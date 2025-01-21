@@ -1,0 +1,12 @@
+Required software to run the system:
+
+node.js
+npm
+
+To run the system, download the repository, and install the dependencies with npm install.(Note: If you are running on a mac, remove the 'devDependencies' section of the package. These dependencies are only needed for running the test suite and are imcompatible with mac.)
+
+Once the dependencies are installed, run the application by executing node app.js in the primary folder. 
+
+To see the examples, please visit the project page at [https://offenwanger.github.io/moments/](https://offenwanger.github.io/moments/) 
+
+Good luck.
