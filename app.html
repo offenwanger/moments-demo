@@ -9,20 +9,15 @@
     <script type="importmap">
         {
             "imports": {
-                "three": "/node_modules/three/build/three.module.js",
-                "three-mesh-ui": "/node_modules/three-mesh-ui/build/three-mesh-ui.module.js",
-                "three/addons/": "/node_modules/three/examples/jsm/"
+                "three": "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js",
+                "three-mesh-ui": "https://cdn.jsdelivr.net/npm/three-mesh-ui@6.5.4/+esm",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/"
             },
             "scopes": {
-                "/moments-demo/": {
-                    "three": "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js",
-                    "three-mesh-ui": "https://cdn.jsdelivr.net/npm/three-mesh-ui@6.5.4/+esm",
-                    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/"
-                },
-                "/npm/": {
-                    "three": "https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js",
-                    "three-mesh-ui": "https://cdn.jsdelivr.net/npm/three-mesh-ui@6.5.4/+esm",
-                    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.164.1/examples/jsm/"
+                "http://localhost:8000/": {
+                    "three": "/node_modules/three/build/three.module.js",
+                    "three-mesh-ui": "/node_modules/three-mesh-ui/build/three-mesh-ui.module.js",
+                    "three/addons/": "/node_modules/three/examples/jsm/"
                 }
             }
         }
