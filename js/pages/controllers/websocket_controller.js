@@ -41,6 +41,11 @@ export function WebsocketController() {
         mWebSocket.emit(ServerMessage.CONNECTION_ID, mSocketId);
     });
 
+    mWebSocket.on('connect_error', function (data) {
+        mWebSocket.disconnect();
+        console.error('Websocket connection failed.');
+    });
+
     mWebSocket.on("disconnect", (reason) => {
         logInfo("Disconnecting because: " + reason);
     });
