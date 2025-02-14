@@ -224,10 +224,25 @@ export function PoseableAssetWrapper(parent, audioListener) {
                 return q;
             }
 
-            interactionTarget.setLocalOrientation = (orientation) => {
+            interactionTarget.getWorldOrientation = () => {
+                let q = new THREE.Quaternion();
                 if (mGLTF) {
                     let obj = mGLTF.getObjectByName(pose.name);
-                    obj.quaternion.copy(orientation)
+                    obj.getWorldQuaternion(q);
+                }
+                return q;
+            }
+
+            interactionTarget.setWorldOrientation = (orientation) => {
+                if (mGLTF) {
+                    let obj = mGLTF.getObjectByName(pose.name);
+                    if (!obj.parent) { obj.quaternion.copy(orientation); return; }
+
+                    let q = new THREE.Quaternion()
+                    obj.parent.getWorldQuaternion(q);
+                    // I do not understand these multiplications but it works so I'm running away. 
+                    q.invert().multiply(orientation);
+                    obj.quaternion.copy(q);
                 }
             }
 

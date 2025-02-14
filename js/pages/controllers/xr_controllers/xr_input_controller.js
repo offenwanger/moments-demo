@@ -9,7 +9,6 @@ export function XRInputController(sceneContainer) {
     let mPointerMoveCallback = async (raycaster, orietation, isPrimary) => { }
     let mPointerUpCallback = async (raycaster, orietation, isPrimary) => { }
 
-
     let mSession = null;
     let mMoved = false;
     let mButtonState = getButtonPressedState();
@@ -162,7 +161,7 @@ export function XRInputController(sceneContainer) {
 
 
         setRay(mRightController, mRaycaster);
-        await mPointerMoveCallback(mRaycaster, mRightController.quaternion, true);
+        await mPointerMoveCallback(mRaycaster, getRightControllerOrientation(), true);
         if (lastButtonState.primaryRPressed != mButtonState.primaryRPressed) {
             if (mButtonState.primaryRPressed) {
                 await mPointerDownCallback(mRaycaster, mRightController.quaternion, true);
@@ -172,7 +171,7 @@ export function XRInputController(sceneContainer) {
         }
 
         setRay(mLeftController, mRaycaster);
-        await mPointerMoveCallback(mRaycaster, mLeftController.quaternion, false);
+        await mPointerMoveCallback(mRaycaster, getLeftControllerOrientation(), false);
         if (lastButtonState.primaryLPressed != mButtonState.primaryLPressed) {
             if (mButtonState.primaryLPressed) {
                 await mPointerDownCallback(mRaycaster, mLeftController.quaternion, false);

@@ -7,8 +7,9 @@ export class InteractionTargetInterface {
     getLocalPosition = () => { return new THREE.Vector3(); }
     getWorldPosition = () => { return new THREE.Vector3(); }
     setWorldPosition = (worldPosition) => { }
-    getLocalOrientation = () => { return new THREE.Quaternion() }
-    setLocalOrientation = (orientation) => { }
+    getLocalOrientation = () => { return new THREE.Quaternion(); }
+    getWorldOrientation = () => { return new THREE.Quaternion() }
+    setWorldOrientation = (orientation) => { }
 
     getScale = () => { return 1 }
     setScale = (scale) => { }

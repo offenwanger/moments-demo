@@ -182,7 +182,7 @@ function startOneHandMove(raycaster, orientation, target, interactionState) {
         rootTarget,
         startRay: new THREE.Ray().copy(raycaster.ray),
         startRayOrientation: new THREE.Quaternion().copy(orientation),
-        startOrientation: rootTarget.getLocalOrientation(),
+        startOrientation: rootTarget.getWorldOrientation(),
         startPosition: rootTarget.getWorldPosition(),
     }
 }

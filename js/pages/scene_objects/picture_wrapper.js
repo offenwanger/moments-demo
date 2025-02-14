@@ -133,11 +133,22 @@ export function PictureWrapper(parent, audioListener) {
         }
         target.getLocalOrientation = () => {
             let q = new THREE.Quaternion();
-            q.copy(mPlanes.quaternion);
+            q.copy(mPlanes.quaternion)
             return q;
         }
-        target.setLocalOrientation = (orientation) => {
-            mPlanes.quaternion.copy(orientation)
+        target.getWorldOrientation = () => {
+            let q = new THREE.Quaternion();
+            mPlanes.getWorldQuaternion(q);
+            return q;
+        }
+        target.setWorldOrientation = (orientation) => {
+            if (!mPlanes.parent) { mPlanes.quaternion.copy(orientation); return; }
+            // orientation = parentOrientation * localOrientation 
+            // parentOrienataion^-1 * orientation  = localOrientation
+            let q = new THREE.Quaternion()
+            mPlanes.parent.getWorldQuaternion(q);
+            q.invert().multiply(orientation);
+            mPlanes.quaternion.copy(q);
         }
         target.getScale = () => {
             return mPlanes.scale.x;

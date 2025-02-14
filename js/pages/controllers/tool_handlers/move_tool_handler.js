@@ -41,20 +41,21 @@ function pointerMove(raycaster, orientation, isPrimary, interactionState, toolMo
         }
     } else if (interactionState.type == InteractionType.ONE_HAND_MOVE && isPrimary) {
         // Move the moving thing. 
-        let fromRay = interactionState.data.startRay;
-        let fromOrientation = new THREE.Quaternion().copy(interactionState.data.startRayOrientation);
-        let toRay = raycaster.ray;
-        let toOrientation = orientation;
+        let startOrigin = interactionState.data.startRay.origin;
+        let startOrientation = new THREE.Quaternion().copy(interactionState.data.startRayOrientation);
+        let toOrigin = raycaster.ray.origin;
 
+        // amount to rotate by = 
         let rotation = new THREE.Quaternion()
-            .multiplyQuaternions(toOrientation, fromOrientation.invert());
-        let newOrientation = new THREE.Quaternion()
-            .multiplyQuaternions(interactionState.data.startOrientation, rotation);
-        let newPosition = new THREE.Vector3().copy(interactionState.data.startPosition)
-            .sub(fromRay.origin).applyQuaternion(rotation).add(toRay.origin);
+            .multiplyQuaternions(orientation, startOrientation.invert());
 
+        let newPosition = new THREE.Vector3().copy(interactionState.data.startPosition)
+            .sub(startOrigin).applyQuaternion(rotation).add(toOrigin);
         interactionState.data.rootTarget.setWorldPosition(newPosition);
-        interactionState.data.rootTarget.setLocalOrientation(newOrientation);
+
+        let newOrientation = new THREE.Quaternion()
+            .multiplyQuaternions(rotation, interactionState.data.startOrientation);
+        interactionState.data.rootTarget.setWorldOrientation(newOrientation);
 
         let targets = [];
         if (interactionState.data.rootTarget.isTeleport()) {
@@ -91,7 +92,7 @@ function pointerMove(raycaster, orientation, isPrimary, interactionState, toolMo
             let rotation = new THREE.Quaternion().setFromUnitVectors(interactionState.data.direction, newDirection);
 
             let newOrienatation = new THREE.Quaternion().multiplyQuaternions(rotation, interactionState.data.originalRotation)
-            interactionState.data.rootTarget.setLocalOrientation(newOrienatation);
+            interactionState.data.rootTarget.setWorldOrientation(newOrienatation);
 
             let dist = new THREE.Vector3().subVectors(primary, secondary).length();
             let newScale = interactionState.data.originalScale * (dist / interactionState.data.dist)
@@ -139,7 +140,7 @@ function pointerMove(raycaster, orientation, isPrimary, interactionState, toolMo
                 .sub(fromRay.origin).applyQuaternion(rotation).add(toRay.origin);
 
             interactionState.data.rootTarget.setWorldPosition(newPosition);
-            interactionState.data.rootTarget.setLocalOrientation(newOrientation);
+            interactionState.data.rootTarget.setWorldOrientation(newOrientation);
         }
     }
 }
@@ -278,7 +279,7 @@ function startOneHandMove(raycaster, orientation, target, interactionState, scen
         rootTarget,
         startRay: new THREE.Ray().copy(raycaster.ray),
         startRayOrientation: new THREE.Quaternion().copy(orientation),
-        startOrientation: rootTarget.getLocalOrientation(),
+        startOrientation: rootTarget.getWorldOrientation(),
         startPosition: rootTarget.getWorldPosition(),
     }
 
@@ -321,7 +322,7 @@ function startTwoHandMove() {
     //     direction,
     //     dist,
     //     targetMidpointOffset,
-    //     originalRotation: rootTarget.getLocalOrientation(),
+    //     originalRotation: rootTarget.getWorldOrientation(),
     //     originalScale: rootTarget.getScale(),
     // }
 }

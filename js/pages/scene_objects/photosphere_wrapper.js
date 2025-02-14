@@ -445,7 +445,8 @@ export function PhotosphereWrapper(parent) {
                 new THREE.Matrix4().lookAt(new THREE.Vector3(...surface.normal),
                     new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 1, 0)));
         }
-        target.setLocalOrientation = function (orientation) {
+        target.getWorldOrientation = target.getLocalOrientation;
+        target.setWorldOrientation = function (orientation) {
             let surfaceId = this.getId();
             let surfaceIndex = mSurfaces.findIndex(s => s.id == surfaceId);
             if (surfaceIndex == -1) console.error('invalid target: ' + this.getId());
