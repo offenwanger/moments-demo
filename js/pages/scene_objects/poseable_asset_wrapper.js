@@ -91,6 +91,7 @@ export function PoseableAssetWrapper(parent, audioListener) {
             object.position.set(pose.x, pose.y, pose.z);
             object.scale.set(pose.scale, pose.scale, pose.scale);
             object.userData.id = pose.id;
+            object.userData.state = 'idle';
 
             let teleport = model.teleports.find(t => t.attachedId == pose.id);
             if (teleport) {
@@ -313,10 +314,12 @@ export function PoseableAssetWrapper(parent, audioListener) {
                 } else {
                     console.error("Unexpected target object!", obj);
                 }
+                obj.userData.state = 'highlighted';
             };
             interactionTarget.select = (toolMode) => {
                 let obj = mGLTF.getObjectByName(pose.name);
                 if (obj.userData.interactionAudio) try { mSounds[pose.id].play(); } catch (e) { console.error(e); }
+                obj.userData.state = 'selected';
             };
             interactionTarget.idle = (toolMode) => {
                 let obj = interactionTarget.getObject3D();
@@ -331,6 +334,7 @@ export function PoseableAssetWrapper(parent, audioListener) {
                 } else {
                     console.error("Unexpected target object!", obj);
                 }
+                obj.userData.state = 'idle';
             }
 
             interactionTarget.getId = () => pose.id;

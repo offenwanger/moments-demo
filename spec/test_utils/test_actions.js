@@ -44,11 +44,12 @@ export async function createAndOpenStoryMoment() {
     await clickButtonInput('#moment-button-' + testmodel().moments[0].id);
 }
 
-export async function createAndOpenPoseableAsset() {
+export async function setupEnvironmentWith3DAsset(assetName) {
     await createAndOpenStoryMoment();
 
-    await loadRealFile('sample.glb')
-    window.files.push(new mockFile('sample.glb', "model/gltf-binary", global.fileSystem['sample.glb']));
+    await loadRealFile(assetName);
+    // add the file to the 'choosen file' queue.
+    window.files.push(new mockFile(assetName, "model/gltf-binary", global.fileSystem[assetName]));
     await clickButtonInput('#asset-manager-button');
     await clickButtonInput('#asset-add-button');
     await clickButtonInput('#dialog-close-button');
@@ -64,6 +65,8 @@ export async function createAndOpenPoseableAsset() {
 
     expect(testmodel().moments[0].poseableAssetIds.length).toBe(1);
     await clickButtonInput('#poseable-asset-button-' + testmodel().moments[0].poseableAssetIds[0]);
+
+    await global.test_rendererAccess.animationLoop();
 }
 
 export async function uploadImageAsset() {
@@ -188,62 +191,110 @@ export async function stopXR() {
     global.navigator.xr.eventListeners.sessionend();
 }
 
-export async function moveHead(x, y, z) {
+export async function lookHead(x, y, z) {
     await global.test_rendererAccess.animationLoop();
     let camera = global.test_rendererAccess.lastRender.camera;
-    camera.updateWorldMatrix()
+    camera.lookAt(x, y, z);
+    camera.updateWorldMatrix(true)
+    await global.test_rendererAccess.animationLoop();
+}
+
+export async function movePageHead(x, y, z) {
+    let camera = global.test_rendererAccess.lastRender.camera;
     camera.position.set(x, y, z);
     camera.updateWorldMatrix()
     await global.test_rendererAccess.animationLoop();
 }
 
-export async function lookHead(x, y, z) {
-    await global.test_rendererAccess.animationLoop();
+export async function moveXRHead(x, y, z) {
     let camera = global.test_rendererAccess.lastRender.camera;
-    camera.updateWorldMatrix()
-    camera.lookAt(x, y, z);
-    camera.updateWorldMatrix()
+    let cPos = camera.parent.worldToLocal(new THREE.Vector3(x, y, z));
+    camera.position.copy(cPos);
+    camera.updateWorldMatrix(true);
     await global.test_rendererAccess.animationLoop();
 }
 
-export async function moveXRController(left, x, y, z) {
-    let controller = global.navigator.xr.getSession().inputSources
-        .find(s => s.handedness == (left ? 'left' : 'right'));
-    let v = new THREE.Vector3();
-    controller.getWorldPosition(v)
-    // set the position with a slight offset for the tip
-    let pos = new THREE.Vector3(x + (left ? - 0.005 : 0.005), y, z + 0.03);
-    let moveTransform = pos.sub(v);
-    controller.position.add(moveTransform);
+export async function lookController(primary, x, y, z) {
+    let controller = await getController(primary);
+    let lookPos = new THREE.Vector3(x, y, z);
+    let pos = controller.getWorldPosition(new THREE.Vector3());
+    // for some reason controllers need to face backwards. I don't know why. 
+    lookPos.sub(pos).negate().add(pos);
+    controller.lookAt(lookPos.x, lookPos.y, lookPos.z);
+    await moveXRController(primary, pos.x, pos.y, pos.z);
+}
+
+export async function moveXRController(primary, x, y, z) {
+    let controller = await getController(primary);
+    let cPos = controller.parent.worldToLocal(new THREE.Vector3(x, y, z));
+    controller.position.copy(cPos);
+    controller.updateWorldMatrix(true);
     await global.test_rendererAccess.animationLoop();
 }
 
-export async function pressXRTrigger(left) {
-    let controller = global.navigator.xr.getSession().inputSources
-        .find(s => s.handedness == (left ? 'left' : 'right'));
+export async function pressXRTrigger(primary) {
+    let controller = await getController(primary);
     controller.gamepad.buttons[0].pressed = true;
     await global.navigator.xr.getSession().eventListeners.selectstart();
     await global.test_rendererAccess.animationLoop();
 }
 
-export async function releaseXRTrigger(left) {
-    let controller = global.navigator.xr.getSession().inputSources
-        .find(s => s.handedness == (left ? 'left' : 'right'));
+export async function releaseXRTrigger(primary) {
+    let controller = await getController(primary);
     controller.gamepad.buttons[0].pressed = false;
     await global.navigator.xr.getSession().eventListeners.selectend();
     await global.test_rendererAccess.animationLoop();
 }
 
-export async function pushXRToggle(left, axes) {
-    let controller = global.navigator.xr.getSession().inputSources
-        .find(s => s.handedness == (left ? 'left' : 'right'));
+export async function pushXRToggle(primary, axes) {
+    let controller = await getController(primary);
     controller.gamepad.axes = axes;
     await global.test_rendererAccess.animationLoop();
 }
 
-export async function releaseXRToggle(left) {
-    let controller = global.navigator.xr.getSession().inputSources
-        .find(s => s.handedness == (left ? 'left' : 'right'));
+export async function releaseXRToggle(primary) {
+    let controller = await getController(primary);
     controller.gamepad.axes = [0, 0, 0, 0];
     await global.test_rendererAccess.animationLoop();
+}
+
+export async function toggleMoveForward() {
+    let axes = [0, 0, 0, 0];
+    axes[3] = 1;
+    await pushXRToggle(true, axes);
+    await releaseXRToggle(true);
+}
+
+export async function toggleMoveBack() {
+    let axes = [0, 0, 0, 0];
+    axes[3] = -1;
+    await pushXRToggle(true, axes);
+    await releaseXRToggle(true);
+}
+
+export async function toggleTurnLeft() {
+    let axes = [0, 0, 0, 0];
+    axes[2] = -1;
+    await pushXRToggle(true, axes);
+    await releaseXRToggle(true);
+}
+
+export async function toggleTurnRight() {
+    let axes = [0, 0, 0, 0];
+    axes[2] = 1;
+    await pushXRToggle(true, axes);
+    await releaseXRToggle(true);
+}
+
+export function getTHREEObjectByName(name) {
+    let scene = global.test_rendererAccess.lastRender.scene;
+    if (!scene) return null;
+    return scene.getObjectByName(name);
+}
+
+async function getController(primary) {
+    let controller = global.navigator.xr.getSession().inputSources
+        .find(s => s.handedness == (primary ? 'right' : 'left'));
+    controller.updateWorldMatrix(true)
+    return controller;
 }

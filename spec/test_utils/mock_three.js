@@ -55,7 +55,8 @@ export async function mockThreeSetup() {
                         }
                         return intercept;
                     }
-                    return originalIntercept.call(this, object)[0];
+                    let intercept = originalIntercept.call(this, [object])[0];
+                    return intercept;
                 }).filter(i => i)
             }
             return interceptedCaster;

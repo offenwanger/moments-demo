@@ -323,11 +323,15 @@ export function XRInputController(sceneContainer) {
         }
     }
 
-    const dummyMatrix = new THREE.Matrix4();
+    const mDummyVector = new THREE.Vector3();
     function setRay(controller, raycaster) {
-        dummyMatrix.identity().extractRotation(controller.matrixWorld);
-        raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
-        raycaster.ray.direction.set(0, 0, -1).applyMatrix4(dummyMatrix);
+        controller.getWorldPosition(mDummyVector);
+        raycaster.ray.origin.copy(mDummyVector);
+        controller.getWorldDirection(mDummyVector)
+        // I do not know why, but a held controller's world direction 
+        // points backwards towards the user.
+        mDummyVector.negate();
+        raycaster.ray.direction.copy(mDummyVector);
     }
 
     this.getCamera = () => mXRCamera;

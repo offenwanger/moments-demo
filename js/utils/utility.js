@@ -128,12 +128,8 @@ function getClosestTarget(ray, targets) {
     if (targets.length == 0) return null;
     if (targets.length == 1) return targets[0];
 
-    let sortation = targets.map(t => {
-        return { t, distance: ray.distanceToPoint(t.getIntersection().point) }
-    })
-
-    sortation.sort((a, b) => a.distance - b.distance)
-    return sortation[0].t;
+    targets.sort((a, b) => a.getIntersection().distance - b.getIntersection().distance)
+    return targets[0];
 }
 
 // point and polygon in {x,y} format. 

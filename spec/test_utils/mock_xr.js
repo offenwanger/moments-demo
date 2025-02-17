@@ -3,12 +3,12 @@ import * as THREE from 'three';
 
 export function mockXR() {
     let session = new mockSession();
-    let controller0 = new mockController();
+    let controller0 = new mockController('left');
     controller0.handedness = 'left';
-    let controller1 = new mockController();
+    let controller1 = new mockController('right');
     controller1.handedness = 'right';
-    let controllerGrip0 = new mockController();
-    let controllerGrip1 = new mockController();
+    let controllerGrip0 = new mockController('leftGrip');
+    let controllerGrip1 = new mockController('rightGrip');
 
     session.inputSources.push(controller0, controller1);
 
@@ -32,7 +32,9 @@ export function mockXR() {
 }
 
 export function mockXRControllerModelFactory() {
-    this.createControllerModel = function () { return new THREE.Object3D() }
+    this.createControllerModel = function () {
+        return new THREE.Object3D()
+    }
 }
 
 export function mockSession() {
@@ -43,8 +45,9 @@ export function mockSession() {
     this.inputSources = [];
 }
 
-export function mockController() {
+export function mockController(hand) {
     let controller = new THREE.Object3D();
+    controller.name = hand + 'Controller';
     controller.eventListeners = {};
     controller.addEventListener = function (event, func) {
         this.eventListeners[event] = func

@@ -1,7 +1,7 @@
 
 import { cleanup, setup } from './test_utils/test_environment.js';
 
-import { canvaspointerdown, createAndOpenPoseableAsset, lookHead, moveHead, pointermove, pointerup, testmodel } from './test_utils/test_actions.js';
+import { canvaspointerdown, lookHead, movePageHead, pointermove, pointerup, setupEnvironmentWith3DAsset, testmodel } from './test_utils/test_actions.js';
 
 
 
@@ -16,13 +16,13 @@ describe('Test Moment Panel', function () {
 
     describe('init tests', function () {
         it('should load a 3D model', async function () {
-            await createAndOpenPoseableAsset();
+            await setupEnvironmentWith3DAsset('bonesAndMesh.glb');
         });
     });
 
     describe('target tests', function () {
         it('should target model mesh', async function () {
-            await createAndOpenPoseableAsset();
+            await setupEnvironmentWith3DAsset('bonesAndMesh.glb');
             let poseableAsset = testmodel()
                 .find(testmodel().moments[0].poseableAssetIds[0]);
             let cubeData = testmodel().assetPoses.find(p =>
@@ -33,7 +33,7 @@ describe('Test Moment Panel', function () {
 
             let canvas = document.querySelector('#main-canvas');
 
-            await moveHead(0.6, 0, 0)
+            await movePageHead(0.6, 0, 0)
             await lookHead(cubeData.x, cubeData.y, cubeData.z)
 
             await pointermove(canvas.width / 2, canvas.height / 2);
@@ -50,7 +50,7 @@ describe('Test Moment Panel', function () {
         });
 
         it('should drag skinnedmesh', async function () {
-            await createAndOpenPoseableAsset();
+            await setupEnvironmentWith3DAsset('bonesAndMesh.glb');
             let poseableAsset = testmodel().find(testmodel().moments[0].poseableAssetIds[0]);
 
             expect(testmodel().assetPoses
