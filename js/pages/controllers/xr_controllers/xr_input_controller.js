@@ -164,9 +164,9 @@ export function XRInputController(sceneContainer) {
         await mPointerMoveCallback(mRaycaster, getRightControllerOrientation(), true);
         if (lastButtonState.primaryRPressed != mButtonState.primaryRPressed) {
             if (mButtonState.primaryRPressed) {
-                await mPointerDownCallback(mRaycaster, mRightController.quaternion, true);
+                await mPointerDownCallback(mRaycaster, getRightControllerOrientation(), true);
             } else {
-                await mPointerUpCallback(mRaycaster, mRightController.quaternion, true);
+                await mPointerUpCallback(mRaycaster, getRightControllerOrientation(), true);
             }
         }
 
@@ -174,9 +174,9 @@ export function XRInputController(sceneContainer) {
         await mPointerMoveCallback(mRaycaster, getLeftControllerOrientation(), false);
         if (lastButtonState.primaryLPressed != mButtonState.primaryLPressed) {
             if (mButtonState.primaryLPressed) {
-                await mPointerDownCallback(mRaycaster, mLeftController.quaternion, false);
+                await mPointerDownCallback(mRaycaster, getLeftControllerOrientation(), false);
             } else {
-                await mPointerUpCallback(mRaycaster, mLeftController.quaternion, false);
+                await mPointerUpCallback(mRaycaster, getLeftControllerOrientation(), false);
             }
         }
     }
