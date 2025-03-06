@@ -5,7 +5,7 @@ import { canvaspointerdown, lookHead, movePageHead, pointermove, pointerup, setu
 
 
 
-describe('Test Moment Panel', function () {
+describe('Test Posable Asset Wrapper', function () {
     beforeEach(async function () {
         await setup();
     });
@@ -20,13 +20,12 @@ describe('Test Moment Panel', function () {
         });
     });
 
-    describe('target tests', function () {
+    describe('canvas drag tests', function () {
         it('should target model mesh', async function () {
             await setupEnvironmentWith3DAsset('bonesAndMesh.glb');
-            let poseableAsset = testmodel()
-                .find(testmodel().moments[0].poseableAssetIds[0]);
+            let poseableAsset = testmodel().poseableAssets[0];
             let cubeData = testmodel().assetPoses.find(p =>
-                p.name == "Cube" && poseableAsset.poseIds.includes(p.id))
+                p.name == "Cube" && p.parentId == poseableAsset.id)
             expect(cubeData.x).toBeCloseTo(0.6, 3);
             expect(cubeData.y).toBeCloseTo(0, 4);
             expect(cubeData.z).toBeCloseTo(-1, 4);
@@ -43,7 +42,7 @@ describe('Test Moment Panel', function () {
 
 
             cubeData = testmodel().assetPoses.find(p =>
-                p.name == "Cube" && poseableAsset.poseIds.includes(p.id))
+                p.name == "Cube" && p.parentId == poseableAsset.id)
             expect(cubeData.x).toBeCloseTo(0.4116, 3);
             expect(cubeData.y).toBeCloseTo(0, 4);
             expect(cubeData.z).toBeCloseTo(-0.9821, 3);
@@ -51,13 +50,13 @@ describe('Test Moment Panel', function () {
 
         it('should drag skinnedmesh', async function () {
             await setupEnvironmentWith3DAsset('bonesAndMesh.glb');
-            let poseableAsset = testmodel().find(testmodel().moments[0].poseableAssetIds[0]);
+            let poseableAsset = testmodel().poseableAssets[0];
 
             expect(testmodel().assetPoses
-                .find(p => p.name == "Bone" && poseableAsset.poseIds.includes(p.id)).x)
+                .find(p => p.name == "Bone" && p.parentId == poseableAsset.id).x)
                 .toBeCloseTo(0.004, 3);
             expect(testmodel().assetPoses
-                .find(p => p.name == "Bone" && poseableAsset.poseIds.includes(p.id)).z)
+                .find(p => p.name == "Bone" && p.parentId == poseableAsset.id).z)
                 .toBeCloseTo(0.0, 4);
 
             let canvas = document.querySelector('#main-canvas');
@@ -68,10 +67,10 @@ describe('Test Moment Panel', function () {
             await pointerup(canvas.width / 2 - 100, canvas.height / 2);
 
             expect(testmodel().assetPoses
-                .find(p => p.name == "Bone" && poseableAsset.poseIds.includes(p.id)).x)
+                .find(p => p.name == "Bone" && p.parentId == poseableAsset.id).x)
                 .toBeCloseTo(-0.185, 3);
             expect(testmodel().assetPoses
-                .find(p => p.name == "Bone" && poseableAsset.poseIds.includes(p.id)).z)
+                .find(p => p.name == "Bone" && p.parentId == poseableAsset.id).z)
                 .toBeCloseTo(0.0172, 3);
         });
     });

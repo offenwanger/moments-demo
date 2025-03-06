@@ -40,7 +40,7 @@ function pointerUp(raycaster, orientation, isPrimary, interactionState, toolMode
     interactionState.type = InteractionType.NONE;
     interactionState.data = {};
 
-    let updates = []
+    let reaction;
 
     helperPointController.hidePoint(isPrimary);
 
@@ -58,14 +58,14 @@ function pointerUp(raycaster, orientation, isPrimary, interactionState, toolMode
             return [];
         }
         let assetId = data.target.getId();
-        updates.push({
-            command: ASSET_UPDATE_COMMAND,
+        reaction = {
+            type: ASSET_UPDATE_COMMAND,
             id: assetId,
             dataPromise: new Promise(resolve => canvas.toBlob(resolve))
-        });
+        };
     }
 
-    return updates;
+    return reaction;
 }
 
 export const BrushToolHandler = {

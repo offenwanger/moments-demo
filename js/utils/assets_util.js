@@ -53,7 +53,7 @@ export function AssetUtil(workspace) {
         try {
             if (!mLoadedAssets[assetId]) {
                 let asset = mModel.find(assetId);
-                if (!asset) { console.error("Invalid image asset: " + assetId, asset); throw new Error("Invalid model asset: " + assetId); }
+                if (!asset) { console.error("Invalid image asset: " + assetId); throw new Error("Invalid model asset: " + assetId); }
                 let uri = await mWorkspace.getAssetAsDataURI(asset.filename);
                 let image = await mImageLoader.loadAsync(uri, null, null, function (error) { console.error('Error loading image', error); });
                 mLoadedAssets[assetId] = image;

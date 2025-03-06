@@ -69,8 +69,8 @@ export function WebsocketController() {
         await mStoryConnectCallback(story);
     });
 
-    mWebSocket.on(ServerMessage.UPDATE_STORY, async (updates) => {
-        await mStoryUpdateCallback(updates);
+    mWebSocket.on(ServerMessage.UPDATE_STORY, async (transaction) => {
+        await mStoryUpdateCallback(transaction);
     });
 
     mWebSocket.on(ServerMessage.NEW_ASSET, async (data) => {
@@ -126,9 +126,9 @@ export function WebsocketController() {
         }, 1000)
     }
 
-    function updateStory(updates) {
+    function updateStory(transaction) {
         if (!mConnectedToStory) return;
-        mWebSocket.emit(ServerMessage.UPDATE_STORY, updates);
+        mWebSocket.emit(ServerMessage.UPDATE_STORY, transaction);
     }
 
     async function uploadAsset(storyId, filename, workspace) {

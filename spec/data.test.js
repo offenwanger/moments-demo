@@ -48,16 +48,16 @@ describe('Test Data', function () {
 
         it('should find poseableAsset', function () {
             let model = createStoryModel();
-            let poseableAssetId = model.moments[0].poseableAssetIds[0];
+            let poseableAssetId = model.poseableAssets[0].id;
             let poseableAsset = model.find(poseableAssetId);
-            expect(poseableAsset.id).toBe(model.moments[0].poseableAssetIds[0]);
+            expect(poseableAsset.id).toBe(poseableAssetId);
         })
 
         it('should find picture', function () {
             let model = createStoryModel();
-            let pictureId = model.moments[0].pictureIds[0];
+            let pictureId = model.pictures[0].id;
             let picture = model.find(pictureId);
-            expect(picture.id).toBe(model.moments[0].pictureIds[0]);
+            expect(picture.id).toBe(pictureId);
         })
 
         it('should not find invalid id', function () {
@@ -80,7 +80,7 @@ describe('Test Data', function () {
 
         it('should delete poseableAsset', function () {
             let model = createStoryModel();
-            let id = model.moments[0].poseableAssetIds[0];
+            let id = model.poseableAssets[0].id;
             let poseableAsset = model.find(id);
             expect(poseableAsset).not.toBeNull();
             model.delete(id);
@@ -94,15 +94,13 @@ describe('Test Data', function () {
             let id = model.assetPoses[0].id;
             let pose = model.find(id);
             expect(pose).not.toBeNull();
-            expect(model.assets[0].poseIds).toContain(id);
-            expect(model.assets[0].poseIds.length).toEqual(3);
+            expect(pose.parentId).toBe(model.assets[0].id);
+            expect(model.assetPoses.filter(p => p.parentId == model.assets[0].id).length).toEqual(3);
 
             model.delete(id);
 
             pose = model.find(id);
             expect(pose).toBeNull();
-            expect(model.assets[0].poseIds).not.toContain(id);
-            expect(model.assets[0].poseIds.length).toEqual(2)
         });
     })
 

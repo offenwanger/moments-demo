@@ -12,7 +12,6 @@ export function AudioPanel(container) {
     let mModel = new Data.StoryModel();
     let mAudio = new Data.Audio();
     let mAudioId = null;
-    let mMomentId = null;
 
     let mPanelContainer = document.createElement('div');
     container.appendChild(mPanelContainer);
@@ -22,7 +21,7 @@ export function AudioPanel(container) {
         .setId('audio-back-button')
         .setLabel("<- Back")
         .setOnClick(async () => {
-            await mNavigationCallback(mMomentId);
+            await mNavigationCallback(mAudio.momentId);
         });
 
     let mNameInput = new TextInput(mPanelContainer)
@@ -75,10 +74,6 @@ export function AudioPanel(container) {
         mModel = model;
         mAudioId = audioId;
         mAudio = mModel.find(audioId);
-
-        let moment = mModel.moments.find(m => m.audioIds.includes(mAudioId));
-        if (!moment) { console.error("Moment not found!"); }
-        else mMomentId = moment.id;
 
         mNameInput.setText(mAudio.name);
         mAmbientInput.setVal(mAudio.ambient);

@@ -289,7 +289,6 @@ function updateHoverTargetHighlight(target, interactionState, toolMode, isPrimar
             interactionState.secondaryHovered.idle(toolMode);
             interactionState.secondaryHovered = null;
         }
-        sessionController.hovered(false, isPrimary)
         helperPointController.hidePoint(isPrimary);
     }
 
@@ -298,7 +297,6 @@ function updateHoverTargetHighlight(target, interactionState, toolMode, isPrimar
     }
 
     if (target && currentId != targetId) {
-        sessionController.hovered(true, isPrimary)
         if (isPrimary) {
             interactionState.primaryHovered = target;
             interactionState.primaryHovered.highlight(toolMode);
@@ -307,6 +305,8 @@ function updateHoverTargetHighlight(target, interactionState, toolMode, isPrimar
             interactionState.secondaryHovered.highlight(toolMode);
         }
     }
+
+    sessionController.updateState(interactionState);
 }
 
 export const Util = {

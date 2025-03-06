@@ -1,20 +1,21 @@
 
 import * as THREE from 'three';
-import { AssetTypes, ModelUpdateCommands } from '../constants.js';
+import { AssetTypes } from '../constants.js';
 import { Data } from '../data.js';
 import { AssetUtil } from '../utils/assets_util.js';
+import { AudioRecorder } from '../utils/audio_recorder.js';
 import { DataUtil } from '../utils/data_util.js';
 import { IdUtil } from '../utils/id_util.js';
+import { Action, ActionType, Transaction } from '../utils/transaction_util.js';
 import { UrlUtil } from '../utils/url_util.js';
 import { Util } from '../utils/utility.js';
 import { WindowEventManager } from '../window_event_manager.js';
-import { ModelController, ModelUpdate } from './controllers/model_controller.js';
+import { RemoteWorkSpace } from '../workspace_manager.js';
+import { ModelController } from './controllers/model_controller.js';
 import { PictureEditorController } from './controllers/picture_editor_controller.js';
 import { SceneInterfaceController } from './controllers/scene_interface_controller.js';
 import { SidebarController } from './controllers/sidebar_controller.js';
 import { AssetPicker } from './editor_panels/asset_picker.js';
-import { AudioRecorder } from '../utils/audio_recorder.js';
-import { RemoteWorkSpace } from '../workspace_manager.js';
 
 export function EditorPage(parentContainer, mWebsocketController) {
     const RESIZE_TARGET_SIZE = 20;
@@ -70,21 +71,23 @@ export function EditorPage(parentContainer, mWebsocketController) {
     parentContainer.appendChild(mResizeTarget);
 
     let mSceneInterface = new SceneInterfaceController(mViewContainer, mWebsocketController, mAudioRecorder);
-    mSceneInterface.onModelUpdate(async (updates) => {
-        await mModelController.applyUpdates(updates);
+    mSceneInterface.onModelUpdate(async (transaction) => {
+        await mModelController.applyTransaction(transaction);
         await updateModel();
     });
 
     // Shares a container with the sessions
     let mPictureEditorController = new PictureEditorController(mViewContainer);
     mPictureEditorController.onSave(async (id, json, dataUrl) => {
-        await mModelController.applyUpdates([new ModelUpdate({ id, json, image: dataUrl })]);
+        await mModelController.applyTransaction(new Transaction([
+            new Action(ActionType.UPDATE, id, { json, image: dataUrl })
+        ]));
         await updateModel();
     })
 
     let mAssetPicker = new AssetPicker(parentContainer);
     mAssetPicker.onAssetsUpload(async (files) => {
-        let updates = [];
+        let transaction = new Transaction();
         for (let file of files) {
             try {
                 let t = file.type.split('/')[0];
@@ -112,15 +115,15 @@ export function EditorPage(parentContainer, mWebsocketController) {
                     if (type == AssetTypes.MODEL) {
                         asset = await mAssetUtil.loadGLTFModel(newFilename);
                     }
-                    updates.push(...(await DataUtil.getAssetCreationUpdates(
+                    transaction.actions.push(...(await DataUtil.getAssetCreationActions(
                         id, file.name, newFilename, type, asset)));
                 }
             } catch (e) {
                 console.error(e);
             }
         }
-        if (updates) {
-            await mModelController.applyUpdates(updates);
+        if (transaction.actions) {
+            await mModelController.applyTransaction(transaction);
             await updateModel();
         }
     })
@@ -131,11 +134,13 @@ export function EditorPage(parentContainer, mWebsocketController) {
         await updateModel();
     })
     mSidebarController.setUpdateAttributeCallback(async (id, attrs) => {
-        await mModelController.applyUpdates([new ModelUpdate({ id, ...attrs })]);
+        await mModelController.applyTransaction(new Transaction([
+            new Action(ActionType.UPDATE, id, attrs)
+        ]));
         await updateModel();
     })
     mSidebarController.setDeleteCallback(async (id) => {
-        await mModelController.applyUpdates([new ModelUpdate({ id }, ModelUpdateCommands.DELETE)]);
+        await mModelController.applyTransaction(new Transaction([new Action(ActionType.DELETE, id)]));
         await updateModel();
     })
     mSidebarController.setEditPictureCallback(async (id) => {
@@ -164,9 +169,9 @@ export function EditorPage(parentContainer, mWebsocketController) {
         await mAssetPicker.showOpenAssetPicker();
     })
 
-    mWebsocketController.onStoryUpdate(async updates => {
+    mWebsocketController.onStoryUpdate(async transaction => {
         mModelController.removeUpdateListener(mWebsocketController.updateStory);
-        await mModelController.applyUpdates(updates);
+        await mModelController.applyTransaction(transaction);
         mModelController.addUpdateListener(mWebsocketController.updateStory);
         updateModel();
     })
@@ -180,8 +185,8 @@ export function EditorPage(parentContainer, mWebsocketController) {
         if (type == AssetTypes.MODEL) {
             asset = await mAssetUtil.loadGLTFModel(newFilename);
         }
-        let updates = await DataUtil.getAssetCreationUpdates(id, file.name, newFilename, type, asset);
-        await mModelController.applyUpdates(updates);
+        let actions = await DataUtil.getAssetCreationActions(id, file.name, newFilename, type, asset);
+        await mModelController.applyTransaction(new Transaction(actions));
         updateModel();
     })
 
@@ -194,7 +199,7 @@ export function EditorPage(parentContainer, mWebsocketController) {
         } else {
             await mWorkspace.updateAsset(file);
             await mWebsocketController.uploadAsset(mModelController.getModel().id, asset.filename, mWorkspace);
-            await mModelController.applyUpdates([new ModelUpdate({ id, updated: Date.now() })]);
+            await mModelController.applyTransaction(new Transaction([new Action(ActionType.UPDATE, id, { updated: Date.now() })]));
             await updateModel();
         }
     });
@@ -209,9 +214,9 @@ export function EditorPage(parentContainer, mWebsocketController) {
             if (type == AssetTypes.MODEL) {
                 asset = await mAssetUtil.loadGLTFModel(newFilename);
             }
-            let updates = await DataUtil.getAssetCreationUpdates(
+            let actions = await DataUtil.getAssetCreationActions(
                 id, file.name, newFilename, type, asset)
-            await mModelController.applyUpdates(updates);
+            await mModelController.applyTransaction(new Transaction(actions));
             updateModel();
         }
     });
@@ -222,7 +227,7 @@ export function EditorPage(parentContainer, mWebsocketController) {
         if (!teleport) { console.error('Invalid id: ' + id); }
         let pos = new THREE.Vector3(teleport.sceneX, teleport.sceneY, teleport.sceneZ)
         let direction = new THREE.Vector3(teleport.sceneDirX, teleport.sceneDirY, teleport.sceneDirZ);
-        await setCurrentMoment(teleport.momentId, pos, direction);
+        await setCurrentMoment(teleport.destinationId, pos, direction);
         updateModel();
     });
 
@@ -238,7 +243,7 @@ export function EditorPage(parentContainer, mWebsocketController) {
         let file = new File([buffer], name);
         await mWorkspace.updateAsset(file);
         await mWebsocketController.uploadAsset(mModelController.getModel().id, name, mWorkspace);
-        await mModelController.applyUpdates([new ModelUpdate({ id, updated: Date.now() })]);
+        await mModelController.applyTransaction(new Transaction([new Action(ActionType.UPDATE, id, { updated: Date.now() })]));
         updateModel();
     })
 
@@ -274,7 +279,7 @@ export function EditorPage(parentContainer, mWebsocketController) {
             if (!story) throw Error("Invalid workspace!");
 
             mModelController = new ModelController(story);
-            mModelController.addUpdateListener((updates, model) => mWorkspace.updateStory(model));
+            mModelController.addUpdateListener((transaction, model) => mWorkspace.updateStory(model));
             mAssetUtil = new AssetUtil(mWorkspace);
 
             if (story.moments.length == 0) {
@@ -333,11 +338,11 @@ export function EditorPage(parentContainer, mWebsocketController) {
             canvas.width = 512;
             let blurFileName = await mWorkspace.storeCanvas('sphereblur', canvas);
             let colorFileName = await mWorkspace.storeCanvas('spherecolor', canvas);
-            let updates = await DataUtil.getMomentCreationUpdates(
+            let actions = await DataUtil.getMomentCreationActions(
                 mModelController.getModel(),
                 blurFileName,
                 colorFileName);
-            await mModelController.applyUpdates(updates);
+            await mModelController.applyTransaction(new Transaction(actions));
             updateModel();
         }
     }

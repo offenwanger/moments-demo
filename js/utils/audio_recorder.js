@@ -49,6 +49,51 @@ export function AudioRecorder() {
         }
     }
 
+    function startRecording() {
+        mMediaRecorder?.resume();
+    }
+
+    function stopRecording() {
+        mMediaRecorder?.pause();
+    }
+
+    function clearRecorder() {
+        mMediaRecorder?.stop();
+        mMediaRecorder?.start(1000);
+        mMediaRecorder?.pause();
+        // this doesn't actually clear it because
+        // the async stop drops the last chunk, but 
+        // do it anyway.
+        mChunks = [];
+    }
+
+    function playAudioFile() {
+        if (mChunks.length == 0) {
+            // nothing to play.
+            return;
+        }
+
+        const blob = new Blob(mChunks, { type: mMediaRecorder.mimeType });
+        const audioURL = window.URL.createObjectURL(blob);
+        mAudio.src = audioURL;
+        mAudio.load();
+        mAudio.play();
+        mIsPlaying = true;
+    }
+
+    function stopAudioFile() {
+        mIsPlaying = false;
+        mAudio.pause();
+    }
+
+    function rewindAudioFile() {
+        mAudio.currentTime -= 1
+    }
+
+    function forwardAudioFile() {
+        mAudio.currentTime += 1
+    }
+
     function animate() {
         const WIDTH = mCanvas.width;
         const HEIGHT = mCanvas.height;
@@ -82,53 +127,27 @@ export function AudioRecorder() {
         mCtx.stroke();
     }
 
-    function startRecording() {
-        mMediaRecorder?.resume();
-    }
-
-    function stopRecording() {
-        mMediaRecorder?.pause();
-    }
-
-    function clearRecorder() {
-        mMediaRecorder?.stop();
-        mMediaRecorder?.start(1000);
-        mMediaRecorder?.pause();
-        // this doesn't actually clear it because
-        // the async stop drops the last chunk, but 
-        // do it anyway.
-        mChunks = [];
+    function hasContent() {
+        return mChunks.length > 1;
     }
 
     function getAudioBlob() {
         return new Blob(mChunks, { type: mMediaRecorder.mimeType });
     }
 
-    function playAudioFile() {
-        if (mChunks.length == 0) {
-            // nothing to play.
-            return;
+    function getExtension() {
+        if (mMediaRecorder.mimeType.includes('audio/wav')) {
+            return '.wav';
+        } else if (mMediaRecorder.mimeType.includes('audio/webm')) {
+            return '.weba';
+        } else if (mMediaRecorder.mimeType.includes('audio/mpeg')) {
+            return '.mp3';
+        } else if (mMediaRecorder.mimeType.includes('audio/mp4')) {
+            return '.mp4';
+        } else {
+            console.error('Mimetype extension not known: ' + mMediaRecorder.mimeType);
+            return '';
         }
-
-        const blob = new Blob(mChunks, { type: mMediaRecorder.mimeType });
-        const audioURL = window.URL.createObjectURL(blob);
-        mAudio.src = audioURL;
-        mAudio.load();
-        mAudio.play();
-        mIsPlaying = true;
-    }
-
-    function stopAudioFile() {
-        mIsPlaying = false;
-        mAudio.pause();
-    }
-
-    function rewindAudioFile() {
-        mAudio.currentTime -= 1
-    }
-
-    function forwardAudioFile() {
-        mAudio.currentTime += 1
     }
 
     this.init = init;
@@ -139,9 +158,10 @@ export function AudioRecorder() {
     this.stopAudioFile = stopAudioFile;
     this.rewindAudioFile = rewindAudioFile;
     this.forwardAudioFile = forwardAudioFile;
-    this.isPlaying = () => mIsPlaying;
-    this.hasContent = () => mChunks.length > 1;
     this.animate = animate;
-    this.getCanvas = () => mCanvas;
+    this.hasContent = hasContent;
     this.getAudioBlob = getAudioBlob;
+    this.getExtension = getExtension;
+    this.isPlaying = () => mIsPlaying;
+    this.getCanvas = () => mCanvas;
 }

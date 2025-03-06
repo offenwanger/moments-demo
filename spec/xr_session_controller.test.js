@@ -1,6 +1,7 @@
-import { Euler, Quaternion, Vector3 } from 'three';
-import { getTHREEObjectByName, lookController, lookHead, moveXRController, moveXRHead, pressXRTrigger, releaseXRTrigger, setupEnvironmentWith3DAsset, startXR, stopXR, testmodel, toggleMoveForward, toggleTurnLeft } from './test_utils/test_actions.js';
 import { cleanup, setup } from './test_utils/test_environment.js';
+
+import { Euler, Quaternion } from 'three';
+import { getTHREEObjectByName, lookController, lookHead, moveXRController, moveXRHead, pressXRTrigger, releaseXRTrigger, setupEnvironmentWith3DAsset, startXR, stopXR, testmodel, toggleMoveForward, toggleTurnLeft } from './test_utils/test_actions.js';
 
 describe('Test XR Session', function () {
     beforeEach(async function () {
@@ -35,9 +36,9 @@ describe('Test XR Session', function () {
             await setupEnvironmentWith3DAsset('threeMesh.glb');
             await startXR();
 
-            let poseableAsset = testmodel().find(testmodel().moments[0].poseableAssetIds[0]);
+            let poseableAsset = testmodel().poseableAssets[0]
 
-            let cubePos = testmodel().assetPoses.find(p => p.name == "Cube" && poseableAsset.poseIds.includes(p.id));
+            let cubePos = testmodel().assetPoses.find(p => p.name == "Cube" && p.parentId == poseableAsset.id);
             expect(cubePos.x).toBeCloseTo(0.6, 3);
             expect(cubePos.y).toBeCloseTo(0, 4);
             expect(cubePos.z).toBeCloseTo(-1, 4);
@@ -49,19 +50,19 @@ describe('Test XR Session', function () {
             await moveXRController(true, 1, 0, -1);
             await releaseXRTrigger(true);
 
-            let newcubePos = testmodel().assetPoses.find(p => p.name == "Cube" && poseableAsset.poseIds.includes(p.id));
+            let newcubePos = testmodel().assetPoses.find(p => p.name == "Cube" && p.parentId == poseableAsset.id);
             expect(newcubePos.x).toBeCloseTo(1.6, 3);
             expect(newcubePos.y).toBeCloseTo(0, 4);
             expect(newcubePos.z).toBeCloseTo(-1, 4);
         });
 
         it('should rotate', async function () {
-            await setupEnvironmentWith3DAsset('threeMesh.glb');
+            await setupEnvironmentWith3DAsset('oneMesh.glb');
             await startXR();
 
-            let poseableAsset = testmodel().find(testmodel().moments[0].poseableAssetIds[0]);
+            let poseableAsset = testmodel().poseableAssets[0]
 
-            let cubePos = testmodel().assetPoses.find(p => p.name == "Cube" && poseableAsset.poseIds.includes(p.id));
+            let cubePos = testmodel().assetPoses.find(p => p.name == "Cube" && p.parentId == poseableAsset.id);
             expect(cubePos.x).toBeCloseTo(0.6, 3);
             expect(cubePos.y).toBeCloseTo(0, 4);
             expect(cubePos.z).toBeCloseTo(-1, 4);
@@ -78,7 +79,7 @@ describe('Test XR Session', function () {
             await lookController(true, 0, 1, -1);
             await releaseXRTrigger(true);
 
-            let newcubePos = testmodel().assetPoses.find(p => p.name == "Cube" && poseableAsset.poseIds.includes(p.id));
+            let newcubePos = testmodel().assetPoses.find(p => p.name == "Cube" && p.parentId == poseableAsset.id);
             expect(newcubePos.x).toBeCloseTo(0, 3);
             expect(newcubePos.y).toBeCloseTo(1, 4);
             expect(newcubePos.z).toBeCloseTo(-1.6, 4);
@@ -92,8 +93,8 @@ describe('Test XR Session', function () {
             await setupEnvironmentWith3DAsset('oneMesh.glb');
             await startXR();
 
-            let poseableAsset = testmodel().find(testmodel().moments[0].poseableAssetIds[0]);
-            let cubePos = testmodel().assetPoses.find(p => p.name == "Cube" && poseableAsset.poseIds.includes(p.id));
+            let poseableAsset = testmodel().poseableAssets[0]
+            let cubePos = testmodel().assetPoses.find(p => p.name == "Cube" && p.parentId == poseableAsset.id);
             expect(cubePos.x).toBeCloseTo(0.6, 3);
             expect(cubePos.y).toBeCloseTo(0, 4);
             expect(cubePos.z).toBeCloseTo(-1, 4);
@@ -118,9 +119,11 @@ describe('Test XR Session', function () {
             await toggleMoveForward();
 
             await releaseXRTrigger(true);
+            expect(getTHREEObjectByName('Cube').userData.state).toBe('highlighted')
+            await moveXRController(true, 0, 0, -1);
             expect(getTHREEObjectByName('Cube').userData.state).toBe('idle')
 
-            cubePos = testmodel().assetPoses.find(p => p.name == "Cube" && poseableAsset.poseIds.includes(p.id));
+            cubePos = testmodel().assetPoses.find(p => p.name == "Cube" && p.parentId == poseableAsset.id);
             expect(cubePos.x).toBeCloseTo(0.6, 3);
             expect(cubePos.y).toBeCloseTo(0, 4);
             expect(cubePos.z).toBeCloseTo(0, 4);
@@ -134,9 +137,9 @@ describe('Test XR Session', function () {
             await setupEnvironmentWith3DAsset('oneMesh.glb');
             await startXR();
 
-            let poseableAsset = testmodel().find(testmodel().moments[0].poseableAssetIds[0]);
+            let poseableAsset = testmodel().poseableAssets[0]
 
-            let cubePos = testmodel().assetPoses.find(p => p.name == "Cube" && poseableAsset.poseIds.includes(p.id));
+            let cubePos = testmodel().assetPoses.find(p => p.name == "Cube" && p.parentId == poseableAsset.id);
             expect(cubePos.x).toBeCloseTo(0.6, 3);
             expect(cubePos.y).toBeCloseTo(0, 4);
             expect(cubePos.z).toBeCloseTo(-1, 4);
@@ -162,7 +165,7 @@ describe('Test XR Session', function () {
             await releaseXRTrigger(true);
             expect(getTHREEObjectByName('Cube').userData.state).toBe('highlighted')
 
-            cubePos = testmodel().assetPoses.find(p => p.name == "Cube" && poseableAsset.poseIds.includes(p.id));
+            cubePos = testmodel().assetPoses.find(p => p.name == "Cube" && p.parentId == poseableAsset.id);
             expect(cubePos.x).toBeCloseTo(0.6, 3);
             expect(cubePos.y).toBeCloseTo(0, 4);
             expect(cubePos.z).toBeCloseTo(-1, 4);

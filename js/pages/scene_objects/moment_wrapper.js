@@ -29,10 +29,11 @@ export function MomentWrapper(parent, audioListener) {
 
             parent.add(mStoryGroup);
 
-            await mPhotosphereWrapper.update(moment.photosphereId, model, assetUtil);
+            let photosphere = model.photospheres.find(p => p.momentId == momentId);
+            await mPhotosphereWrapper.update(photosphere, model, assetUtil);
 
             await SceneUtil.updateWrapperArray(mPoseableAssetWrappers,
-                mModel.poseableAssets.filter(a => moment.poseableAssetIds.includes(a.id)),
+                mModel.poseableAssets.filter(p => p.momentId == momentId),
                 mModel,
                 assetUtil,
                 async (poseableAsset) => {
@@ -41,7 +42,7 @@ export function MomentWrapper(parent, audioListener) {
                 });
 
             await SceneUtil.updateWrapperArray(mPictureWrappers,
-                mModel.pictures.filter(p => moment.pictureIds.includes(p.id)),
+                mModel.pictures.filter(p => p.momentId == moment.id),
                 mModel,
                 assetUtil,
                 async (picture) => {
@@ -50,7 +51,7 @@ export function MomentWrapper(parent, audioListener) {
                 });
 
             await SceneUtil.updateWrapperArray(mAudioWrappers,
-                mModel.audios.filter(a => moment.audioIds.includes(a.id) && !a.attachedId),
+                mModel.audios.filter(a => a.momentId == moment.id && !a.attachedId),
                 mModel,
                 assetUtil,
                 async (audio) => {
@@ -59,7 +60,7 @@ export function MomentWrapper(parent, audioListener) {
                 });
 
             await SceneUtil.updateWrapperArray(mTeleportWrappers,
-                mModel.teleports.filter(t => moment.teleportIds.includes(t.id) && !t.attachedId),
+                mModel.teleports.filter(t => t.momentId == moment.id && !t.attachedId),
                 mModel,
                 assetUtil,
                 async (teleport) => {

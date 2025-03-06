@@ -1,9 +1,9 @@
 import * as THREE from 'three';
-import { Data } from "../../data.js";
-import { InteractionTargetInterface } from "./interaction_target_interface.js";
 import { BrushToolButtons, SurfaceToolButtons, ToolButtons } from '../../constants.js';
+import { Data } from "../../data.js";
 import { CanvasUtil } from '../../utils/canvas_util.js';
 import { Util } from '../../utils/utility.js';
+import { InteractionTargetInterface } from "./interaction_target_interface.js";
 
 const DEFAULT_TEXTURE = 'assets/images/default_sphere_texture.png';
 
@@ -46,8 +46,6 @@ export function PhotosphereWrapper(parent) {
     let mBlurCtx = mBlur.getContext('2d')
     let mColor = document.createElement('canvas');
     let mColorCtx = mColor.getContext('2d')
-    let mOriginalBlur = document.createElement('canvas');
-    let mOriginalColor = document.createElement('canvas');
     let mSurfacesOverlay = document.createElement('canvas');
     mSurfacesOverlay.height = 256;
     mSurfacesOverlay.width = 512;
@@ -66,19 +64,18 @@ export function PhotosphereWrapper(parent) {
     const mPlaneHelper = new THREE.Plane();
     const mRayHelper = new THREE.Ray();
 
-    async function update(photosphereId, model, assetUtil) {
-        mPhotosphere = model.photospheres.find(p => p.id == photosphereId);
-        mSurfaces = model.surfaces.filter(s => mPhotosphere.surfaceIds.includes(s.id));
-
+    async function update(photosphere, model, assetUtil) {
+        mPhotosphere = photosphere;
         mModel = model;
 
-        if (!mPhotosphere.enabled) {
+        if (!mPhotosphere || !mPhotosphere.enabled) {
             mParent.remove(mSphere);
             return;
         } else {
             mParent.add(mSphere)
         }
 
+        mSurfaces = model.surfaces.filter(s => s.photosphereId == mPhotosphere.id);
         mSurfacePivots = mSurfaces.map(s => {
             let center = new THREE.Vector3();
             for (let i = 0; i < s.points.length; i += 2) {
@@ -101,25 +98,12 @@ export function PhotosphereWrapper(parent) {
         // TODO: Might need to fix performance here. 
         updateMesh();
 
-        if (mPhotosphere.imageAssetId) {
-            mImage = await assetUtil.loadImage(mPhotosphere.imageAssetId);
+        if (mPhotosphere.assetId) {
+            mImage = await assetUtil.loadImage(mPhotosphere.assetId);
         } else {
             mImage = await (new THREE.ImageLoader()).loadAsync(DEFAULT_TEXTURE)
         }
-        mOriginalBlur = await assetUtil.loadImage(mPhotosphere.blurAssetId);
-        if (mOriginalBlur) {
-            mBlur.height = mOriginalBlur.height
-            mBlur.width = mOriginalBlur.width
-            resetBlur();
-        }
-
-        mOriginalColor = await assetUtil.loadImage(mPhotosphere.colorAssetId);
-        if (mOriginalColor) {
-            mColor.height = mOriginalColor.height
-            mColor.width = mOriginalColor.width
-            resetColor();
-        }
-        mSphere.userData.id = photosphereId;
+        mSphere.userData.id = mPhotosphere.id;
 
         drawTexture();
     }
@@ -228,7 +212,7 @@ export function PhotosphereWrapper(parent) {
     }
 
     function getId() {
-        return mPhotosphere.id;
+        return mPhotosphere?.id;
     }
 
     function remove() {
@@ -238,6 +222,8 @@ export function PhotosphereWrapper(parent) {
     // TODO: This is terrible and needs to be done better
     let mTool = ToolButtons.MOVE;
     function getTargets(ray, toolMode) {
+        if (!mPhotosphere) return [];
+
         let lastTool = mTool;
         mTool = toolMode.tool;
         if (mTool != lastTool) { drawTexture() }
@@ -345,7 +331,6 @@ export function PhotosphereWrapper(parent) {
 
     function resetBlur() {
         mBlurCtx.clearRect(0, 0, mBlur.width, mBlur.height);
-        mBlurCtx.drawImage(mOriginalBlur, 0, 0);
     }
 
     function drawColor(u, v, brushWidth, color) {

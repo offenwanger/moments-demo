@@ -1,12 +1,12 @@
 import * as THREE from 'three';
-import { InteractionType, ModelUpdateCommands, SurfaceToolButtons } from "../../../constants.js";
+import { InteractionType, SurfaceToolButtons } from "../../../constants.js";
 import { Data } from "../../../data.js";
 import { IdUtil } from "../../../utils/id_util.js";
 import { Util } from "../../../utils/utility.js";
-import { ModelUpdate } from "../model_controller.js";
 
 // defines simplify2
 import '../../../../lib/simplify2.js';
+import { Action, ActionType, Transaction } from '../../../utils/transaction_util.js';
 
 function pointerMove(raycaster, orientation, isPrimary, interactionState, toolMode, model, sessionController, sceneController, helperPointController) {
 
@@ -65,7 +65,9 @@ function pointerDown(raycaster, orientation, isPrimary, interactionState, toolMo
 
 function pointerUp(raycaster, orientation, isPrimary, interactionState, toolMode, model, sessionController, sceneController, helperPointController) {
     // secondary controller has no effect.
-    if (!isPrimary) return [];
+    let reaction;
+
+    if (!isPrimary) return reaction;
 
     let type = interactionState.type;
     let data = interactionState.data;
@@ -73,16 +75,13 @@ function pointerUp(raycaster, orientation, isPrimary, interactionState, toolMode
     interactionState.type = InteractionType.NONE;
     interactionState.data = {};
 
-    let updates = []
-
     helperPointController.hidePoint();
 
+    let actions = []
     if (type == InteractionType.BRUSHING) {
         // we are either flattening or resetting.
-
-        let photosphereId = data.target.getId();
-        let photosphere = model.photospheres.find(p => p.id == photosphereId);
-        if (!photosphere) { console.error('invalid id: ' + photosphereId); return []; }
+        let photosphere = model.photospheres.find(p => p.id == data.target.getId());
+        if (!photosphere) { console.error('invalid id: ' + data.target.getId()); return []; }
 
         // for both flatten and reset, clear circled points out of 
         // other surfaces
@@ -111,8 +110,6 @@ function pointerUp(raycaster, orientation, isPrimary, interactionState, toolMode
 
         let otherSurfaces = model.surfaces.filter(s => photosphere.surfaceIds.includes(s.id));
         for (let s of otherSurfaces) {
-            let u = []
-
             let points = []
             for (let shape of shapes) {
                 for (let i = 0; i < s.points.length; i += 2) {
@@ -123,21 +120,16 @@ function pointerUp(raycaster, orientation, isPrimary, interactionState, toolMode
                 }
             }
             if (points.length == 0) {
-                u = [new ModelUpdate({ id: s.id }, ModelUpdateCommands.DELETE)]
+                actions.push(new Action(ActionType.DELETE, s.id));
             } else if (points.length != s.points.length) {
-                u.push(new ModelUpdate({
-                    id: s.id,
-                    points,
-                }));
+                actions.push(new Action(ActionType.UPDATE, s.id, { points }));
                 let bpi = s.basePointIndices.filter(i => !includedIndices.includes(i));
                 if (bpi.length != s.basePointIndices.length) {
-                    u.push(new ModelUpdate({
-                        id: s.id,
+                    actions.push(new Action(ActionType.UPDATE, s.id, {
                         basePointIndices: bpi,
                     }));
                 }
             }
-            updates.push(...u);
         }
 
         // if we are flattening, create the new surface.
@@ -150,14 +142,10 @@ function pointerUp(raycaster, orientation, isPrimary, interactionState, toolMode
                 normal.add(Util.uvToPoint(points[i], points[i + 1]));
             }
             normal.normalize();
-            let surfaceId = IdUtil.getUniqueId(Data.PhotosphereSurface);
-            updates.push(
-                new ModelUpdate({
-                    id: photosphereId,
-                    surfaceIds: photosphere.surfaceIds.concat([surfaceId]),
-                }),
-                new ModelUpdate({
-                    id: surfaceId,
+            actions.push(
+                new Action(ActionType.CREATE,
+                    IdUtil.getUniqueId(Data.PhotosphereSurface), {
+                    photosphereId,
                     points,
                     normal: normal.toArray(),
                     basePointIndices: includedIndices,
@@ -167,11 +155,14 @@ function pointerUp(raycaster, orientation, isPrimary, interactionState, toolMode
         }
     } else if (type == InteractionType.ONE_HAND_MOVE) {
         let { normal, dist } = data.target.getNormalAndDist();
-        let id = data.target.getId();
-        updates.push(new ModelUpdate({ id, normal, dist }));
+        actions.push(new Action(ActionType.UPDATE,
+            data.target.getId(), {
+            normal, dist
+        }));
     }
+    if (actions.length) reaction = new Transaction(actions);
 
-    return updates;
+    return reaction;
 }
 
 function startOneHandMove(raycaster, orientation, target, interactionState) {

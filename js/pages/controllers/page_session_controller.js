@@ -36,6 +36,7 @@ export function PageSessionController(parentContainer) {
     const mMenuHelper = new THREE.Mesh(new THREE.BoxGeometry(0.0001, 0.0001, 0.0001));
     mPageCamera.add(mMenuHelper);
 
+    let mOrbitControlsDragging = false;
     const mOrbitControls = new OrbitControls(mPageCamera, mPageRenderer.domElement);
     mOrbitControls.enableKeys = true;
     mOrbitControls.minDistance = 1;
@@ -43,6 +44,8 @@ export function PageSessionController(parentContainer) {
     mOrbitControls.enableZoom = false;
     mOrbitControls.target.set(0, 2, -2);
     mOrbitControls.update();
+    mOrbitControls.addEventListener('start', () => mOrbitControlsDragging = true);
+    mOrbitControls.addEventListener('end', () => mOrbitControlsDragging = false);
     mOrbitControls.addEventListener('change', () => {
         mPageCamera.updateMatrixWorld()
 
@@ -58,6 +61,12 @@ export function PageSessionController(parentContainer) {
         mMenuContainer.position.copy(result);
         mMenuHelper.getWorldQuaternion(mMenuContainer.quaternion);
     })
+
+    function updateState(interactionState) {
+        if (!mOrbitControlsDragging) {
+            mOrbitControls.enabled = !interactionState.primaryHovered;
+        }
+    }
 
     function resize(width, height) {
         if (!mPageRenderer) return;
@@ -143,7 +152,7 @@ export function PageSessionController(parentContainer) {
         return { pos, dir };
     }
 
-    this.hovered = (hovered, isPrimary) => { mOrbitControls.enabled = !hovered }
+    this.updateState = updateState;
     this.resize = resize;
     this.setUserPositionAndDirection = setUserPositionAndDirection;
     this.getUserPositionAndDirection = getUserPositionAndDirection;

@@ -1,9 +1,9 @@
 import * as THREE from "three";
-import { TELEPORT_COMMAND, InteractionType } from "../../../constants.js";
-import { Util } from "../../../utils/utility.js";
-import { ModelUpdate } from "../model_controller.js";
-import { IdUtil } from "../../../utils/id_util.js";
+import { InteractionType, TELEPORT_COMMAND } from "../../../constants.js";
 import { Data } from "../../../data.js";
+import { IdUtil } from "../../../utils/id_util.js";
+import { Action, ActionType, Transaction } from "../../../utils/transaction_util.js";
+import { Util } from "../../../utils/utility.js";
 import { InteractionTargetInterface } from "../../scene_objects/interaction_target_interface.js";
 
 let mIKSolver;
@@ -65,6 +65,7 @@ function pointerMove(raycaster, orientation, isPrimary, interactionState, toolMo
             updateTeleportTarget(raycaster, sceneController);
         }
 
+        // if there was no teleport target look for other targets
         if (targets.length == 0) {
             let moveClass = IdUtil.getClass(interactionState.data.rootTarget.getId());
             targets = getDropTargets(raycaster, toolMode, moveClass, sceneController);
@@ -173,7 +174,7 @@ function pointerUp(raycaster, orientation, isPrimary, interactionState, toolMode
     interactionState.type = InteractionType.NONE;
     interactionState.data = {};
 
-    let updates = []
+    let reaction;
 
     if (type == InteractionType.ONE_HAND_MOVE) {
         // idle the hovered
@@ -187,10 +188,10 @@ function pointerUp(raycaster, orientation, isPrimary, interactionState, toolMode
             // TODO: Update this to check if an item has a teleport attached. 
             let target = getTeleportDropTarget(raycaster);
             if (target) targets = [target];
-            updates = [{
-                command: TELEPORT_COMMAND,
+            reaction = {
+                type: TELEPORT_COMMAND,
                 id: data.rootTarget.getId(),
-            }]
+            };
         }
 
         if (targets.length == 0) {
@@ -200,42 +201,45 @@ function pointerUp(raycaster, orientation, isPrimary, interactionState, toolMode
             if (targets.length > 0) {
                 let closest = Util.getClosestTarget(raycaster.ray, targets);
                 let targetId = closest.getId();
-                updates = [new ModelUpdate({
-                    id: data.rootTarget.getId(),
-                    attachedId: targetId
-                })];
+                reaction = new Transaction([
+                    new Action(ActionType.UPDATE, data.rootTarget.getId(), {
+                        attachedId: targetId
+                    })
+                ]);
             }
         }
 
         if (targets.length == 0) {
             let newPosition = data.rootTarget.getLocalPosition();
-            let updateData = {
-                id: data.rootTarget.getId(),
+            let id = data.rootTarget.getId();
+            let params = {
                 x: newPosition.x,
                 y: newPosition.y,
                 z: newPosition.z,
             }
-            let cls = IdUtil.getClass(updateData.id)
+            let cls = IdUtil.getClass(id)
             if (cls == Data.AssetPose || cls == Data.Picture) {
-                updateData.orientation = data.rootTarget.getLocalOrientation().toArray();
+                params.orientation = data.rootTarget.getLocalOrientation().toArray();
             }
-            updates = [new ModelUpdate(updateData)]
+            reaction = new Transaction([
+                new Action(ActionType.UPDATE, id, params)
+            ]);
         }
     } else if (type == InteractionType.TWO_HAND_MOVE) {
         let newPosition = data.rootTarget.getLocalPosition();
-        updates = [new ModelUpdate({
-            id: data.rootTarget.getId(),
-            x: newPosition.x,
-            y: newPosition.y,
-            z: newPosition.z,
-            orientation: data.rootTarget.getLocalOrientation().toArray(),
-            scale: data.rootTarget.getScale()
-        })];
+        reaction = new Transaction([
+            new Action(ActionType.UPDATE, data.rootTarget.getId(), {
+                x: newPosition.x,
+                y: newPosition.y,
+                z: newPosition.z,
+                orientation: data.rootTarget.getLocalOrientation().toArray(),
+                scale: data.rootTarget.getScale()
+            })
+        ]);
     } else if (type == InteractionType.TWO_HAND_POSE) {
-        updates = data.affectedTargets.map(t => {
+        let actions = data.affectedTargets.map(t => {
             let position = t.getLocalPosition();
-            return new ModelUpdate({
-                id: t.getId(),
+            return new Action(ActionType.UPDATE, t.getId, {
                 x: position.x,
                 y: position.y,
                 z: position.z,
@@ -246,16 +250,18 @@ function pointerUp(raycaster, orientation, isPrimary, interactionState, toolMode
         if (data.affectedTargets[0]) {
             let root = data.affectedTargets[0].getRoot();
             let position = root.getLocalPosition();
-            updates.push(new ModelUpdate({
-                id: root.getId(),
+            actions.push(new Action(ActionType.UPDATE, root.getId(), {
                 x: position.x,
                 y: position.y,
                 z: position.z,
                 orientation: root.getLocalOrientation().toArray(),
             }))
         }
+
         if (mIKSolver) sceneController.getScene().remove(mIKSolver);
         mIKSolver = null
+
+        reaction = new Transaction(actions);
     }
 
     if (mCCDIKHelper) {
@@ -265,7 +271,7 @@ function pointerUp(raycaster, orientation, isPrimary, interactionState, toolMode
 
     sceneController.getScene().remove(mTeleportTarget)
 
-    return updates;
+    return reaction;
 }
 
 

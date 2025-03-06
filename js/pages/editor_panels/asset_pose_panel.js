@@ -9,7 +9,6 @@ export function AssetPosePanel(container) {
     let mModel = new Data.StoryModel();
     let mAssetPose = new Data.AssetPose();
     let mAssetPoseId = null;
-    let mPoseableAssetId = null;
 
     let mPanelContainer = document.createElement('div');
     container.appendChild(mPanelContainer); hide();
@@ -18,7 +17,7 @@ export function AssetPosePanel(container) {
         .setId('assetpose-back-button')
         .setLabel("<- Back")
         .setOnClick(async () => {
-            await mNavigationCallback(mPoseableAssetId);
+            await mNavigationCallback(mAssetPose.parentId);
         });
 
     let mNameDisplay = document.createElement('div');
@@ -57,10 +56,6 @@ export function AssetPosePanel(container) {
         mAssetPose = mModel.find(assetPoseId);
 
         mNameDisplay.innerHTML = mAssetPose.name;
-
-        let posableAsset = mModel.poseableAssets.find(p => p.poseIds.includes(mAssetPoseId));
-        if (!posableAsset) { console.error("PosableAsset not found!"); }
-        else mPoseableAssetId = posableAsset.id;
 
         mPositionXInput.setText(Math.round(mAssetPose.x * 1000) / 1000);
         mPositionYInput.setText(Math.round(mAssetPose.y * 1000) / 1000);

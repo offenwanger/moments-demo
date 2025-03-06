@@ -1,20 +1,20 @@
 import * as THREE from "three";
 import { ASSET_UPDATE_COMMAND, AssetTypes, AttributeButtons, BrushToolButtons, InteractionType, ItemButtons, MenuNavButtons, RecordToolButtons, SurfaceToolButtons, TELEPORT_COMMAND, ToolButtons } from "../../constants.js";
 import { Data } from "../../data.js";
+import { DataUtil } from "../../utils/data_util.js";
 import { IdUtil } from "../../utils/id_util.js";
+import { Action, ActionType, Transaction } from "../../utils/transaction_util.js";
 import { Util } from "../../utils/utility.js";
 import { HelperPointController } from "./helper_point_controller.js";
 import { MenuController } from "./menu_controllers/menu_controller.js";
-import { ModelUpdate } from "./model_controller.js";
 import { PageSessionController } from './page_session_controller.js';
 import { SceneController } from "./scene_controller.js";
 import { ToolMode } from "./system_state.js";
 import { BrushToolHandler } from "./tool_handlers/brush_tool_handler.js";
 import { MoveToolHandler } from "./tool_handlers/move_tool_handler.js";
-import { XRSessionController } from './xr_controllers/xr_session_controller.js';
-import { DataUtil } from "../../utils/data_util.js";
-import { SurfaceToolHandler } from "./tool_handlers/surface_tool_handler.js";
 import { RecorderToolHandler } from "./tool_handlers/recorder_tool_handler.js";
+import { SurfaceToolHandler } from "./tool_handlers/surface_tool_handler.js";
+import { XRSessionController } from './xr_controllers/xr_session_controller.js';
 
 /**
  * Handles the display of the story, including the event handling and 
@@ -199,7 +199,7 @@ export function SceneInterfaceController(parentContainer, mWebsocketController, 
     async function onPointerUp(raycaster, orientation = null, isPrimary = true) {
         let handler = getToolHandler(mToolMode.tool)
         if (!handler) { console.error("Tool not handled: " + mToolMode.tool); return; }
-        let updates = handler.pointerUp(
+        let reaction = handler.pointerUp(
             raycaster,
             orientation,
             isPrimary,
@@ -210,19 +210,17 @@ export function SceneInterfaceController(parentContainer, mWebsocketController, 
             mSceneController,
             mHelperPointController);
 
-        let modelUpdates = updates.filter(u => u instanceof ModelUpdate)
-        if (modelUpdates.length > 0) await mModelUpdateCallback(modelUpdates);
 
-        let assetUpdates = updates.filter(u => u.command == ASSET_UPDATE_COMMAND);
-        for (let update of assetUpdates) {
-            await mAssetUpdateCallback(update.id, await update.dataPromise)
-        };
-
-        let teleportCommand = updates.filter(u => u.command == TELEPORT_COMMAND);
-        if (teleportCommand[0]) {
-            if (teleportCommand.length > 1) { console.error('Cant teleport more than once!'); }
-            teleportCommand = teleportCommand[0];
-            await mTeleportCallback(teleportCommand.id);
+        if (!reaction) {
+            // no reaction, do nothing.
+        } else if (reaction instanceof Transaction) {
+            await mModelUpdateCallback(reaction);
+        } else if (reaction.type == ASSET_UPDATE_COMMAND) {
+            await mAssetUpdateCallback(reaction.id, await reaction.dataPromise)
+        } else if (reaction.type == TELEPORT_COMMAND) {
+            await mTeleportCallback(reaction.id);
+        } else {
+            console.error('Invalid reaction', reaction);
         }
     }
 
@@ -266,21 +264,21 @@ export function SceneInterfaceController(parentContainer, mWebsocketController, 
         } else if (buttonId == AttributeButtons.SPHERE_SCALE_UP) {
             let moment = mModel.moments.find(m => m.id == mCurrentMomentId);
             if (!moment) { console.error("invalid moment id: " + mCurrentMomentId); return; }
-            let photosphere = mModel.photospheres.find(p => p.id == moment.photosphereId);
-            if (!photosphere) { console.error("invalid photosphere id: " + moment.photosphereId); return; }
-            await mModelUpdateCallback([new ModelUpdate({
-                id: moment.photosphereId,
+            let photosphere = mModel.photospheres.find(p => p.momentId == moment.id);
+            if (!photosphere) { console.error("invalid moment, no photosphere: " + moment.id); return; }
+            await mModelUpdateCallback(new Transaction([new Action(ActionType.UPDATE,
+                photosphere.id, {
                 scale: Math.min(photosphere.scale + 0.1, 5),
-            })]);
+            })]));
         } else if (buttonId == AttributeButtons.SPHERE_SCALE_DOWN) {
             let moment = mModel.moments.find(m => m.id == mCurrentMomentId);
             if (!moment) { console.error("invalid moment id: " + mCurrentMomentId); return; }
-            let photosphere = mModel.photospheres.find(p => p.id == moment.photosphereId);
-            if (!photosphere) { console.error("invalid photosphere id: " + moment.photosphereId); return; }
-            await mModelUpdateCallback([new ModelUpdate({
-                id: moment.photosphereId,
+            let photosphere = mModel.photospheres.find(p => p.momentId == moment.id);
+            if (!photosphere) { console.error("invalid moment id, no photosphere: " + moment.id); return; }
+            await mModelUpdateCallback(new Transaction([new Action(ActionType.UPDATE,
+                photosphere.id, {
                 scale: Math.max(photosphere.scale - 0.1, 0.5),
-            })]);
+            })]));
         } else if (buttonId == RecordToolButtons.REWIND) {
             mAudioRecorder.rewindAudioFile();
         } else if (buttonId == RecordToolButtons.PLAYPAUSE) {
@@ -297,47 +295,48 @@ export function SceneInterfaceController(parentContainer, mWebsocketController, 
                 let audioBlob = mAudioRecorder.getAudioBlob();
                 mAudioRecorder.clearRecorder();
                 let assetId = IdUtil.getUniqueId(Data.Asset);
-                let filename = assetId + '.weba';
+                let filename = assetId + mAudioRecorder.getExtension();
                 await mAssetCreateCallback(assetId, filename, AssetTypes.AUDIO, audioBlob);
 
-                await mModelUpdateCallback(DataUtil.getAudioCreationUpdates(mModel, mCurrentMomentId, assetId, point));
+                let actions = DataUtil.getAudioCreationActions(mModel, mCurrentMomentId, assetId, point);
+                await mModelUpdateCallback(new Transaction(actions));
             }
         } else if (buttonId == RecordToolButtons.DELETE) {
             mAudioRecorder.clearRecorder();
         } else if (buttonId == AttributeButtons.SPHERE_TOGGLE) {
             let moment = mModel.moments.find(m => m.id == mCurrentMomentId);
             if (!moment) { console.error("invalid moment id: " + mCurrentMomentId); return; }
-            let photosphere = mModel.photospheres.find(p => p.id == moment.photosphereId);
-            if (!photosphere) { console.error("invalid photosphere id: " + moment.photosphereId); return; }
-            await mModelUpdateCallback([new ModelUpdate({
-                id: moment.photosphereId,
+            let photosphere = mModel.photospheres.find(p => p.momentId == moment.id);
+            if (!photosphere) { console.error("invalid moment id, no photosphere: " + moment.id); return; }
+            await mModelUpdateCallback(new Transaction([new Action(ActionType.UPDATE,
+                photosphere.id, {
                 enabled: !photosphere.enabled
-            })]);
+            })]));
         } else if (IdUtil.getClass(buttonId) == Data.Asset) {
-            let parentMoment = mModel.moments.find(m => m.id == mCurrentMomentId);
-            if (!parentMoment) { console.error("invalid moment id: " + mCurrentMomentId); return; }
+            let photosphere = mModel.photospheres.find(p => p.momentId == mCurrentMomentId);
+            if (!photosphere) { console.error("invalid moment, no photosphere: " + mCurrentMomentId); return; }
             let point = target.getIntersection().point;
 
             if (menuId == MenuNavButtons.SPHERE_IMAGE) {
-                await mModelUpdateCallback([new ModelUpdate({
-                    id: parentMoment.photosphereId,
-                    imageAssetId: buttonId
-                })]);
+                await mModelUpdateCallback(new Transaction([new Action(ActionType.UPDATE,
+                    photosphere.id, {
+                    assetId: buttonId
+                })]));
             } else if (menuId == MenuNavButtons.ADD_MODEL) {
                 let assetId = buttonId;
-                let updates = await DataUtil.getPoseableAssetCreationUpdates(mModel, mCurrentMomentId, assetId);
-                await mModelUpdateCallback(updates);
+                let actions = await DataUtil.getPoseableAssetCreationActions(mModel, mCurrentMomentId, assetId);
+                await mModelUpdateCallback(new Transaction(actions));
             } else if (menuId == MenuNavButtons.ADD_PICTURE) {
                 let assetId = buttonId;
-                let updates = await DataUtil.getPictureCreationUpdates(
+                let actions = await DataUtil.getPictureCreationActions(
                     mModel, mCurrentMomentId, assetId,
                     point, new THREE.Quaternion());
-                await mModelUpdateCallback(updates);
+                await mModelUpdateCallback(new Transaction(actions));
             } else if (menuId == MenuNavButtons.ADD_AUDIO) {
                 let assetId = buttonId;
-                let updates = await DataUtil.getAudioCreationUpdates(
+                let actions = await DataUtil.getAudioCreationActions(
                     mModel, mCurrentMomentId, assetId, point);
-                await mModelUpdateCallback(updates);
+                await mModelUpdateCallback(new Transaction(actions));
             } else {
                 console.error("not implimented!!");
             }
@@ -347,20 +346,14 @@ export function SceneInterfaceController(parentContainer, mWebsocketController, 
                 if (!parentMoment) { console.error("invalid moment id: " + mCurrentMomentId); return; }
                 let point = target.getIntersection().point;
                 let targetMoment = buttonId;
-                let id = IdUtil.getUniqueId(Data.Teleport);
-                parentMoment.teleportIds.push(id);
-
-                await mModelUpdateCallback([
-                    new ModelUpdate({
-                        id,
-                        momentId: targetMoment,
+                await mModelUpdateCallback(new Transaction([
+                    new Action(ActionType.CREATE,
+                        IdUtil.getUniqueId(Data.Teleport), {
+                        momentId: parentMoment.id,
+                        destinationId: targetMoment,
                         x: point.x, y: point.y, z: point.z,
-                    }),
-                    new ModelUpdate({
-                        id: parentMoment.id,
-                        teleportIds: parentMoment.teleportIds,
-                    })],
-                );
+                    })
+                ]));
             } else {
                 console.error("not implimented!!");
             }

@@ -60,7 +60,7 @@ export function XRSessionController() {
         await mXRInputController.pollInteractionState();
     }
 
-    this.hovered = (hovered, isPrimary) => { }
+    this.updateState = (interactionState) => { }
     this.sessionStart = sessionStart;
     this.onSessionEnd = (func) => mOnSessionEndCallback = func;
     this.onUserMoved = (func) => { mUserMovedCallback = func }

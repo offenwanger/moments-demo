@@ -1,39 +1,49 @@
-import { ModelUpdateCommands } from "../../constants.js";
 import { Data } from "../../data.js";
 import { IdUtil } from "../../utils/id_util.js";
+import { ActionType } from "../../utils/transaction_util.js";
 
 export function ModelController(story = new Data.StoryModel()) {
     let mModel = story;
     let mModelIndex = story.getIndex();
     let mUpdateListeners = [];
 
-    async function applyUpdates(updates) {
-        for (let update of updates) {
-            if (!update) { console.error('Invalid update, no data'); continue; }
-            if (update.command == ModelUpdateCommands.DELETE) {
-                mModel.delete(update.data.id);
-                delete mModelIndex[update.data.id];
-            } else if (update.command == ModelUpdateCommands.CREATE_OR_UPDATE) {
-                if (!update.data.id || !IdUtil.getClass(update.data.id)) { console.error('Invalid update, invalid id: ' + update.data.id); continue; }
+    async function applyTransaction(transaction) {
+        for (let action of transaction.actions) {
+            if (!action) { console.error('Invalid action, no data'); continue; }
+            if (action.type == ActionType.DELETE) {
+                mModel.delete(action.id);
+                delete mModelIndex[action.id];
+            } else if (action.type == ActionType.CREATE) {
+                if (!action.id || !IdUtil.getClass(action.id)) { console.error('Invalid action, invalid id: ' + action.id); continue; }
 
-                let item = mModelIndex[update.data.id];
+                let item = mModelIndex[action.id];
                 if (!item) {
-                    let dataClass = IdUtil.getClass(update.data.id);
-                    if (!dataClass) console.error("Invalid id: " + update.data.id);
-                    _create(dataClass, update.data);
+                    let dataClass = IdUtil.getClass(action.id);
+                    if (!dataClass) console.error("Invalid id: " + action.id);
+                    _create(dataClass, action.id, action.params);
                 } else {
-                    _update(update.data.id, update.data);
+                    console.error('Cannot apply create, item already exists: ' + action.id);
+                }
+            } else if (action.type == ActionType.UPDATE) {
+                if (!action.id || !IdUtil.getClass(action.id)) { console.error('Invalid action, invalid id: ' + action.id); continue; }
+
+                let item = mModelIndex[action.id];
+                if (item) {
+                    _update(action.id, action.params);
+                } else {
+                    console.error('Item does not exist, cannot update: ' + action.id);
                 }
             } else {
-                console.error("Invalid update: " + JSON.stringify(update));
+                console.error("Invalid action: " + JSON.stringify(action));
             }
         }
 
-        for (let callback of mUpdateListeners) await callback(updates, mModel);
+        for (let callback of mUpdateListeners) await callback(transaction, mModel);
     }
 
-    function _create(dataClass, attrs) {
+    function _create(dataClass, id, attrs) {
         let item = new dataClass();
+        item.id = id;
         for (let key of Object.keys(attrs)) {
             if (!Object.hasOwn(item, key)) { console.error("Invalid attr: " + key); continue; }
             item[key] = attrs[key];
@@ -78,18 +88,9 @@ export function ModelController(story = new Data.StoryModel()) {
     }
 
     return {
-        applyUpdates,
+        applyTransaction,
         getModel: () => mModel.clone(),
         addUpdateListener: (callback) => mUpdateListeners.push(callback),
         removeUpdateListener: (callback) => mUpdateListeners = mUpdateListeners.filter(c => c != callback),
-    }
-}
-
-export function ModelUpdate(data, command = ModelUpdateCommands.CREATE_OR_UPDATE) {
-    this.command = command;
-    this.data = data;
-    if (!this.data.id) {
-        // we alert here but don't terminate execution.
-        console.error('Invalid data, no id: ' + data);
     }
 }

@@ -1,8 +1,8 @@
 import * as THREE from 'three';
+import { ToolButtons } from '../../constants.js';
 import { Data } from "../../data.js";
 import { GLTKUtil } from '../../utils/gltk_util.js';
 import { InteractionTargetInterface } from './interaction_target_interface.js';
-import { ToolButtons } from '../../constants.js';
 
 export function PoseableAssetWrapper(parent, audioListener) {
     let mModel = new Data.StoryModel();
@@ -37,7 +37,7 @@ export function PoseableAssetWrapper(parent, audioListener) {
     async function update(poseableAsset, model, assetUtil) {
         mModel = model;
 
-        mPoses = mModel.assetPoses.filter(p => poseableAsset.poseIds.includes(p.id));
+        mPoses = mModel.assetPoses.filter(p => p.parentId == poseableAsset.id);
 
         let oldModel = mPoseableAsset;
         mPoseableAsset = poseableAsset;
@@ -90,6 +90,8 @@ export function PoseableAssetWrapper(parent, audioListener) {
             object.setRotationFromQuaternion(new THREE.Quaternion().fromArray(pose.orientation));
             object.position.set(pose.x, pose.y, pose.z);
             object.scale.set(pose.scale, pose.scale, pose.scale);
+            object.updateWorldMatrix()
+
             object.userData.id = pose.id;
             object.userData.state = 'idle';
 

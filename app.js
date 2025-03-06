@@ -111,17 +111,17 @@ sockserver.on('connection', client => {
         }
     });
 
-    client.on(ServerMessage.UPDATE_STORY, updates => {
+    client.on(ServerMessage.UPDATE_STORY, transaction => {
         if (!client.clientId) { console.error('Invalid init state!'); return; }
 
         // sending story update
         let story = sharedStories.find(s => s.participants.includes(client.clientId));
         if (!story) { console.error("No story found for story update!"); return; }
 
-        story.storyController.applyUpdates(updates);
+        story.storyController.applyTransaction(transaction);
 
         for (let pId of story.participants) {
-            if (pId != client.clientId) emitToId(pId, ServerMessage.UPDATE_STORY, updates);
+            if (pId != client.clientId) emitToId(pId, ServerMessage.UPDATE_STORY, transaction);
         }
     });
 

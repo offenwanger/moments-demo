@@ -66,9 +66,9 @@ export function MomentPanel(container) {
         if (!mMoment) console.error("Invalid id: " + momentId);
         mNameInput.setText(mMoment.name)
 
-        let photosphere = model.find(mMoment.photosphereId)
+        let photosphere = model.photospheres.find(p => p.momentId == momentId);
         if (photosphere) {
-            let asset = model.find(photosphere.imageAssetId);
+            let asset = model.assets.find(a => a.id == photosphere.assetId);
             if (asset) {
                 mPhotoSphereAssetButton.setLabel(asset.name);
             } else {
@@ -78,28 +78,28 @@ export function MomentPanel(container) {
             mPhotoSphereAssetButton.hide();
         }
 
-        let assets = model.poseableAssets.filter(a => mMoment.poseableAssetIds.includes(a.id));
+        let assets = model.poseableAssets.filter(p => p.momentId == mMoment.id);
         Util.setComponentListLength(mPoseableAssetsList, assets.length, () => new ButtonInput(mPoseableAssetsContainer))
         for (let i = 0; i < assets.length; i++) {
             mPoseableAssetsList[i].setId("poseable-asset-button-" + assets[i].id)
                 .setLabel(assets[i].name)
                 .setOnClick(async () => await mNavigationCallback(assets[i].id));
         }
-        let pictures = model.pictures.filter(p => mMoment.pictureIds.includes(p.id));
+        let pictures = model.pictures.filter(p => p.momentId == mMoment.id);
         Util.setComponentListLength(mPicturesList, pictures.length, () => new ButtonInput(mPicturesContainer))
         for (let i = 0; i < pictures.length; i++) {
             mPicturesList[i].setId("picture-button-" + pictures[i].id)
                 .setLabel(pictures[i].name)
                 .setOnClick(async () => await mNavigationCallback(pictures[i].id));
         }
-        let audios = model.audios.filter(a => mMoment.audioIds.includes(a.id));
+        let audios = model.audios.filter(a => a.momentId == mMoment.id);
         Util.setComponentListLength(mAudiosList, audios.length, () => new ButtonInput(mAudiosContainer))
         for (let i = 0; i < audios.length; i++) {
             mAudiosList[i].setId("audio-button-" + audios[i].id)
                 .setLabel(audios[i].name)
                 .setOnClick(async () => await mNavigationCallback(audios[i].id));
         }
-        let teleports = model.teleports.filter(t => mMoment.teleportIds.includes(t.id));
+        let teleports = model.teleports.filter(t => t.momentId == mMoment.id);
         Util.setComponentListLength(mTeleportsList, teleports.length, () => new ButtonInput(mTeleportsContainer))
         for (let i = 0; i < teleports.length; i++) {
             mTeleportsList[i].setId("teleport-button-" + teleports[i].id)

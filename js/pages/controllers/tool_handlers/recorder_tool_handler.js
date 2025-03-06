@@ -20,14 +20,14 @@ function pointerDown(raycaster, orientation, isPrimary, interactionState, toolMo
 
 function pointerUp(raycaster, orientation, isPrimary, interactionState, toolMode, model, sessionController, sceneController, helperPointController) {
     // stop recording. 
-    if (!mRecorder) { console.error('Recorder tool not initialized, no recorder.'); return []; }
-    if (!isPrimary) return []; // nothing for secondary controller to do.
-    if (interactionState.type != InteractionType.RECORDING) return [];
+    if (!mRecorder) { console.error('Recorder tool not initialized, no recorder.'); return null; }
+    if (!isPrimary) return null; // nothing for secondary controller to do.
+    if (interactionState.type != InteractionType.RECORDING) return null;
 
     mRecorder.stopRecording();
     interactionState.type = InteractionType.NONE;
 
-    return []
+    return null;
 }
 
 export const RecorderToolHandler = {

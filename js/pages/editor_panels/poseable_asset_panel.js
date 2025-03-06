@@ -10,7 +10,6 @@ export function PoseableAssetPanel(container) {
     let mModel = null;
     let mPoseableAssetId = null;
     let mPoseableAsset = null;
-    let mMomentId = null;
 
     let mPanelContainer = document.createElement("div")
     container.appendChild(mPanelContainer);
@@ -20,7 +19,7 @@ export function PoseableAssetPanel(container) {
         .setId('poseableAsset-back-button')
         .setLabel("<- Back")
         .setOnClick(async () => {
-            await mNavigationCallback(mMomentId);
+            await mNavigationCallback(mPoseableAsset.momentId);
         })
 
     let mNameInput = new TextInput(mPanelContainer)
@@ -47,13 +46,9 @@ export function PoseableAssetPanel(container) {
         mPoseableAssetId = poseableAssetId;
         mPoseableAsset = mModel.find(mPoseableAssetId);
 
-        let moment = mModel.moments.find(m => m.poseableAssetIds.includes(mPoseableAssetId));
-        if (!moment) { console.error("Moment not found!"); }
-        else mMomentId = moment.id;
-
         mNameInput.setText(mPoseableAsset.name);
 
-        let assetPoses = model.assetPoses.filter(p => mPoseableAsset.poseIds.includes(p.id));
+        let assetPoses = model.assetPoses.filter(p => p.parentId == poseableAssetId);
         Util.setComponentListLength(mAssetPosesList, assetPoses.length, () => new ButtonInput(mAssetPosesContainer))
         for (let i = 0; i < assetPoses.length; i++) {
             mAssetPosesList[i].setId("assetpose-button-" + assetPoses[i].id)

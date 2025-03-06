@@ -109,10 +109,6 @@ export const AttributeButtons = {
     SPHERE_SCALE_DOWN: 'decreaseScale',
 }
 
-export const ModelUpdateCommands = {
-    DELETE: 'delete',
-    CREATE_OR_UPDATE: 'createOrUpdate',
-}
 export const ASSET_UPDATE_COMMAND = 'assetUpdate'
 export const TELEPORT_COMMAND = 'updateCurrentMoment'
 

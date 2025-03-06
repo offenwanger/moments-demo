@@ -10,7 +10,6 @@ export function TeleportPanel(container) {
     let mModel = new Data.StoryModel();
     let mTeleport = new Data.Teleport();
     let mTeleportId = null;
-    let mMomentId = null;
 
     let mPanelContainer = document.createElement('div');
     container.appendChild(mPanelContainer);
@@ -20,7 +19,7 @@ export function TeleportPanel(container) {
         .setId('teleport-back-button')
         .setLabel("<- Back")
         .setOnClick(async () => {
-            await mNavigationCallback(mMomentId);
+            await mNavigationCallback(mTeleport.momentId);
         });
 
     let mNameInput = new TextInput(mPanelContainer)
@@ -60,10 +59,6 @@ export function TeleportPanel(container) {
         mModel = model;
         mTeleportId = teleportId;
         mTeleport = mModel.find(teleportId);
-
-        let moment = mModel.moments.find(m => m.teleportIds.includes(mTeleportId));
-        if (!moment) { console.error("Moment not found!"); }
-        else mMomentId = moment.id;
 
         mNameInput.setText(mTeleport.name);
 

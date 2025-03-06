@@ -14,7 +14,6 @@ export function PicturePanel(container) {
     let mPicture = new Data.Picture();
     let mPictureId = null;
     let mShowingEditor = false;
-    let mMomentId = null;
 
     let mPanelContainer = document.createElement('div');
     container.appendChild(mPanelContainer); hide();
@@ -24,7 +23,7 @@ export function PicturePanel(container) {
         .setLabel("<- Back")
         .setOnClick(async () => {
             if (mShowingEditor) await hideEditor();
-            await mNavigationCallback(mMomentId);
+            await mNavigationCallback(mPicture.momentId);
         });
 
     let mNameInput = new TextInput(mPanelContainer)
@@ -118,10 +117,6 @@ export function PicturePanel(container) {
         mPicture = mModel.find(pictureId);
 
         mNameInput.setText(mPicture.name);
-
-        let moment = mModel.moments.find(m => m.pictureIds.includes(mPictureId));
-        if (!moment) { console.error("Moment not found!"); }
-        else mMomentId = moment.id;
 
         mPositionXInput.setText(Math.round(mPicture.x * 1000) / 1000);
         mPositionYInput.setText(Math.round(mPicture.y * 1000) / 1000);
