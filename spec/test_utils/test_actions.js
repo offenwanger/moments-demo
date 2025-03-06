@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { Data } from '../../js/data.js';
 import { loadRealFile, mockFile, mockFileSystemDirectoryHandle } from './mock_filesystem.js';
-import { AssetTypes, MenuNavButtons } from '../../js/constants.js';
+import { AssetTypes, MenuNavButtons, RecordToolButtons, ToolButtons } from '../../js/constants.js';
 import { forceIntercept } from './mock_three.js';
 
 export function testmodel() {
@@ -42,6 +42,23 @@ export async function createAndOpenStoryMoment() {
     await window.mainFunc();
     expect(testmodel().moments.length).toBe(1);
     await clickButtonInput('#moment-button-' + testmodel().moments[0].id);
+
+    await global.test_rendererAccess.animationLoop();
+}
+
+export async function createAudioInCanvasEnvironment() {
+    await canvasClickMenuButton(ToolButtons.RECORD);
+
+    let canvas = document.querySelector('#main-canvas');
+    await pointermove(canvas.width / 2, canvas.height / 2);
+    await canvaspointerdown(canvas.width / 2, canvas.height / 2)
+    await pointermove(canvas.width / 2 - 100, canvas.height / 2);
+    await pointerup(canvas.width / 2 - 100, canvas.height / 2);
+
+    await canvasClickMenuButton(RecordToolButtons.ACCEPT);
+    await canvasClickMenuButton(ToolButtons.MOVE);
+
+    await global.test_rendererAccess.animationLoop();
 }
 
 export async function setupEnvironmentWith3DAsset(assetName) {
@@ -59,12 +76,40 @@ export async function setupEnvironmentWith3DAsset(assetName) {
     await canvasClickMenuButton(MenuNavButtons.ADD);
     await canvasClickMenuButton(MenuNavButtons.ADD_MODEL);
     await canvasClickMenuButton(assetId);
+    await canvasClickMenuButton(MenuNavButtons.BACK_BUTTON);
+    await canvasClickMenuButton(MenuNavButtons.BACK_BUTTON);
 
     expect(document.querySelector('#assets-container').children.length).toBeGreaterThan(0);
     document.querySelector('#assets-container').children[0].eventListeners.click();
 
-    expect(testmodel().moments[0].poseableAssetIds.length).toBe(1);
-    await clickButtonInput('#poseable-asset-button-' + testmodel().moments[0].poseableAssetIds[0]);
+    expect(testmodel().poseableAssets.length).toBe(1);
+    await clickButtonInput('#poseable-asset-button-' + testmodel().poseableAssets[0].id);
+
+    await global.test_rendererAccess.animationLoop();
+}
+
+export async function setupEnvironmentWithPicture() {
+    await createAndOpenStoryMoment();
+
+    // add the file to the 'choosen file' queue.
+    window.files.push(new mockFile('fakePicture', 'image/gif', 'data:image/gif;base64,R0lGODlhAQABAAAAACwAAAAAAQABAAAC'));
+    await clickButtonInput('#asset-manager-button');
+    await clickButtonInput('#asset-add-button');
+    await clickButtonInput('#dialog-close-button');
+
+    let assetId = testmodel().assets.find(a => a.type == AssetTypes.IMAGE).id;
+
+    await canvasClickMenuButton(MenuNavButtons.ADD);
+    await canvasClickMenuButton(MenuNavButtons.ADD_PICTURE);
+    await canvasClickMenuButton(assetId);
+    await canvasClickMenuButton(MenuNavButtons.BACK_BUTTON);
+    await canvasClickMenuButton(MenuNavButtons.BACK_BUTTON);
+
+    expect(document.querySelector('#assets-container').children.length).toBeGreaterThan(0);
+    document.querySelector('#assets-container').children[0].eventListeners.click();
+
+    expect(testmodel().pictures.length).toBe(1);
+    await clickButtonInput('#picture-button-' + testmodel().pictures[0].id);
 
     await global.test_rendererAccess.animationLoop();
 }
@@ -131,29 +176,38 @@ export function createStoryModel() {
     let model = new Data.StoryModel();
     model.name = "TestStory"
 
+    model.moments.push(new Data.Moment());
+
     let asset1 = new Data.Asset()
     let pose1 = new Data.AssetPose()
+    pose1.parentId = asset1.id;
     let pose2 = new Data.AssetPose()
+    pose2.parentId = asset1.id;
     let pose3 = new Data.AssetPose()
-    asset1.poseIds = [pose1.id, pose2.id, pose3.id];
+    pose3.parentId = asset1.id;
     let asset2 = new Data.Asset()
     let pose4 = new Data.AssetPose()
+    pose4.parentId = asset2.id;
     let pose5 = new Data.AssetPose()
-    asset2.poseIds = [pose4.id, pose5.id];
+    pose5.parentId = asset2.id;
 
     let imageAsset = new Data.Asset()
 
     let poseableAsset1 = new Data.PoseableAsset()
     poseableAsset1.assetId = asset1.id;
+    poseableAsset1.momentId = model.moments[0].id;
     let poseableAsset2 = new Data.PoseableAsset()
     poseableAsset2.assetId = asset1.id;
+    poseableAsset2.momentId = model.moments[0].id;
     let poseableAsset3 = new Data.PoseableAsset()
     poseableAsset3.assetId = asset1.id;
+    poseableAsset3.momentId = model.moments[0].id;
     model.poseableAssets.push(poseableAsset1);
     model.poseableAssets.push(poseableAsset2);
     model.poseableAssets.push(poseableAsset3);
 
     let picture = new Data.Picture();
+    picture.momentId = model.moments[0].id;
     model.pictures.push(picture);
 
     model.assets.push(asset1);
@@ -164,14 +218,6 @@ export function createStoryModel() {
     model.assetPoses.push(pose4);
     model.assetPoses.push(pose5);
     model.assets.push(imageAsset);
-
-    model.moments.push(new Data.Moment());
-
-    model.moments[0].pictureIds.push(picture.id);
-
-    model.moments[0].poseableAssetIds.push(poseableAsset1.id);
-    model.moments[0].poseableAssetIds.push(poseableAsset2.id);
-    model.moments[0].poseableAssetIds.push(poseableAsset3.id);
 
     return model;
 }

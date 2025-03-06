@@ -12,6 +12,7 @@ import fs from 'fs';
 import { dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { mockAudioContext } from './mock_audio_context.js';
+import { mockMediaRecorder } from './mock_media_recorder.js';
 import { mockServerSetup } from './mock_server.js';
 import { mockXR } from './mock_xr.js';
 
@@ -38,7 +39,7 @@ export async function setup() {
 
     global.indexedDB = new mockIndexedDB();
     global.AudioContext = mockAudioContext;
-    global.MediaRecorder = function () { return { start: () => { }, pause: () => { } } };
+    global.MediaRecorder = mockMediaRecorder;
     global.HTMLCanvasElement = Object;
     global.ProgressEvent = Event;
     if (!global.navigator) global.navigator = { userAgent: 'TestEnv' }

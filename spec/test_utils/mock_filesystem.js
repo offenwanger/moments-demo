@@ -1,3 +1,4 @@
+import { Canvas } from 'canvas';
 import * as fs from 'fs';
 import mime from 'mime';
 import { dirname } from 'path';
@@ -66,23 +67,35 @@ export function mockFileSystemFileHandle(filename, config) {
         throw new Error("A requested file or directory could not be found at the time an operation was processed => fake filesystem: " +
             filename + " Existing files: " + (global.fileSystem ? JSON.stringify(Object.keys(global.fileSystem)) : "No filesystem: " + global.fileSystem));
     }
-    this.getFile = () => new mockFile(filename, "", global.fileSystem[filename]);
-    this.createWritable = () => new mockFile(filename, '');
+    this.getFile = () => new mockFile(filename, null, global.fileSystem[filename]);
+    this.createWritable = () => new mockFile(filename);
 }
 
-export function mockFile(filename, type, text) {
+export function mockFile(filename, type = null, text = null) {
     this.name = filename;
-    this.type = type
-    this.text = () => text;
-    this.write = (text) => {
-        if (typeof text == 'object') {
-            // assume it's a canvas
-            text = text.toDataURL();
+    this.type = type;
+
+    // writing file
+    this.write = (stream) => {
+        if (stream instanceof ArrayBuffer) {
+            let str = '';
+            let bytes = new Uint8Array(stream);
+            let len = bytes.byteLength;
+            for (let i = 0; i < len; i++) { str += String.fromCharCode(bytes[i]); }
+            global.fileSystem[filename] = str;
+        } else if (stream instanceof Canvas) {
+            global.fileSystem[filename] = stream.toDataURL();
+        } else if (typeof stream == 'string') {
+            global.fileSystem[filename] = stream;
+        } else {
+            console.error('unhandled data stream: ', stream)
         }
-        global.fileSystem[filename] = text;
     }
     this.close = () => { };
+
+    // reading file
     this.arrayBuffer = () => text;
+    this.text = () => text;
 }
 
 let counter = 0;
