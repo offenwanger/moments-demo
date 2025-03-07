@@ -194,7 +194,9 @@ class StoryModel extends DataItem {
     assetPoses = [];
     moments = [];
     photospheres = [];
-    surfaces = []
+    strokes = [];
+    surfaces = [];
+    areas = [];
     poseableAssets = [];
     pictures = [];
     audios = [];
@@ -280,22 +282,21 @@ class PhotosphereSurface extends DataItem {
     photosphereId = null;
 
     /* independant attributes */
-    // uv array of u,v. 
-    points = []
     normal = [0, 0, 1]
     dist = -1;
+}
 
-    /* procedural linked attributes */
-    /**
-     * array of basePoint indices. 
-     * this relies on the assumption that all photospheres
-     * will have the same number of base points.
-     */
-    basePointIndices = []
+class PhotosphereArea extends DataItem {
+    /* required id links */
+    photosphereSurfaceId = null;
+
+    /* independant attributes */
+    // uv array of u,v. 
+    points = []
 }
 
 const StrokeType = {
-    BLUR: 'blur',
+    FOCUS: 'focus',
     COLOR: 'color'
 }
 class Stroke extends DataItem {
@@ -305,7 +306,8 @@ class Stroke extends DataItem {
     /* independant attributes */
     // uv array of u,v. 
     points = [];
-    width = 1;
+    // width in percent of canvas height.  
+    width = 0.1;
     color = '#000000';
     type = StrokeType.COLOR;
 }
@@ -364,6 +366,7 @@ export const Data = {
     AssetPose,
     Photosphere,
     PhotosphereSurface,
+    PhotosphereArea,
     StrokeType,
     Stroke,
     Picture,

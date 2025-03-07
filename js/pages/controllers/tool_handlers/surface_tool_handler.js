@@ -85,7 +85,9 @@ function pointerUp(raycaster, orientation, isPrimary, interactionState, toolMode
 
         // for both flatten and reset, clear circled points out of 
         // other surfaces
-        let path = data.target.getDrawnPath();
+
+        console.log("this should be adapted to use getTransaction")
+        let path = data.target.getTransaction();
         let shapes = Util.breakUpUVSelection(path).map(s => {
             let coordArray = []
             for (let i = 0; i < s.length; i += 2) {

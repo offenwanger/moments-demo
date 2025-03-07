@@ -294,9 +294,7 @@ function updateHoverTargetHighlight(target, interactionState, toolMode, isPrimar
 
     if (target) {
         helperPointController.showPoint(isPrimary, target.getIntersection().point);
-    }
 
-    if (target && currentId != targetId) {
         if (isPrimary) {
             interactionState.primaryHovered = target;
             interactionState.primaryHovered.highlight(toolMode);

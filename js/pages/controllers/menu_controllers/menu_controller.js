@@ -86,8 +86,8 @@ export function MenuController() {
     // Submenus
     mSubMenus[ToolButtons.BRUSH] = createMenu(ToolButtons.BRUSH, [
         new MeshButton(BrushToolButtons.UNBLUR, 'Unblur', BUTTON_SIZE),
-        new MeshButton(BrushToolButtons.BLUR, 'Blur', BUTTON_SIZE),
-        new MeshButton(BrushToolButtons.COLOR, 'Color', BUTTON_SIZE, 0xff0000),
+        new MeshButton(BrushToolButtons.COLOR, 'Draw', BUTTON_SIZE),
+        new MeshButton(BrushToolButtons.CLEAR, 'Clear', BUTTON_SIZE),
     ]);
     mSubMenus[ToolButtons.SURFACE] = createMenu(ToolButtons.SURFACE, [
         new MeshButton(SurfaceToolButtons.FLATTEN, 'Flatten', BUTTON_SIZE),
@@ -172,9 +172,6 @@ export function MenuController() {
                 menu = mImageSelectMenu;
             } else if (asset.type == AssetTypes.AUDIO) {
                 menu = mAudioSelectMenu;
-            } else if (asset.type == AssetTypes.PHOTOSPHERE_BLUR || asset.type == AssetTypes.PHOTOSPHERE_COLOR) {
-                // no menu for these
-                continue;
             } else {
                 console.error('Invalid type: ' + asset.type);
                 continue;

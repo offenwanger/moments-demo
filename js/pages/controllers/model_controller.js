@@ -73,6 +73,8 @@ export function ModelController(story = new Data.StoryModel()) {
             return mModel.photospheres;
         } else if (cls == Data.PhotosphereSurface) {
             return mModel.surfaces;
+        } else if (cls == Data.Stroke) {
+            return mModel.strokes;
         } else if (cls == Data.PoseableAsset) {
             return mModel.poseableAssets;
         } else if (cls == Data.Picture) {

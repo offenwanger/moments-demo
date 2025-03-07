@@ -13,9 +13,7 @@ export const AssetTypes = {
     MODEL: 'model',
     IMAGE: 'image',
     AUDIO: 'audio',
-    BOX: 'box',
-    PHOTOSPHERE_BLUR: 'blur',
-    PHOTOSPHERE_COLOR: 'color',
+    BOX: 'box'
 }
 
 export const AssetExtensions = {};
@@ -63,7 +61,7 @@ export const ToolButtons = {
 }
 
 export const BrushToolButtons = {
-    BLUR: 'brushToolBlur',
+    CLEAR: 'brushToolClear',
     UNBLUR: 'brushToolUnblur',
     COLOR: 'brushToolColor',
 }

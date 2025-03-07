@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { BrushToolButtons, SurfaceToolButtons, ToolButtons } from '../../constants.js';
 import { Data } from "../../data.js";
-import { CanvasUtil } from '../../utils/canvas_util.js';
+import { Action, ActionType, Transaction } from '../../utils/transaction_util.js';
 import { Util } from '../../utils/utility.js';
 import { InteractionTargetInterface } from "./interaction_target_interface.js";
 
@@ -21,14 +21,21 @@ export function PhotosphereWrapper(parent) {
     let mParent = parent;
     let mModel = new Data.StoryModel();
     let mPhotosphere = new Data.Photosphere();
+    let mStrokes = [];
     let mSurfaces = [];
     let mSurfacePivots = [];
+    let mSurfaceAreas = [];
     let mInteractionTarget = createInteractionTarget();
 
     let mBasePointUVs = Data.Photosphere.basePointUVs;
     let mSurfaceOffsets = [];
 
-    let mSurfaceSelectLine = [];
+    let mInputStrokes = [];
+    let mInputPath3D = [];
+    let mDrawingDeletedStrokes = [];
+    let mDrawingNewStrokes = [];
+    let mDrawingSurfaceAreas = [];
+    let mDrawAllSurfaceAreas = false;
 
     const mGeometry = new THREE.BufferGeometry();
     let mPositionAttribute;
@@ -41,16 +48,28 @@ export function PhotosphereWrapper(parent) {
     let mNormalsArray;
     let mIndicesArray;
 
+    // the original image which we will manipulate
     let mImage = document.createElement('canvas');
+
+    // extra canvases to reduce draw calls
+    // also they're smaller than the main canvas so the 
+    // aliasing softens the edges of the lines without actually
+    // blurring them. Turns out using a blur filters for soft
+    // edges is a really bad idea, seizes up the browser.
     let mBlur = document.createElement('canvas');
+    mBlur.width = BASE_CANVAS_WIDTH / 4;
+    mBlur.height = BASE_CANVAS_HEIGHT / 4;
     let mBlurCtx = mBlur.getContext('2d')
     let mColor = document.createElement('canvas');
+    mColor.width = BASE_CANVAS_WIDTH / 4;
+    mColor.height = BASE_CANVAS_HEIGHT / 4;
     let mColorCtx = mColor.getContext('2d')
-    let mSurfacesOverlay = document.createElement('canvas');
-    mSurfacesOverlay.height = 256;
-    mSurfacesOverlay.width = 512;
-    let mSurfacesOverlayCtx = mSurfacesOverlay.getContext('2d')
+    let mSurfaceArea = document.createElement('canvas');
+    mSurfaceArea.width = BASE_CANVAS_WIDTH / 4;
+    mSurfaceArea.height = BASE_CANVAS_HEIGHT / 4;
+    let mSurfaceAreaCtx = mSurfaceArea.getContext('2d')
 
+    // The canvas for the sphere
     const mCanvas = document.createElement('canvas');
     mCanvas.width = BASE_CANVAS_WIDTH;
     mCanvas.height = BASE_CANVAS_HEIGHT;
@@ -65,6 +84,13 @@ export function PhotosphereWrapper(parent) {
     const mRayHelper = new THREE.Ray();
 
     async function update(photosphere, model, assetUtil) {
+        mInputStrokes = [];
+        mInputPath3D = [];
+        mDrawingDeletedStrokes = [];
+        mDrawingNewStrokes = [];
+        mDrawingSurfaceAreas = [];
+        mDrawAllSurfaceAreas = false;
+
         mPhotosphere = photosphere;
         mModel = model;
 
@@ -75,8 +101,16 @@ export function PhotosphereWrapper(parent) {
             mParent.add(mSphere)
         }
 
+        mStrokes = model.strokes.filter(s => s.photosphereId == mPhotosphere.id);
+
         mSurfaces = model.surfaces.filter(s => s.photosphereId == mPhotosphere.id);
-        mSurfacePivots = mSurfaces.map(s => {
+        mSurfacePivots = [];
+        mSurfaceAreas = [];
+
+        mSurfaces.forEach(s => {
+            mSurfaceAreas.push(...model.areas.filter(a => a.photosphereSurfaceId == s.id));
+
+            // make the pivot
             let center = new THREE.Vector3();
             for (let i = 0; i < s.points.length; i += 2) {
                 center.add(Util.uvToPoint(s.points[i], s.points[i + 1]));
@@ -92,7 +126,7 @@ export function PhotosphereWrapper(parent) {
                 console.error('Invalid pivot:' + pivot.toArray())
                 pivot.copy(center);
             }
-            return pivot;
+            mSurfacePivots.push(pivot);
         })
 
         // TODO: Might need to fix performance here. 
@@ -105,25 +139,89 @@ export function PhotosphereWrapper(parent) {
         }
         mSphere.userData.id = mPhotosphere.id;
 
-        drawTexture();
+        drawBlur();
+        drawColor();
+        drawSurfaceArea();
+
+        draw();
     }
 
-    function drawTexture() {
+    function draw() {
         mCtx.reset();
-        mCtx.drawImage(mBlur, 0, 0, BASE_CANVAS_WIDTH, BASE_CANVAS_HEIGHT)
+        mCtx.drawImage(mBlur, 0, 0, BASE_CANVAS_WIDTH, BASE_CANVAS_HEIGHT);
         mCtx.globalCompositeOperation = 'source-atop'
         mCtx.drawImage(mImage, 0, 0, BASE_CANVAS_WIDTH, BASE_CANVAS_HEIGHT);
         mCtx.filter = 'blur(15px)'
         mCtx.globalCompositeOperation = 'destination-over'
-        mCtx.drawImage(mImage, 0, 0, BASE_CANVAS_WIDTH, BASE_CANVAS_HEIGHT)
-        mCtx.drawImage(mImage, 0, 0, BASE_CANVAS_WIDTH, BASE_CANVAS_HEIGHT)
+        mCtx.drawImage(mImage, 0, 0, BASE_CANVAS_WIDTH, BASE_CANVAS_HEIGHT);
         mCtx.globalCompositeOperation = 'source-over'
         mCtx.filter = "none";
         mCtx.drawImage(mColor, 0, 0, BASE_CANVAS_WIDTH, BASE_CANVAS_HEIGHT)
-        if (mTool == ToolButtons.SURFACE) {
-            mCtx.drawImage(mSurfacesOverlay, 0, 0, BASE_CANVAS_WIDTH, BASE_CANVAS_HEIGHT);
-        }
+        mCtx.drawImage(mSurfaceArea, 0, 0, BASE_CANVAS_WIDTH, BASE_CANVAS_HEIGHT);
         mCanvasMaterial.needsUpdate = true;
+    }
+
+    function drawBlur() {
+        mBlurCtx.reset();
+        // Draw the focus strokes.
+        let focusStokes = mStrokes
+            .filter(s => !mDrawingDeletedStrokes.includes(s.id))
+            .concat(mDrawingNewStrokes)
+            .filter(s => s.type == Data.StrokeType.FOCUS)
+        for (let s of focusStokes) {
+            drawStroke(mBlur, mBlurCtx, s);
+        }
+    }
+
+    function drawColor() {
+        mColorCtx.reset();
+        // Draw the color
+        let drawStrokes = mStrokes.filter(s => !mDrawingDeletedStrokes.includes(s.id))
+            .concat(mDrawingNewStrokes)
+            .filter(s => s.type == Data.StrokeType.COLOR)
+        for (let s of drawStrokes) {
+            drawStroke(mColor, mColorCtx, s);
+        }
+    }
+
+    function drawSurfaceArea() {
+        mSurfaceAreaCtx.reset();
+        mDrawingSurfaceAreas.forEach(s => { drawArea(s); });
+        if (mDrawAllSurfaceAreas) {
+            mSurfaceAreas.forEach(s => { drawArea(s); });
+        }
+    }
+
+    function drawStroke(canvas, ctx, stroke) {
+        ctx.globalCompositeOperation = 'source-over'
+        ctx.lineCap = 'round'
+        ctx.lineWidth = stroke.width * canvas.height;
+        ctx.color = stroke.color;
+
+        ctx.beginPath();
+        ctx.moveTo((stroke.points[0] * canvas.width) - 1, ((1 - stroke.points[1]) * canvas.height) - 1)
+        for (let i = 0; i < stroke.points.length; i += 2) {
+            ctx.lineTo(stroke.points[i] * canvas.width, (1 - stroke.points[i + 1]) * canvas.height);
+        }
+        ctx.stroke();
+        ctx.closePath();
+    }
+
+    function drawArea(area) {
+        mCtx.globalCompositeOperation = 'source-over'
+        mCtx.lineWidth = mCanvas.height * 0.05;
+        let index = mSurfaces.indexOf(s => s.id == area.photosphereSurfaceId);
+        mCtx.color = SURFACE_COLORS[index % SURFACE_COLORS.length]
+        mCtx.fillStyle = mCtx.color + /*alpha*/ '30';
+        mCtx.filter = 'none'
+
+        mCtx.beginPath();
+        mCtx.moveTo(area.points[0], area.points[1])
+        for (let i = 0; i < area.points.length; i += 2) {
+            mCtx.lineTo(area.points[i] * mCanvas.width, (1 - area.points[i + 1]) * mCanvas.height)
+        }
+        mCtx.fill();
+        mCtx.stroke();
     }
 
     function updateMesh() {
@@ -219,190 +317,295 @@ export function PhotosphereWrapper(parent) {
         mParent.remove(mSphere);
     }
 
-    // TODO: This is terrible and needs to be done better
-    let mTool = ToolButtons.MOVE;
     function getTargets(ray, toolMode) {
         if (!mPhotosphere) return [];
 
-        let lastTool = mTool;
-        mTool = toolMode.tool;
-        if (mTool != lastTool) { drawTexture() }
-
-        if (toolMode.tool == ToolButtons.BRUSH ||
-            toolMode.tool == ToolButtons.SURFACE ||
-            toolMode.tool == ToolButtons.SCISSORS) {
-        } else {
-            return []
+        if (toolMode.tool != ToolButtons.BRUSH &&
+            toolMode.tool != ToolButtons.SURFACE &&
+            toolMode.tool != ToolButtons.SCISSORS) {
+            // not a target for whatever this tool is
+            return [];
         }
 
         let intersect = ray.intersectObject(mSphere);
         if (intersect.length == 0) return [];
         intersect = intersect[0];
 
-        let targetedId;
-        if (toolMode.tool == ToolButtons.BRUSH &&
-            (toolMode.brushSettings.mode == BrushToolButtons.BLUR ||
-                toolMode.brushSettings.mode == BrushToolButtons.UNBLUR)) {
-            targetedId = mPhotosphere.blurAssetId;
-        } else if (toolMode.tool == ToolButtons.BRUSH &&
-            toolMode.brushSettings.mode == BrushToolButtons.COLOR) {
-            targetedId = mPhotosphere.colorAssetId;
-        } else if (toolMode.tool == ToolButtons.SURFACE &&
+        let targetedId = mPhotosphere.id;
+        if (toolMode.tool == ToolButtons.SURFACE &&
             toolMode.surfaceSettings.mode == SurfaceToolButtons.PULL) {
             let pointIndex = intersect.face.a
             let surface = getSurfaceForPointIndex(pointIndex);
             if (!surface) return [];
             else targetedId = surface.id;
-        } else if (toolMode.tool == ToolButtons.SURFACE &&
-            (toolMode.surfaceSettings.mode == SurfaceToolButtons.FLATTEN ||
-                toolMode.surfaceSettings.mode == SurfaceToolButtons.RESET)) {
-            targetedId = mPhotosphere.id;
-        } else {
-            console.error('Unhandled tool state: ' + JSON.stringify(toolMode));
         }
 
         mInteractionTarget.getIntersection = () => intersect;
         mInteractionTarget.getId = () => targetedId;
         mInteractionTarget.highlight = function (toolMode) {
+            mDrawAllSurfaceAreas = false;
             if (toolMode.tool == ToolButtons.BRUSH) {
-                if (toolMode.brushSettings.mode == BrushToolButtons.UNBLUR) {
-                    resetBlur();
-                    drawBlur(intersect.uv.x, intersect.uv.y, toolMode.brushSettings.brushWidth, false)
-                    drawTexture();
-                } else if (toolMode.brushSettings.mode == BrushToolButtons.BLUR) {
-                    resetBlur();
-                    drawBlur(intersect.uv.x, intersect.uv.y, toolMode.brushSettings.brushWidth, true)
-                    drawTexture();
+                if (toolMode.brushSettings.mode == BrushToolButtons.CLEAR) {
+                    let { deletedStrokes, newStrokes } = eraseStrokesWithStrokes(mStrokes, [{
+                        points: [intersect.uv.x, intersect.uv.y]
+                    }]);
+                    mDrawingNewStrokes = newStrokes;
+                    mDrawingDeletedStrokes = deletedStrokes;
+                    drawBlur();
+                    drawColor();
+                    draw();
+                } else if (toolMode.brushSettings.mode == BrushToolButtons.UNBLUR) {
+                    let stroke = new Data.Stroke();
+                    stroke.points = [intersect.uv.x, intersect.uv.y]
+                    stroke.type = Data.StrokeType.FOCUS;
+                    stroke.width = toolMode.brushSettings.width;
+                    mDrawingNewStrokes = [stroke];
+                    drawBlur();
+                    draw();
+                } else if (toolMode.brushSettings.mode == BrushToolButtons.COLOR) {
+                    let stroke = new Data.Stroke();
+                    stroke.points = [intersect.uv.x, intersect.uv.y]
+                    stroke.type = Data.StrokeType.COLOR;
+                    stroke.width = toolMode.brushSettings.width;
+                    stroke.color = toolMode.brushSettings.color;
+                    mDrawingNewStrokes = [stroke];
+                    drawColor();
+                    draw();
                 }
             } else if (toolMode.tool == ToolButtons.SURFACE &&
                 toolMode.surfaceSettings.mode == SurfaceToolButtons.PULL) {
-                resetSurfacesOverlay();
                 let surfaceIndex = mSurfaces.findIndex(s => s.id == targetedId);
                 if (surfaceIndex == -1) { console.error('Invalid surface: ' + targetedId); return; }
-                drawSurface(mSurfaces[surfaceIndex].points, surfaceIndex);
-                drawTexture();
+                console.log('Set drawing surfaces to this one')
+                drawSurfaceArea();
+                draw();
+            } else if (toolMode.tool == ToolButtons.SURFACE &&
+                (toolMode.surfaceSettings.mode == SurfaceToolButtons.RESET
+                    || toolMode.surfaceSettings.mode == SurfaceToolButtons.FLATTEN)) {
+                mDrawAllSurfaceAreas = true;
+                draw();
+            } else {
+                // nothing to do. 
             }
         };
+
         mInteractionTarget.select = (toolMode) => {
-            if (toolMode.tool == ToolButtons.BRUSH) {
-                if (toolMode.brushSettings.mode == BrushToolButtons.UNBLUR) {
-                    drawBlur(intersect.uv.x, intersect.uv.y, toolMode.brushSettings.brushWidth, false)
-                } else if (toolMode.brushSettings.mode == BrushToolButtons.BLUR) {
-                    drawBlur(intersect.uv.x, intersect.uv.y, toolMode.brushSettings.brushWidth, true)
+            // add a stroke to the input strokes. If it's very far away from the last one, start a new stroke
+            // this can happen if the user exists and enters the sphere, 
+            // or if they cross the seam.
+            if (mInputStrokes.length == 0) {
+                mInputStrokes.push([...intersect.uv]);
+            } else {
+                let lastPoint = mInputStrokes[mInputStrokes.length - 1].slice(mInputStrokes[mInputStrokes.length - 1].length - 2);
+                if (intersect.uv.distanceTo({ x: lastPoint[0], y: lastPoint[1] }) > toolMode.brushSettings.width * 1.5) {
+                    mInputStrokes.push([]);
+                    if (1 - Math.abs(lastPoint[0] - intersect.uv) < toolMode.brushSettings.width * 1.5) {
+                        // we crossed the boundry. Add the extended points to their respective arrays
+                        mInputStrokes[mInputStrokes.length - 1].push(
+                            lastPoint[0] < 0.5 ? lastPoint[0] + 1 : lastPoint[0] - 1,
+                            lastPoint[1])
+                        mInputStrokes[mInputStrokes.length - 2].push(
+                            intersect.uv.x < 0.5 ? intersect.uv.x + 1 : intersect.uv.x - 1,
+                            intersect.uv.y);
+                    }
                 }
-                drawTexture();
+                mInputStrokes[mInputStrokes.length - 1].push(...intersect.uv);
+            }
+            mInputPath3D.push(new THREE.Vector3().copy(intersect.point).normalize());
+
+            if (toolMode.tool == ToolButtons.BRUSH) {
+                if (toolMode.brushSettings.mode == BrushToolButtons.CLEAR) {
+                    let { deletedStrokes, newStrokes } = eraseStrokesWithStrokes(mStrokes,
+                        mInputStrokes.map(points => { return { points, width: toolMode.brushSettings.width } }));
+                    mDrawingNewStrokes = newStrokes;
+                    mDrawingDeletedStrokes = deletedStrokes;
+                    drawBlur();
+                    drawColor();
+                    draw();
+                } else if (toolMode.brushSettings.mode == BrushToolButtons.UNBLUR) {
+                    mDrawingNewStrokes = mInputStrokes.map(points => {
+                        let s = new Data.Stroke();
+                        s.photosphereId = mPhotosphere.id;
+                        s.width = toolMode.brushSettings.width;
+                        s.type = Data.StrokeType.FOCUS;
+                        s.points = points;
+                        return s;
+                    });
+                    drawBlur();
+                    draw();
+                } else if (toolMode.brushSettings.mode == BrushToolButtons.COLOR) {
+                    mDrawingNewStrokes = mInputStrokes.map(points => {
+                        let s = new Data.Stroke();
+                        s.photosphereId = mPhotosphere.id;
+                        s.width = toolMode.brushSettings.width;
+                        s.color = toolMode.brushSettings.color;
+                        s.type = Data.StrokeType.COLOR;
+                        s.points = points;
+                        return s;
+                    });
+                    drawColor();
+                    draw();
+                }
             } else if (toolMode.tool == ToolButtons.SURFACE) {
                 if (toolMode.surfaceSettings.mode == SurfaceToolButtons.FLATTEN ||
                     toolMode.surfaceSettings.mode == SurfaceToolButtons.RESET) {
-                    mSurfaceSelectLine.push(...intersect.uv);
-                    resetSurfacesOverlay();
-                    drawSurface(mSurfaceSelectLine, mSurfaces.length);
+                    let areas = inputPathToAreas(mInputPath3D, mInputStrokes);
+                    mDrawingSurfaceAreas = areas;
+                } else if (toolMode.surfaceSettings.mode == SurfaceToolButtons.PULL) {
+                    mDrawAllSurfaceAreas = false;
+                    mDrawingSurfaceAreas = mSurfaceAreas.filter(s => s.photosphereSurfaceId == targetedId);
                 } else {
-                    let surfaceIndex = mSurfaces.findIndex(s => s.id == targetedId);
-                    if (surfaceIndex == -1) { console.error('Invalid surface: ' + targetedId); return; }
-                    resetSurfacesOverlay();
-                    drawSurface(mSurfaces[surfaceIndex].points, surfaceIndex);
+                    console.error('Invalid tool state: ' + toolMode.surfaceSettings.mode);
                 }
-                drawTexture();
+                drawSurfaceArea();
+                draw();
             }
         }
         mInteractionTarget.idle = (toolMode) => {
-            if (toolMode.tool == ToolButtons.BRUSH) {
-                resetBlur();
-            } else if (toolMode.tool == ToolButtons.SURFACE) {
-                mSurfaceSelectLine = [];
-                resetSurfacesOverlay();
-            }
-            drawTexture();
+            mInputStrokes = [];
+            mInputPath3D = [];
+            mDrawingDeletedStrokes = [];
+            mDrawingNewStrokes = [];
+            mDrawingSurfaceAreas = [];
+            mDrawAllSurfaceAreas = false;
         }
-        return [mInteractionTarget];
+
+        return [mInteractionTarget]
     }
 
-    function drawBlur(u, v, brushWidth, blur) {
-        mBlurCtx.save();
-        mBlurCtx.filter = "blur(16px)";
-        mBlurCtx.fillStyle = 'black';
-        if (blur) {
-            mBlurCtx.globalCompositeOperation = "destination-out"
-        }
-        drawWrappedCircle(u, v, brushWidth, mBlur, mBlurCtx);
-        mBlurCtx.restore();
-    }
+    function eraseStrokesWithStrokes(strokes, eraseStrokes) {
+        let deletedStrokes = []
+        let newStrokes = []
 
-    function resetBlur() {
-        mBlurCtx.clearRect(0, 0, mBlur.width, mBlur.height);
-    }
-
-    function drawColor(u, v, brushWidth, color) {
-        mColorCtx.save();
-        mColorCtx.filter = "blur(16px)";
-        mColorCtx.fillStyle = color;
-        drawWrappedCircle(u, v, brushWidth, mColor, mColorCtx);
-        mColorCtx.restore();
-    }
-
-    function resetColor() {
-        mColorCtx.drawImage(mOriginalColor, 0, 0);
-    }
-
-    function drawSurface(points, colorIndex) {
-        let sets = Util.breakUpUVSelection(points);
-        let shapes = sets.map(s => {
-            let coordArray = []
-            for (let i = 0; i < s.length; i += 2) {
-                let u = s[i];
-                let v = s[i + 1];
-                let x = Math.round(u * mSurfacesOverlay.width);
-                let y = Math.round((1 - v) * mSurfacesOverlay.height);
-                coordArray.push({ x, y });
+        strokes.forEach(stroke => {
+            let deletes = new Array(stroke.points.length / 2).fill(false);
+            for (let i = 0; i < stroke.points.length / 2; i++) {
+                let p = new THREE.Vector2(stroke.points[i * 2], stroke.points[i * 2 + 1]);
+                for (let { width, points } of eraseStrokes) {
+                    for (let j = 0; j < points.length; j += 2) {
+                        if (p.distanceTo(new THREE.Vector2(points[j], points[j + 1])) < width) {
+                            deletes[i] = true;
+                            break;
+                        }
+                    }
+                    if (deletes[i] == true) break;
+                }
             }
-            return coordArray;
+            if (deletes.some(d => d)) {
+                deletedStrokes.push(stroke.id);
+                let currStroke = []
+                for (let i = 0; i < deletes.length; i++) {
+                    if (deletes[i] && currStroke.length > 0) {
+                        let s = new Data.Stroke();
+                        s.points = currStroke;
+                        s.type = stroke.type;
+                        s.width = stroke.width;
+                        s.color = stroke.color;
+                        s.photosphereId = stroke.photosphereId;
+                        newStrokes.push(s);
+                        currStroke = [];
+                    } else if (!deletes[0]) {
+                        currStroke.push(stroke.points[i * 2], stroke.points[i * 2 + 1]);
+                    }
+                }
+            }
+            return false;
+        });
+
+        return { deletedStrokes, newStrokes };
+    }
+
+    function inputPathToAreas(path3D, paths) {
+        // no paths no area
+        if (paths.length == 0) return [];
+        // less than 3 points, no area
+        if (paths.flat().length < 6) return [];
+
+        // We only make an area that's total angle is less than 120degrees. 
+        for (let i = 0; i < path3D.length; i++) {
+            for (let j = i; j < path3D.length; j++) {
+                if (path3D[i].angleTo(path3D[j]) > (2 / 3 * Math.PI)) {
+                    // too big
+                    return [];
+                }
+            }
+        }
+
+        // first determine if we close by crossing the seam or not
+        // we do this by checking the first and last points. 
+        let p1 = paths[0].slice(0, 2);
+        let lastPath = paths[paths.length - 1];
+        let pn = lastPath.slice(lastPath.length - 2);
+
+        if (Math.abs(p1[0] - pn[0]) > 0.5) {
+            // closer to go around. 
+            // extend the last path to the first point, and add a second segment
+            paths[paths.length - 1] = paths[paths.length - 1].concat([
+                p1[0] > 0.5 ? p1[0] - 1 : p1[0] + 1,
+                p1[1]
+            ]);
+            paths.push([
+                pn[0] > 0.5 ? pn[0] - 1 : pn[0] + 1,
+                pn[1],
+                p1[0],
+                p1[1]
+            ])
+        } else {
+            // closer to go direct, no changes needed.
+        }
+
+        if (paths.length == 1) {
+            // if there's only one path, then it's a closed shape, 
+            // making one area
+            let area = new Data.PhotosphereArea();
+            area.points = paths[0];
+            area.photosphereId = mPhotosphere.id;
+            return [area];
+        }
+
+        // there's more than one path, start by connecting the start and end
+        let start = paths.shift();
+        paths[paths.length - 1].push(...start);
+
+        // now we add points so that wrapping paths include the 
+        // whole bottom, and otherwise just return everything as an area. 
+        for (let path of paths) {
+            if (path[0] < 0 && path[path.length - 2] > 1) {
+                path.unshift([path[0], path[1] > 0.5 ? 1.1 : -0.1]);
+                path.push([path[path.length - 2], path[path.length - 1] > 0.5 ? 1.1 : -0.1]);
+            }
+        }
+
+        return paths.map(points => {
+            let area = new Data.PhotosphereArea();
+            area.points = points;
+            area.photosphereId = mPhotosphere.id;
+            return area;
         })
-        for (let shape of shapes) {
-            mSurfacesOverlayCtx.save();
-            mSurfacesOverlayCtx.beginPath();
-            mSurfacesOverlayCtx.moveTo(shape[0].x, shape[0].y);
-            for (let p of shape) {
-                mSurfacesOverlayCtx.lineTo(p.x, p.y);
-            }
-            mSurfacesOverlayCtx.fillStyle = SURFACE_COLORS[colorIndex % SURFACE_COLORS.length];
-            mSurfacesOverlayCtx.globalAlpha = 0.1;
-            mSurfacesOverlayCtx.fill();
-            mSurfacesOverlayCtx.restore();
-        }
-    }
-
-    function resetSurfacesOverlay() {
-        mSurfacesOverlayCtx.clearRect(0, 0, mSurfacesOverlay.width, mSurfacesOverlay.height);
-        mSurfacesOverlayCtx.reset();
-        for (let i = 0; i < mSurfaces.length; i++) {
-            drawSurface(mSurfaces[i].points, i);
-        }
-    }
-
-    function drawWrappedCircle(u, v, brushWidth, canvas, ctx) {
-        let x = Math.round(u * canvas.width);
-        let y = Math.round((1 - v) * canvas.height);
-        ctx.beginPath();
-        let widthX = brushWidth / 2 * canvas.width
-        let widthY = brushWidth * canvas.height;
-        ctx.ellipse(x, y, widthX, widthY, 0, 0, Math.PI * 2, true);
-        if (x + widthX > canvas.width) {
-            ctx.ellipse(x - canvas.width, y, widthX, widthY, 0, 0, Math.PI * 2, true);
-        } else if (x - widthX < 0) {
-            ctx.ellipse(x + canvas.width, y, widthX, widthY, 0, 0, Math.PI * 2, true);
-        }
-        ctx.fill();
     }
 
     function createInteractionTarget() {
         let target = new InteractionTargetInterface();
         target.getObject3D = () => { return mSphere; }
-        target.getBlurCanvas = () => CanvasUtil.cloneCanvas(mBlur);
-        target.getColorCanvas = () => CanvasUtil.cloneCanvas(mColor);
-        target.getDrawnPath = () => [...mSurfaceSelectLine];
-        target.setBlurCanvas = (canvas) => mOriginalBlur = canvas;
-        target.setColorCanvas = (canvas) => mOriginalColor = canvas;
+        target.getTransaction = () => {
+            let actions = [];
+            actions.push(...mDrawingDeletedStrokes.map(id => new Action(ActionType.DELETE, id)))
+            actions.push(...mDrawingNewStrokes.map(s => {
+                let params = Object.assign({}, s);
+                delete params.id;
+                return new Action(ActionType.CREATE, s.id, params);
+            }));
+            actions.push(...mDrawingSurfaceAreas.map(s => {
+                let params = Object.assign({}, s);
+                delete params.id;
+                return new Action(ActionType.CREATE, s.id, params);
+            }));
+            if (actions.length > 0) {
+                return new Transaction(actions);
+            } else {
+                return null;
+            }
+        };
         // these are only for moving surfaces
         target.getWorldPosition = function () {
             let surfaceId = this.getId();

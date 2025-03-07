@@ -1,17 +1,18 @@
-import { ASSET_UPDATE_COMMAND, BrushToolButtons, InteractionType } from "../../../constants.js";
+import { InteractionType } from "../../../constants.js";
 import { Util } from "../../../utils/utility.js";
 
 function pointerMove(raycaster, orientation, isPrimary, interactionState, toolMode, model, sessionController, sceneController, helperPointController) {
     if (interactionState.type == InteractionType.NONE) {
+        let targets = [];
         if (isPrimary) {
-            let targets = sceneController.getTargets(raycaster, toolMode)
-            if (targets.length > 1) { console.error('Unexpected target result!'); }
-            Util.updateHoverTargetHighlight(targets[0], interactionState, toolMode, isPrimary, sessionController, helperPointController);
+            targets = sceneController.getTargets(raycaster, toolMode)
+            if (targets.length > 1) { console.error('Got more than one target! There should only be one photosphere to target!'); }
         } else {
             // do nothing.
         }
+        Util.updateHoverTargetHighlight(targets[0], interactionState, toolMode, isPrimary, sessionController, helperPointController);
     } else if (interactionState.type == InteractionType.BRUSHING) {
-        let targets = sceneController.getTargets(raycaster, toolMode)
+        let targets = sceneController.getTargets(raycaster, toolMode);
         if (targets.length == 0) { /* we moved off the sphere, do nothing. */ } else {
             if (targets.length > 1) { console.error('Unexpected target result!'); }
             let target = targets[0];
@@ -45,24 +46,8 @@ function pointerUp(raycaster, orientation, isPrimary, interactionState, toolMode
     helperPointController.hidePoint(isPrimary);
 
     if (type == InteractionType.BRUSHING) {
-        let canvas;
-        if (toolMode.brushSettings.mode == BrushToolButtons.BLUR ||
-            toolMode.brushSettings.mode == BrushToolButtons.UNBLUR) {
-            canvas = data.target.getBlurCanvas();
-            data.target.setBlurCanvas(canvas);
-        } else if (toolMode.brushSettings.mode == BrushToolButtons.COLOR) {
-            canvas = data.target.getColorCanvas();
-            data.target.setColorCanvas(canvas);
-        } else {
-            console.error('Invalid brushing state: ' + JSON.stringify(toolMode));
-            return [];
-        }
-        let assetId = data.target.getId();
-        reaction = {
-            type: ASSET_UPDATE_COMMAND,
-            id: assetId,
-            dataPromise: new Promise(resolve => canvas.toBlob(resolve))
-        };
+        let transaction = data.target.getTransaction();
+        if (transaction) { reaction = transaction; };
     }
 
     return reaction;

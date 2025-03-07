@@ -14,13 +14,9 @@ export class InteractionTargetInterface {
     getScale = () => { return 1 }
     setScale = (scale) => { }
 
-    // For Photosphere
-    getBlurCanvas = () => { return document.createElement('canvas'); }
-    getColorCanvas = () => { return document.createElement('canvas'); }
-    getDrawnPath = () => { return []; }
+    // Gets the transaction for modifications made via interaction
+    getTransaction = () => { return null; }
     getNormalAndDist = () => { return { normal: [0, 0, 1], dist: -1 } }
-    setBlurCanvas = () => { }
-    setColorCanvas = () => { }
 
     // update visual state
     highlight = (toolMode) => { };
