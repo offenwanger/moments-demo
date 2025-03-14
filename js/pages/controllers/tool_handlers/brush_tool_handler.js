@@ -46,7 +46,7 @@ function pointerUp(raycaster, orientation, isPrimary, interactionState, toolMode
     helperPointController.hidePoint(isPrimary);
 
     if (type == InteractionType.BRUSHING) {
-        let transaction = data.target.getTransaction();
+        let transaction = data.target.getTransaction(toolMode);
         if (transaction) { reaction = transaction; };
     }
 

@@ -15,8 +15,7 @@ export class InteractionTargetInterface {
     setScale = (scale) => { }
 
     // Gets the transaction for modifications made via interaction
-    getTransaction = () => { return null; }
-    getNormalAndDist = () => { return { normal: [0, 0, 1], dist: -1 } }
+    getTransaction = (toolMode) => { return null; }
 
     // update visual state
     highlight = (toolMode) => { };

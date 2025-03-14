@@ -117,6 +117,9 @@ export async function setup() {
         innerHeight: 800,
         AudioContext: global.AudioContext,
     };
+    eval(fs.readFileSync(__dirname + '../../../lib/simplify2.js', 'utf-8'))
+    global.simplify2 = window.simplify2;
+
     global.Image = function () {
         let src;
         let onload;

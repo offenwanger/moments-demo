@@ -1,7 +1,5 @@
 import * as THREE from 'three';
 import { InteractionType, SurfaceToolButtons } from "../../../constants.js";
-import { Data } from "../../../data.js";
-import { IdUtil } from "../../../utils/id_util.js";
 import { Util } from "../../../utils/utility.js";
 
 // defines simplify2
@@ -77,92 +75,11 @@ function pointerUp(raycaster, orientation, isPrimary, interactionState, toolMode
 
     helperPointController.hidePoint();
 
-    let actions = []
-    if (type == InteractionType.BRUSHING) {
+    if (type == InteractionType.BRUSHING || type == InteractionType.ONE_HAND_MOVE) {
         // we are either flattening or resetting.
-        let photosphere = model.photospheres.find(p => p.id == data.target.getId());
-        if (!photosphere) { console.error('invalid id: ' + data.target.getId()); return []; }
-
-        // for both flatten and reset, clear circled points out of 
-        // other surfaces
-
-        console.log("this should be adapted to use getTransaction")
-        let path = data.target.getTransaction();
-        let shapes = Util.breakUpUVSelection(path).map(s => {
-            let coordArray = []
-            for (let i = 0; i < s.length; i += 2) {
-                coordArray.push({ x: s[i], y: s[i + 1] });
-            }
-            return coordArray;
-        }).map(arr => {
-            return simplify2.douglasPeucker(arr, 0.0001);
-        })
-
-        let basePointUVs = Data.Photosphere.basePointUVs;
-        let includedIndices = []
-        for (let shape of shapes) {
-            for (let i = 0; i < basePointUVs.length; i += 2) {
-                if (Util.pointInPolygon({ x: basePointUVs[i], y: basePointUVs[i + 1] }, shape)) {
-                    let index = i / 2;
-                    includedIndices.push(index);
-                }
-            }
-        }
-        includedIndices = Util.unique(includedIndices);
-
-        let otherSurfaces = model.surfaces.filter(s => photosphere.surfaceIds.includes(s.id));
-        for (let s of otherSurfaces) {
-            let points = []
-            for (let shape of shapes) {
-                for (let i = 0; i < s.points.length; i += 2) {
-                    let point = { x: s.points[i], y: s.points[i + 1] };
-                    if (!Util.pointInPolygon(point, shape)) {
-                        points.push(point.x, point.y);
-                    }
-                }
-            }
-            if (points.length == 0) {
-                actions.push(new Action(ActionType.DELETE, s.id));
-            } else if (points.length != s.points.length) {
-                actions.push(new Action(ActionType.UPDATE, s.id, { points }));
-                let bpi = s.basePointIndices.filter(i => !includedIndices.includes(i));
-                if (bpi.length != s.basePointIndices.length) {
-                    actions.push(new Action(ActionType.UPDATE, s.id, {
-                        basePointIndices: bpi,
-                    }));
-                }
-            }
-        }
-
-        // if we are flattening, create the new surface.
-        if (toolMode.surfaceSettings.mode == SurfaceToolButtons.FLATTEN) {
-            let points = shapes.reduce((arr, curr) => arr.concat(curr), [])
-                .map(p => [p.x, p.y]).flat();
-
-            let normal = new THREE.Vector3();
-            for (let i = 0; i < points.length; i += 2) {
-                normal.add(Util.uvToPoint(points[i], points[i + 1]));
-            }
-            normal.normalize();
-            actions.push(
-                new Action(ActionType.CREATE,
-                    IdUtil.getUniqueId(Data.PhotosphereSurface), {
-                    photosphereId,
-                    points,
-                    normal: normal.toArray(),
-                    basePointIndices: includedIndices,
-                    dist: -1,
-                }),
-            );
-        }
-    } else if (type == InteractionType.ONE_HAND_MOVE) {
-        let { normal, dist } = data.target.getNormalAndDist();
-        actions.push(new Action(ActionType.UPDATE,
-            data.target.getId(), {
-            normal, dist
-        }));
-    }
-    if (actions.length) reaction = new Transaction(actions);
+        let transaction = data.target.getTransaction(toolMode);
+        if (transaction) reaction = transaction;
+    } 
 
     return reaction;
 }

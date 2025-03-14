@@ -5,6 +5,9 @@ import { Action, ActionType, Transaction } from '../../utils/transaction_util.js
 import { Util } from '../../utils/utility.js';
 import { InteractionTargetInterface } from "./interaction_target_interface.js";
 
+// defines simplify2
+import '../../../lib/simplify2.js';
+
 const DEFAULT_TEXTURE = 'assets/images/default_sphere_texture.png';
 
 const BASE_CANVAS_WIDTH = 2048;
@@ -64,10 +67,10 @@ export function PhotosphereWrapper(parent) {
     mColor.width = BASE_CANVAS_WIDTH / 4;
     mColor.height = BASE_CANVAS_HEIGHT / 4;
     let mColorCtx = mColor.getContext('2d')
-    let mSurfaceArea = document.createElement('canvas');
-    mSurfaceArea.width = BASE_CANVAS_WIDTH / 4;
-    mSurfaceArea.height = BASE_CANVAS_HEIGHT / 4;
-    let mSurfaceAreaCtx = mSurfaceArea.getContext('2d')
+    let mAreaOverlay = document.createElement('canvas');
+    mAreaOverlay.width = BASE_CANVAS_WIDTH / 4;
+    mAreaOverlay.height = BASE_CANVAS_HEIGHT / 4;
+    let mAreaOverlayCtx = mAreaOverlay.getContext('2d')
 
     // The canvas for the sphere
     const mCanvas = document.createElement('canvas');
@@ -108,12 +111,15 @@ export function PhotosphereWrapper(parent) {
         mSurfaceAreas = [];
 
         mSurfaces.forEach(s => {
-            mSurfaceAreas.push(...model.areas.filter(a => a.photosphereSurfaceId == s.id));
+            let areas = model.areas.filter(a => a.photosphereSurfaceId == s.id);
+            mSurfaceAreas.push(...areas);
 
             // make the pivot
             let center = new THREE.Vector3();
-            for (let i = 0; i < s.points.length; i += 2) {
-                center.add(Util.uvToPoint(s.points[i], s.points[i + 1]));
+            for (let area of areas) {
+                for (let i = 0; i < area.points.length; i += 2) {
+                    center.add(Util.uvToPoint(area.points[i], area.points[i + 1]));
+                }
             }
             center.normalize();
 
@@ -129,7 +135,6 @@ export function PhotosphereWrapper(parent) {
             mSurfacePivots.push(pivot);
         })
 
-        // TODO: Might need to fix performance here. 
         updateMesh();
 
         if (mPhotosphere.assetId) {
@@ -157,7 +162,7 @@ export function PhotosphereWrapper(parent) {
         mCtx.globalCompositeOperation = 'source-over'
         mCtx.filter = "none";
         mCtx.drawImage(mColor, 0, 0, BASE_CANVAS_WIDTH, BASE_CANVAS_HEIGHT)
-        mCtx.drawImage(mSurfaceArea, 0, 0, BASE_CANVAS_WIDTH, BASE_CANVAS_HEIGHT);
+        mCtx.drawImage(mAreaOverlay, 0, 0, BASE_CANVAS_WIDTH, BASE_CANVAS_HEIGHT);
         mCanvasMaterial.needsUpdate = true;
     }
 
@@ -185,10 +190,10 @@ export function PhotosphereWrapper(parent) {
     }
 
     function drawSurfaceArea() {
-        mSurfaceAreaCtx.reset();
-        mDrawingSurfaceAreas.forEach(s => { drawArea(s); });
+        mAreaOverlayCtx.reset();
+        mDrawingSurfaceAreas.forEach(s => { drawArea(mAreaOverlay, mAreaOverlayCtx, s); });
         if (mDrawAllSurfaceAreas) {
-            mSurfaceAreas.forEach(s => { drawArea(s); });
+            mSurfaceAreas.forEach(s => { drawArea(mAreaOverlay, mAreaOverlayCtx, s); });
         }
     }
 
@@ -207,27 +212,28 @@ export function PhotosphereWrapper(parent) {
         ctx.closePath();
     }
 
-    function drawArea(area) {
-        mCtx.globalCompositeOperation = 'source-over'
-        mCtx.lineWidth = mCanvas.height * 0.05;
-        let index = mSurfaces.indexOf(s => s.id == area.photosphereSurfaceId);
-        mCtx.color = SURFACE_COLORS[index % SURFACE_COLORS.length]
-        mCtx.fillStyle = mCtx.color + /*alpha*/ '30';
-        mCtx.filter = 'none'
+    function drawArea(canvas, ctx, area) {
+        ctx.globalCompositeOperation = 'source-over'
+        ctx.lineWidth = canvas.height * 0.005;
+        let index = mSurfaces.findIndex(s => s.id == area.photosphereSurfaceId);
+        if (index == -1) index = mSurfaces.length;
+        ctx.color = SURFACE_COLORS[index % SURFACE_COLORS.length]
+        ctx.fillStyle = ctx.color + /*alpha*/ '30';
+        ctx.filter = 'none'
 
-        mCtx.beginPath();
-        mCtx.moveTo(area.points[0], area.points[1])
+        ctx.beginPath();
+        ctx.moveTo(area.points[0] * canvas.width, (1 - area.points[1]) * canvas.height)
         for (let i = 0; i < area.points.length; i += 2) {
-            mCtx.lineTo(area.points[i] * mCanvas.width, (1 - area.points[i + 1]) * mCanvas.height)
+            ctx.lineTo(area.points[i] * canvas.width, (1 - area.points[i + 1]) * canvas.height)
         }
-        mCtx.fill();
-        mCtx.stroke();
+        ctx.fill();
+        ctx.stroke();
     }
 
     function updateMesh() {
-        let numVertices = mBasePointUVs.length / 2 + mSurfaces.reduce((sum, surface) => {
+        let numVertices = mBasePointUVs.length / 2 + mSurfaceAreas.reduce((sum, area) => {
             // add the length of the array /2 since it's a flat u,v array
-            sum += surface.points.length / 2;
+            sum += area.points.length / 2;
             return sum;
         }, 0);
         mPositionArray = new Float32Array(numVertices * POSITION_NUM_COMPONENTS);
@@ -235,28 +241,46 @@ export function PhotosphereWrapper(parent) {
         mUVArray = new Float32Array(numVertices * UV_NUM_COMPONENTS);
         mColorArray = new Float32Array(numVertices * COLOR_NUM_COMPONENTS);
 
+
         let points = [...mBasePointUVs];
-        mSurfaceOffsets = [];
-        for (let surface of mSurfaces) {
-            // the offset where this surfaces points start. 
-            mSurfaceOffsets.push(points.length / 2);
-            points.push(...surface.points);
+        let pointSurfaces = [];
+        for (let i = 0; i < points.length / 2; i++) {
+            let u = points[i * 2];
+            let v = points[i * 2 + 1];
+            pointSurfaces[i] = getSurfacesForPoint(u, v);
         }
+        for (let area of mSurfaceAreas) {
+            for (let i = 0; i < area.points.length / 2; i++) {
+                let u = area.points[i * 2];
+                let v = area.points[i * 2 + 1];
+                let surfaceIds = getSurfacesForPoint(u, v)
+                if (!surfaceIds.includes(area.photosphereSurfaceId)) surfaceIds.push(area.photosphereSurfaceId);
+                pointSurfaces.push(surfaceIds);
+                points.push(u, v);
+            }
+        }
+
         for (let i = 0; i < numVertices; i++) {
             let u = points[i * 2];
             let v = points[i * 2 + 1];
             let point = Util.uvToPoint(u, v);
             let scaledPoint = new THREE.Vector3();
-            let surface = getSurfaceForPointIndex(i);
-            if (surface) {
-                mPlaneHelper.normal.set(...surface.normal);
-                mPlaneHelper.constant = surface.dist;
-                mRayHelper.direction.copy(point);
-                mRayHelper.intersectPlane(mPlaneHelper, scaledPoint);
-                if (scaledPoint.length() == 0) {
-                    console.error('Invalid point:' + [u, v] + ", " + scaledPoint.toArray())
-                    scaledPoint.copy(point);
-                }
+            let surfaceIds = pointSurfaces[i];
+            if (surfaceIds.length > 0) {
+                for (let sId of surfaceIds) {
+                    let surface = mSurfaces.find(s => s.id == sId);
+                    if (!surface) { console.error("invalid surface id: " + sId); continue; }
+                    let surfacePoint = new THREE.Vector3();
+                    mPlaneHelper.normal.set(...surface.normal);
+                    mPlaneHelper.constant = surface.dist;
+                    mRayHelper.direction.copy(point);
+                    mRayHelper.intersectPlane(mPlaneHelper, surfacePoint);
+                    if (surfacePoint.length() == 0) {
+                        console.error('Invalid point: ' + [u, v] + ", " + surfacePoint.toArray())
+                    }
+                    scaledPoint.add(surfacePoint);
+                };
+                scaledPoint.multiplyScalar(1 / surfaceIds.length);
             } else {
                 scaledPoint.copy(point);
             }
@@ -292,21 +316,19 @@ export function PhotosphereWrapper(parent) {
         mGeometry.setIndex(mIndicesArray);
     }
 
-    function getSurfaceForPointIndex(pointIndex) {
-        if (pointIndex < mBasePointUVs.length / 2) {
-            return mSurfaces.find(s => s.basePointIndices.includes(pointIndex));
-        } else {
-            // if it's base the end of the offsets, it's in the last surface.
-            if (pointIndex > mSurfaceOffsets[mSurfaceOffsets.length - 1]) {
-                return mSurfaces[mSurfaces.length - 1];
-            } else {
-                for (let i = 1; i < mSurfaceOffsets.length; i++) {
-                    if (pointIndex < mSurfaceOffsets[i]) {
-                        return mSurfaces[i - 1];
-                    }
-                }
+    function getSurfacesForPoint(u, v) {
+        let areas = []
+        for (let area of mSurfaceAreas) {
+            let point = { x: u, y: v };
+            let shape = []
+            for (let i = 0; i < area.points.length; i += 2) {
+                shape.push({ x: area.points[i], y: area.points[i + 1] });
+            }
+            if (Util.pointInPolygon(point, shape)) {
+                areas.push(area);
             }
         }
+        return [...new Set(areas.map(a => a.photosphereSurfaceId))];
     }
 
     function getId() {
@@ -334,10 +356,9 @@ export function PhotosphereWrapper(parent) {
         let targetedId = mPhotosphere.id;
         if (toolMode.tool == ToolButtons.SURFACE &&
             toolMode.surfaceSettings.mode == SurfaceToolButtons.PULL) {
-            let pointIndex = intersect.face.a
-            let surface = getSurfaceForPointIndex(pointIndex);
-            if (!surface) return [];
-            else targetedId = surface.id;
+            let surfaceIds = getSurfacesForPoint(intersect.uv.x, intersect.uv.y);
+            if (surfaceIds.length == 0) return [];
+            else targetedId = surfaceIds[0];
         }
 
         mInteractionTarget.getIntersection = () => intersect;
@@ -376,7 +397,6 @@ export function PhotosphereWrapper(parent) {
                 toolMode.surfaceSettings.mode == SurfaceToolButtons.PULL) {
                 let surfaceIndex = mSurfaces.findIndex(s => s.id == targetedId);
                 if (surfaceIndex == -1) { console.error('Invalid surface: ' + targetedId); return; }
-                console.log('Set drawing surfaces to this one')
                 drawSurfaceArea();
                 draw();
             } else if (toolMode.tool == ToolButtons.SURFACE &&
@@ -397,9 +417,9 @@ export function PhotosphereWrapper(parent) {
                 mInputStrokes.push([...intersect.uv]);
             } else {
                 let lastPoint = mInputStrokes[mInputStrokes.length - 1].slice(mInputStrokes[mInputStrokes.length - 1].length - 2);
-                if (intersect.uv.distanceTo({ x: lastPoint[0], y: lastPoint[1] }) > toolMode.brushSettings.width * 1.5) {
+                if (intersect.uv.distanceTo({ x: lastPoint[0], y: lastPoint[1] }) > 0.5) {
                     mInputStrokes.push([]);
-                    if (1 - Math.abs(lastPoint[0] - intersect.uv) < toolMode.brushSettings.width * 1.5) {
+                    if (1 - Math.abs(lastPoint[0] - intersect.uv) < toolMode.surfaceSettings.width * 1.5) {
                         // we crossed the boundry. Add the extended points to their respective arrays
                         mInputStrokes[mInputStrokes.length - 1].push(
                             lastPoint[0] < 0.5 ? lastPoint[0] + 1 : lastPoint[0] - 1,
@@ -410,6 +430,7 @@ export function PhotosphereWrapper(parent) {
                     }
                 }
                 mInputStrokes[mInputStrokes.length - 1].push(...intersect.uv);
+                mInputStrokes[mInputStrokes.length - 1] = simplify(mInputStrokes[mInputStrokes.length - 1])
             }
             mInputPath3D.push(new THREE.Vector3().copy(intersect.point).normalize());
 
@@ -547,8 +568,6 @@ export function PhotosphereWrapper(parent) {
             paths.push([
                 pn[0] > 0.5 ? pn[0] - 1 : pn[0] + 1,
                 pn[1],
-                p1[0],
-                p1[1]
             ])
         } else {
             // closer to go direct, no changes needed.
@@ -567,19 +586,23 @@ export function PhotosphereWrapper(parent) {
         let start = paths.shift();
         paths[paths.length - 1].push(...start);
 
+        let avgY = paths.flat()
+            .filter((v, i) => i % 2 == 1)
+            .reduce((sum, y) => sum + y)
+            / (paths.flat().length / 2);
+
         // now we add points so that wrapping paths include the 
         // whole bottom, and otherwise just return everything as an area. 
         for (let path of paths) {
             if (path[0] < 0 && path[path.length - 2] > 1) {
-                path.unshift([path[0], path[1] > 0.5 ? 1.1 : -0.1]);
-                path.push([path[path.length - 2], path[path.length - 1] > 0.5 ? 1.1 : -0.1]);
+                path.unshift(path[0], avgY > 0.5 ? 1.1 : -0.1);
+                path.push(path[path.length - 2], avgY > 0.5 ? 1.1 : -0.1);
             }
         }
 
         return paths.map(points => {
             let area = new Data.PhotosphereArea();
             area.points = points;
-            area.photosphereId = mPhotosphere.id;
             return area;
         })
     }
@@ -587,19 +610,54 @@ export function PhotosphereWrapper(parent) {
     function createInteractionTarget() {
         let target = new InteractionTargetInterface();
         target.getObject3D = () => { return mSphere; }
-        target.getTransaction = () => {
+        target.getTransaction = (toolMode) => {
             let actions = [];
-            actions.push(...mDrawingDeletedStrokes.map(id => new Action(ActionType.DELETE, id)))
-            actions.push(...mDrawingNewStrokes.map(s => {
-                let params = Object.assign({}, s);
-                delete params.id;
-                return new Action(ActionType.CREATE, s.id, params);
-            }));
-            actions.push(...mDrawingSurfaceAreas.map(s => {
-                let params = Object.assign({}, s);
-                delete params.id;
-                return new Action(ActionType.CREATE, s.id, params);
-            }));
+            if (toolMode.tool == ToolButtons.BRUSH) {
+                actions.push(...mDrawingDeletedStrokes.map(id => new Action(ActionType.DELETE, id)))
+                actions.push(...mDrawingNewStrokes.map(s => {
+                    let params = Object.assign({}, s);
+                    delete params.id;
+                    return new Action(ActionType.CREATE, s.id, params);
+                }));
+            } else if (toolMode.tool == ToolButtons.SURFACE &&
+                toolMode.surfaceSettings.mode == SurfaceToolButtons.PULL) {
+                let surfaceId = target.getId();
+                let surface = mSurfaces.find(s => s.id == surfaceId);
+                if (surface) {
+                    actions.push(new Action(ActionType.UPDATE,
+                        surfaceId, {
+                        normal: surface.normal, dist: surface.dist
+                    }))
+                } else {
+                    console.error('Invalid interaction target: ' + surfaceId);
+                }
+            } else if (toolMode.tool == ToolButtons.SURFACE &&
+                toolMode.surfaceSettings.mode == SurfaceToolButtons.RESET) {
+                console.error('not implimented')
+            } else if (toolMode.tool == ToolButtons.SURFACE &&
+                toolMode.surfaceSettings.mode == SurfaceToolButtons.FLATTEN) {
+                let newSurface = new Data.PhotosphereSurface();
+
+                let normal = new THREE.Vector3();
+                for (let p of mInputPath3D) {
+                    normal.add(p);
+                }
+                normal.normalize();
+
+                actions.push(new Action(ActionType.CREATE,
+                    newSurface.id, {
+                    photosphereId: mPhotosphere.id,
+                    dist: -1,
+                    normal: normal.toArray(),
+                }));
+                actions.push(...mDrawingSurfaceAreas.map(s => {
+                    return new Action(ActionType.CREATE, s.id, {
+                        points: s.points,
+                        photosphereSurfaceId: newSurface.id
+                    });
+                }));
+            }
+
             if (actions.length > 0) {
                 return new Transaction(actions);
             } else {
@@ -643,13 +701,16 @@ export function PhotosphereWrapper(parent) {
             mSurfaces[surfaceIndex].dist = mPlaneHelper.constant;
             updateMesh();
         }
-        target.getNormalAndDist = function () {
-            let surfaceId = this.getId();
-            let surface = mSurfaces.find(s => s.id == surfaceId);
-            if (!surface) console.error('invalid target: ' + this.getId());
-            return { normal: surface.normal, dist: surface.dist };
-        }
         return target;
+    }
+
+    function simplify(uvArr) {
+        let simplifiedArr = []
+        for (let i = 0; i < uvArr.length; i += 2) {
+            simplifiedArr.push({ x: uvArr[i], y: uvArr[i + 1] })
+        }
+        simplifiedArr = simplify2.douglasPeucker(simplifiedArr, 0.0001);
+        return simplifiedArr.map(p => [p.x, p.y]).flat();
     }
 
     this.getTargets = getTargets;

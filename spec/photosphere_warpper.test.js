@@ -1,7 +1,7 @@
 
 import { cleanup, setup } from './test_utils/test_environment.js';
 
-import { BrushToolButtons, ToolButtons } from '../js/constants.js';
+import { BrushToolButtons, SurfaceToolButtons, ToolButtons } from '../js/constants.js';
 import { canvasClickMenuButton, canvaspointerdown, createAndOpenStoryMoment, lookHead, movePageHead, pointermove, pointerup, testmodel } from './test_utils/test_actions.js';
 import { Data } from '../js/data.js';
 
@@ -47,7 +47,7 @@ describe('Test Photosphere Wrapper', function () {
             expect(strokes.length).toBe(1);
 
             let stroke = strokes[0];
-            expect(stroke.points.length).toBe(6);
+            expect(stroke.points.length).toBe(4);
             expect(stroke.type).toBe(Data.StrokeType.FOCUS);
         });
 
@@ -75,7 +75,7 @@ describe('Test Photosphere Wrapper', function () {
             expect(strokes.length).toBe(1);
 
             let stroke = strokes[0];
-            expect(stroke.points.length).toBe(6);
+            expect(stroke.points.length).toBe(4);
             expect(stroke.type).toBe(Data.StrokeType.COLOR);
         });
 
@@ -120,8 +120,68 @@ describe('Test Photosphere Wrapper', function () {
 
             strokes = testmodel().strokes.filter(s => s.photosphereId == photosphere.id);
             expect(strokes.length).toBe(0);
-
         });
+    });
+
+    describe('surface tests', function () {
+        it('should flatten a section', async function () {
+            await createAndOpenStoryMoment();
+
+            let photosphere = testmodel().photospheres[0];
+            let surfaces = testmodel().surfaces.filter(s => s.photosphereId == photosphere.id);
+            expect(surfaces.length).toBe(0);
+
+            let canvas = document.querySelector('#main-canvas');
+            await canvasClickMenuButton(ToolButtons.SURFACE);
+            await movePageHead(0, 0, -1);
+            await lookHead(0, 0, 0);
+
+            await canvasClickMenuButton(SurfaceToolButtons.FLATTEN);
+            await pointermove(canvas.width / 2, canvas.height / 2);
+            await canvaspointerdown(canvas.width / 2, canvas.height / 2)
+            await pointermove(canvas.width / 2 - 10, canvas.height / 2);
+            await pointermove(canvas.width / 2 - 30, canvas.height / 2);
+            await pointermove(canvas.width / 2 - 30, canvas.height / 2 - 10);
+            await pointermove(canvas.width / 2 - 30, canvas.height / 2 - 30);
+            await pointermove(canvas.width / 2 - 10, canvas.height / 2 - 30);
+            await pointerup(canvas.width / 2 - 30, canvas.height / 2 - 30);
+
+            surfaces = testmodel().surfaces.filter(s => s.photosphereId == photosphere.id);
+            expect(surfaces.length).toBe(1);
+            let areas = testmodel().areas.filter(a => a.photosphereSurfaceId == surfaces[0].id);
+            expect(areas.length).toBe(1);
+            expect(areas[0].points.length).toBe(8);
+        });
+
+        it('should flatten across the seam', async function () {
+            await createAndOpenStoryMoment();
+
+            let photosphere = testmodel().photospheres[0];
+            let surfaces = testmodel().surfaces.filter(s => s.photosphereId == photosphere.id);
+            expect(surfaces.length).toBe(0);
+
+            let canvas = document.querySelector('#main-canvas');
+            await canvasClickMenuButton(ToolButtons.SURFACE);
+            await movePageHead(0, 0, -1);
+            await lookHead(0, 0, 0);
+
+            await canvasClickMenuButton(SurfaceToolButtons.FLATTEN);
+            await pointermove(canvas.width / 2, canvas.height / 2);
+            await canvaspointerdown(canvas.width / 2, canvas.height / 2)
+            await pointermove(canvas.width / 2 + 30, canvas.height / 2 - 30);
+            await pointermove(canvas.width / 2 - 30, canvas.height / 2 - 30);
+            await pointermove(canvas.width / 2 - 30, canvas.height / 2 + 30);
+            await pointermove(canvas.width / 2 + 30, canvas.height / 2 + 30);
+            await pointerup(canvas.width / 2 + 30, canvas.height / 2 + 30);
+
+            surfaces = testmodel().surfaces.filter(s => s.photosphereId == photosphere.id);
+            expect(surfaces.length).toBe(1);
+            let areas = testmodel().areas.filter(a => a.photosphereSurfaceId == surfaces[0].id);
+            expect(areas.length).toBe(2);
+            expect(areas[0].points.length).toBe(6);
+            expect(areas[1].points.length).toBe(6);
+        });
+
 
     });
 

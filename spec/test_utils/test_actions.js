@@ -21,12 +21,16 @@ export async function pointermove(x, y) {
     if (!window.callbacks.pointermove) console.error("No callbacks registered for pointermove");
     for (let cb of window.callbacks.pointermove)
         await cb({ clientX: x, clientY: y });
+    
+    await global.test_rendererAccess.animationLoop();
 }
 
 export async function pointerup(x, y) {
     if (!window.callbacks.pointerup) console.error("No callbacks registered for pointerup");
     for (let cb of window.callbacks.pointerup)
         await cb({ clientX: x, clientY: y });
+
+    await global.test_rendererAccess.animationLoop();
 }
 
 export async function chooseFolder() {
