@@ -23,6 +23,9 @@ export function EditorPage(parentContainer, mWebsocketController) {
     let mWorkspace;
     let mAssetUtil;
 
+    let mUndoStack = []
+    let mRedoStack = []
+
     let mSidebarDivider = 0.8;
     let mBottomDivider = 0.8;
     let mWidth = 100;
@@ -72,6 +75,7 @@ export function EditorPage(parentContainer, mWebsocketController) {
 
     let mSceneInterface = new SceneInterfaceController(mViewContainer, mWebsocketController, mAudioRecorder);
     mSceneInterface.onModelUpdate(async (transaction) => {
+        pushUndo(mModelController.getModel(), transaction)
         await mModelController.applyTransaction(transaction);
         await updateModel();
     });
@@ -79,9 +83,9 @@ export function EditorPage(parentContainer, mWebsocketController) {
     // Shares a container with the sessions
     let mPictureEditorController = new PictureEditorController(mViewContainer);
     mPictureEditorController.onSave(async (id, json, dataUrl) => {
-        await mModelController.applyTransaction(new Transaction([
-            new Action(ActionType.UPDATE, id, { json, image: dataUrl })
-        ]));
+        let transaction = new Transaction([new Action(ActionType.UPDATE, id, { json, image: dataUrl })])
+        pushUndo(mModelController.getModel(), transaction)
+        await mModelController.applyTransaction(transaction);
         await updateModel();
     })
 
@@ -131,16 +135,17 @@ export function EditorPage(parentContainer, mWebsocketController) {
     let mSidebarController = new SidebarController(mSidebarContainer);
     mSidebarController.onAddMoment(async () => {
         await createMoment();
-        await updateModel();
     })
     mSidebarController.setUpdateAttributeCallback(async (id, attrs) => {
-        await mModelController.applyTransaction(new Transaction([
-            new Action(ActionType.UPDATE, id, attrs)
-        ]));
+        let transaction = new Transaction([new Action(ActionType.UPDATE, id, attrs)]);
+        pushUndo(mModelController.getModel(), transaction)
+        await mModelController.applyTransaction(transaction);
         await updateModel();
     })
     mSidebarController.setDeleteCallback(async (id) => {
-        await mModelController.applyTransaction(new Transaction([new Action(ActionType.DELETE, id)]));
+        let transaction = new Transaction([new Action(ActionType.DELETE, id)])
+        pushUndo(mModelController.getModel(), transaction)
+        await mModelController.applyTransaction(transaction);
         await updateModel();
     })
     mSidebarController.setEditPictureCallback(async (id) => {
@@ -190,26 +195,15 @@ export function EditorPage(parentContainer, mWebsocketController) {
         updateModel();
     })
 
-    mSceneInterface.onAssetUpdate(async (id, blob) => {
-        let asset = mModelController.getModel().find(id);
-        if (!asset) { console.error('Invalid id: ' + id); }
-        let file = new File([blob], asset.filename);
-        if (!mWorkspace) {
-            mWebsocketController.updateAsset(id, file);
-        } else {
-            await mWorkspace.updateAsset(file);
-            await mWebsocketController.uploadAsset(mModelController.getModel().id, asset.filename, mWorkspace);
-            await mModelController.applyTransaction(new Transaction([new Action(ActionType.UPDATE, id, { updated: Date.now() })]));
-            await updateModel();
-        }
-    });
-
     mSceneInterface.onAssetCreate(async (id, name, type, blob) => {
         let file = new File([blob], name);
         if (!mWorkspace) {
             await mWebsocketController.newAsset(id, file, type)
         } else {
             let newFilename = await mWorkspace.storeAsset(file);
+            if (mWebsocketController.isSharing()) {
+                await mWebsocketController.uploadAsset(mModelController.getModel().id, newFilename, mWorkspace);
+            }
             let asset = null;
             if (type == AssetTypes.MODEL) {
                 asset = await mAssetUtil.loadGLTFModel(newFilename);
@@ -234,18 +228,13 @@ export function EditorPage(parentContainer, mWebsocketController) {
     mSceneInterface.onCreateMoment(async () => {
         await createMoment();
     });
+    mSceneInterface.onUndo(undo);
+    mSceneInterface.onRedo(redo);
+
 
     mSceneInterface.onSelect(async (id) => {
         mSidebarController.navigate(id);
     });
-
-    mWebsocketController.onUpdateAsset(async (id, name, buffer) => {
-        let file = new File([buffer], name);
-        await mWorkspace.updateAsset(file);
-        await mWebsocketController.uploadAsset(mModelController.getModel().id, name, mWorkspace);
-        await mModelController.applyTransaction(new Transaction([new Action(ActionType.UPDATE, id, { updated: Date.now() })]));
-        updateModel();
-    })
 
     mWebsocketController.onCreateMoment(async () => {
         await createMoment();
@@ -301,6 +290,34 @@ export function EditorPage(parentContainer, mWebsocketController) {
         }
     }
 
+    function pushUndo(model, transaction) {
+        if (transaction.actions.length == 0) { return; }
+
+        mRedoStack = [];
+        let inverse = transaction.invert(model);
+        if (inverse.actions.length == 0) { console.error('Failed to get inverse for transaction: ' + JSON.stringify(transaction.actions)); return; }
+
+        mUndoStack.push(inverse);
+    }
+
+    async function undo() {
+        if (mUndoStack.length == 0) return;
+        let transaction = mUndoStack.pop()
+        let inverse = transaction.invert(mModelController.getModel());
+        mModelController.applyTransaction(transaction);
+        mRedoStack.push(inverse);
+        updateModel();
+    }
+
+    async function redo() {
+        if (mRedoStack.length == 0) return;
+        let transaction = mRedoStack.pop()
+        let inverse = transaction.invert(mModelController.getModel());
+        mModelController.applyTransaction(transaction);
+        mUndoStack.push(inverse);
+        updateModel();
+    }
+
     async function updateModel() {
         try {
             let model = mModelController.getModel();
@@ -330,21 +347,17 @@ export function EditorPage(parentContainer, mWebsocketController) {
     }
 
     async function createMoment() {
-        if (!mWorkspace) {
-            mWebsocketController.createMoment();
-        } else {
-            let canvas = document.createElement('canvas');
-            canvas.height = 256;
-            canvas.width = 512;
-            let blurFileName = await mWorkspace.storeCanvas('sphereblur', canvas);
-            let colorFileName = await mWorkspace.storeCanvas('spherecolor', canvas);
-            let actions = await DataUtil.getMomentCreationActions(
-                mModelController.getModel(),
-                blurFileName,
-                colorFileName);
-            await mModelController.applyTransaction(new Transaction(actions));
-            updateModel();
-        }
+        let momentId = IdUtil.getUniqueId(Data.Moment);
+        let name = DataUtil.getNextName('Moment', mModelController.getModel().moments.map(m => m.name));
+        let transaction = new Transaction([
+            new Action(ActionType.CREATE,
+                momentId, { name }),
+            new Action(ActionType.CREATE,
+                IdUtil.getUniqueId(Data.Photosphere), { momentId })
+        ]);
+        pushUndo(mModelController.getModel(), transaction)
+        await mModelController.applyTransaction(transaction);
+        await updateModel();
     }
 
     mWindowEventManager.onResize(resize);
@@ -375,6 +388,9 @@ export function EditorPage(parentContainer, mWebsocketController) {
     mWindowEventManager.onPointerUp(() => {
         mResizingWindows = false;
     });
+
+    mWindowEventManager.onUndo(undo);
+    mWindowEventManager.onRedo(redo);
 
     this.show = show;
 }

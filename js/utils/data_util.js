@@ -7,26 +7,6 @@ import { Util } from './utility.js';
 
 // This file contains helper functions for creating things
 // which have to be created with many children. 
-
-/**
- * Creates a set of actions to set up a new moment. 
- * @param {*} blurFileName filename to create specific asset for
- * @param {*} colorFileName filename to create specific asset for
- * @returns 
- */
-async function getMomentCreationActions(model) {
-    let momentId = IdUtil.getUniqueId(Data.Moment);
-    let name = getNextName('Moment', model.moments.map(m => m.name));
-    return [
-        new Action(ActionType.CREATE,
-            momentId, {
-            name
-        }),
-        new Action(ActionType.CREATE,
-            IdUtil.getUniqueId(Data.Photosphere), { momentId })
-    ]
-}
-
 async function getPoseableAssetCreationActions(model, parentId, assetId) {
     let actions = [];
 
@@ -125,7 +105,6 @@ function getNextName(name, nameList) {
 }
 
 export const DataUtil = {
-    getMomentCreationActions,
     getPoseableAssetCreationActions,
     getAssetCreationActions,
     getPictureCreationActions,

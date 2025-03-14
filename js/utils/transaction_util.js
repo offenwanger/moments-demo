@@ -48,6 +48,7 @@ export function Transaction(actions = []) {
                 }
             }
         }
+        return new Transaction(invertedActions);
     }
 
     if (!Array.isArray(actions)) {

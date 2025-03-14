@@ -5,6 +5,8 @@
 export function WindowEventManager() {
     let mPointerUpCallback = async (screenCoords) => { }
     let mPointerMoveCallback = async (screenCoords) => { }
+    let mUndoCallback = async () => { }
+    let mRedoCallback = async () => { }
     let mResizeCallback = async (width, height) => { }
 
     window.addEventListener('resize', async () => {
@@ -25,9 +27,29 @@ export function WindowEventManager() {
         } catch (e) { console.error(e); }
     });
 
+    window.addEventListener('keydown', async (event) => {
+        if (event.ctrlKey && event.key === 'z') {
+            await mUndoCallback();
+        }
+    });
+
+    window.addEventListener('keydown', async (event) => {
+        if (event.ctrlKey && event.key === 'y') {
+            await mRedoCallback();
+        }
+    });
+
+    window.addEventListener('keydown', async (event) => {
+        if (event.ctrlKey && event.shiftKey && event.key === 'z') {
+            await mRedoCallback();
+        }
+    });
+
     return {
         onPointerUp: (func) => mPointerUpCallback = func,
         onPointerMove: (func) => mPointerMoveCallback = func,
+        onUndo: (func) => mUndoCallback = func,
+        onRedo: (func) => mRedoCallback = func,
         onResize: (func) => {
             mResizeCallback = func;
             mResizeCallback(window.innerWidth, window.innerHeight);

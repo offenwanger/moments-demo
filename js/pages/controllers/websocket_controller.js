@@ -24,7 +24,8 @@ export function WebsocketController() {
      * When user shares, creates a folder on the server, uploads the models, server stores all the models for the story. 
      */
 
-    let mConnectedToStory = false;
+    let mIsSharing = false;
+    let mConnectedToRemote = false;
 
     let mSharedStoriesUpdatedCallback = () => { }
     let mStoryConnectCallback = async () => { }
@@ -43,10 +44,12 @@ export function WebsocketController() {
 
     mWebSocket.on('connect_error', function (data) {
         mWebSocket.disconnect();
+        mIsSharing = false;
         console.error('Websocket connection failed.');
     });
 
     mWebSocket.on("disconnect", (reason) => {
+        mIsSharing = false;
         logInfo("Disconnecting because: " + reason);
     });
 
@@ -65,7 +68,7 @@ export function WebsocketController() {
     });
 
     mWebSocket.on(ServerMessage.CONNECT_TO_STORY, async (story) => {
-        mConnectedToStory = true;
+        mConnectedToRemote = true;
         await mStoryConnectCallback(story);
     });
 
@@ -75,10 +78,6 @@ export function WebsocketController() {
 
     mWebSocket.on(ServerMessage.NEW_ASSET, async (data) => {
         await mNewAssetCallback(data.id, data.name, data.buffer, data.type);
-    });
-
-    mWebSocket.on(ServerMessage.UPDATE_ASSET, async (data) => {
-        await mUpdateAssetCallback(data.id, data.name, data.buffer);
     });
 
     mWebSocket.on(ServerMessage.CREATE_MOMENT, async (data) => {
@@ -94,7 +93,7 @@ export function WebsocketController() {
     });
 
     mWebSocket.on(ServerMessage.START_SHARE, () => {
-        mConnectedToStory = true;
+        mIsSharing = true;
         logInfo("Sharing started successfully.")
     })
 
@@ -116,7 +115,7 @@ export function WebsocketController() {
     function connectToStory(storyId) {
         mWebSocket.emit(ServerMessage.CONNECT_TO_STORY, storyId);
         setTimeout(() => {
-            if (!mConnectedToStory) {
+            if (!mConnectedToRemote) {
                 console.error("Connection to " + storyId + " failed, retrying.");
                 mWebSocket.emit(ServerMessage.CONNECT_TO_STORY, storyId);
             };
@@ -127,7 +126,7 @@ export function WebsocketController() {
     }
 
     function updateStory(transaction) {
-        if (!mConnectedToStory) return;
+        if (!mConnectedToRemote && !mIsSharing) return;
         mWebSocket.emit(ServerMessage.UPDATE_STORY, transaction);
     }
 
@@ -154,13 +153,8 @@ export function WebsocketController() {
         mWebSocket.emit(ServerMessage.NEW_ASSET, { id, name: file.name, type, buffer })
     }
 
-    async function updateAsset(id, file) {
-        let buffer = await file.arrayBuffer();
-        mWebSocket.emit(ServerMessage.UPDATE_ASSET, { id, name: file.name, buffer })
-    }
-
     function updateParticipant(head, handR = null, handL = null, momentId = null) {
-        if (!mConnectedToStory) return;
+        if (!mConnectedToRemote && !mIsSharing) return;
         mWebSocket.emit(ServerMessage.UPDATE_PARTICIPANT, { head, handR, handL, momentId })
     }
 
@@ -174,13 +168,12 @@ export function WebsocketController() {
     this.updateStory = updateStory;
     this.updateParticipant = updateParticipant;
     this.newAsset = newAsset;
-    this.updateAsset = updateAsset;
     this.createMoment = createMoment;
     this.onSharedStories = (func) => mSharedStoriesUpdatedCallback = func;
     this.onStoryConnect = (func) => mStoryConnectCallback = func;
     this.onStoryUpdate = (func) => mStoryUpdateCallback = func;
     this.onNewAsset = (func) => mNewAssetCallback = func;
-    this.onUpdateAsset = (func) => mUpdateAssetCallback = func;
     this.onCreateMoment = (func) => mCreateMomentCallback = func;
     this.onParticipantUpdate = (func) => mParticipantUpdateCallback = func;
+    this.isSharing = () => mIsSharing;
 }

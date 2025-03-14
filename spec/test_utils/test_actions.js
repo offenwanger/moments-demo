@@ -1,8 +1,8 @@
 
 import * as THREE from 'three';
+import { AssetTypes, MenuNavButtons, RecordToolButtons, ToolButtons } from '../../js/constants.js';
 import { Data } from '../../js/data.js';
 import { loadRealFile, mockFile, mockFileSystemDirectoryHandle } from './mock_filesystem.js';
-import { AssetTypes, MenuNavButtons, RecordToolButtons, ToolButtons } from '../../js/constants.js';
 import { forceIntercept } from './mock_three.js';
 
 export function testmodel() {
@@ -21,7 +21,7 @@ export async function pointermove(x, y) {
     if (!window.callbacks.pointermove) console.error("No callbacks registered for pointermove");
     for (let cb of window.callbacks.pointermove)
         await cb({ clientX: x, clientY: y });
-    
+
     await global.test_rendererAccess.animationLoop();
 }
 
@@ -29,6 +29,22 @@ export async function pointerup(x, y) {
     if (!window.callbacks.pointerup) console.error("No callbacks registered for pointerup");
     for (let cb of window.callbacks.pointerup)
         await cb({ clientX: x, clientY: y });
+
+    await global.test_rendererAccess.animationLoop();
+}
+
+export async function ctrlZ() {
+    if (!window.callbacks.keydown) console.error("No callbacks registered for keydown");
+    for (let cb of window.callbacks.keydown)
+        await cb({ ctrlKey: true, key: 'z' });
+
+    await global.test_rendererAccess.animationLoop();
+}
+
+export async function ctrlY() {
+    if (!window.callbacks.pointerup) console.error("No callbacks registered for keydown");
+    for (let cb of window.callbacks.keydown)
+        await cb({ ctrlKey: true, key: 'y' });
 
     await global.test_rendererAccess.animationLoop();
 }

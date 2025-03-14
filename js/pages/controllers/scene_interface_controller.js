@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { ASSET_UPDATE_COMMAND, AssetTypes, AttributeButtons, BrushToolButtons, InteractionType, ItemButtons, MenuNavButtons, RecordToolButtons, SurfaceToolButtons, TELEPORT_COMMAND, ToolButtons } from "../../constants.js";
+import { AssetTypes, AttributeButtons, BrushToolButtons, InteractionType, ItemButtons, MenuNavButtons, RecordToolButtons, SurfaceToolButtons, TELEPORT_COMMAND, ToolButtons } from "../../constants.js";
 import { Data } from "../../data.js";
 import { DataUtil } from "../../utils/data_util.js";
 import { IdUtil } from "../../utils/id_util.js";
@@ -23,10 +23,11 @@ import { XRSessionController } from './xr_controllers/xr_session_controller.js';
  */
 export function SceneInterfaceController(parentContainer, mWebsocketController, mAudioRecorder) {
     let mModelUpdateCallback = async () => { }
-    let mAssetUpdateCallback = async () => { }
     let mAssetCreateCallback = async () => { }
     let mTeleportCallback = async () => { }
     let mCreateMomentCallback = async () => { }
+    let mUndoCallback = async () => { }
+    let mRedoCallback = async () => { }
     let mSelectCallback = async () => { }
 
     RecorderToolHandler.setRecorder(mAudioRecorder);
@@ -215,8 +216,6 @@ export function SceneInterfaceController(parentContainer, mWebsocketController, 
             // no reaction, do nothing.
         } else if (reaction instanceof Transaction) {
             await mModelUpdateCallback(reaction);
-        } else if (reaction.type == ASSET_UPDATE_COMMAND) {
-            await mAssetUpdateCallback(reaction.id, await reaction.dataPromise)
         } else if (reaction.type == TELEPORT_COMMAND) {
             await mTeleportCallback(reaction.id);
         } else {
@@ -259,6 +258,10 @@ export function SceneInterfaceController(parentContainer, mWebsocketController, 
             mMenuController.showMenu(buttonId);
         } else if (buttonId == ItemButtons.NEW_MOMENT) {
             await mCreateMomentCallback()
+        } else if (buttonId == ItemButtons.UNDO) {
+            await mUndoCallback()
+        } else if (buttonId == ItemButtons.REDO) {
+            await mRedoCallback()
         } else if (Object.values(ItemButtons).includes(buttonId)) {
             console.error("Impliment me!")
         } else if (buttonId == AttributeButtons.SPHERE_SCALE_UP) {
@@ -422,10 +425,11 @@ export function SceneInterfaceController(parentContainer, mWebsocketController, 
     this.setCurrentMoment = setCurrentMoment;
     this.sessionStart = sessionStart;
     this.onModelUpdate = (func) => mModelUpdateCallback = func;
-    this.onAssetUpdate = (func) => mAssetUpdateCallback = func;
     this.onAssetCreate = (func) => mAssetCreateCallback = func;
     this.onTeleport = (func) => mTeleportCallback = func;
     this.onCreateMoment = (func) => mCreateMomentCallback = func;
+    this.onUndo = (func) => mUndoCallback = func;
+    this.onRedo = (func) => mRedoCallback = func;
     this.onSelect = (func) => mSelectCallback = func;
 }
 

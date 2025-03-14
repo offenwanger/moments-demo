@@ -2,8 +2,8 @@
 import { cleanup, setup } from './test_utils/test_environment.js';
 
 import { BrushToolButtons, SurfaceToolButtons, ToolButtons } from '../js/constants.js';
-import { canvasClickMenuButton, canvaspointerdown, createAndOpenStoryMoment, lookHead, movePageHead, pointermove, pointerup, testmodel } from './test_utils/test_actions.js';
 import { Data } from '../js/data.js';
+import { canvasClickMenuButton, canvaspointerdown, createAndOpenStoryMoment, ctrlZ, lookHead, movePageHead, pointermove, pointerup, testmodel } from './test_utils/test_actions.js';
 
 
 
@@ -121,6 +121,62 @@ describe('Test Photosphere Wrapper', function () {
             strokes = testmodel().strokes.filter(s => s.photosphereId == photosphere.id);
             expect(strokes.length).toBe(0);
         });
+
+        it('should undo clear and blur', async function () {
+            await createAndOpenStoryMoment();
+
+            let photosphere = testmodel().photospheres[0];
+            let strokes = testmodel().strokes.filter(s => s.photosphereId == photosphere.id);
+            expect(strokes.length).toBe(0);
+
+            let canvas = document.querySelector('#main-canvas');
+            await canvasClickMenuButton(ToolButtons.BRUSH);
+            await movePageHead(0, 0, -1);
+            await lookHead(0, 0, 0);
+
+            await canvasClickMenuButton(BrushToolButtons.UNBLUR);
+            await pointermove(canvas.width / 2, canvas.height / 2);
+            await canvaspointerdown(canvas.width / 2, canvas.height / 2)
+            await pointermove(canvas.width / 2 - 10, canvas.height / 2);
+            await pointermove(canvas.width / 2 - 20, canvas.height / 2);
+            await pointermove(canvas.width / 2 - 30, canvas.height / 2);
+            await pointerup(canvas.width / 2 - 30, canvas.height / 2);
+
+            await canvasClickMenuButton(BrushToolButtons.COLOR);
+            await pointermove(canvas.width / 2, canvas.height / 2);
+            await canvaspointerdown(canvas.width / 2, canvas.height / 2)
+            await pointermove(canvas.width / 2 - 10, canvas.height / 2);
+            await pointermove(canvas.width / 2 - 20, canvas.height / 2);
+            await pointermove(canvas.width / 2 - 30, canvas.height / 2);
+            await pointerup(canvas.width / 2 - 30, canvas.height / 2);
+
+            strokes = testmodel().strokes.filter(s => s.photosphereId == photosphere.id);
+            expect(strokes.length).toBe(2);
+
+            await canvasClickMenuButton(BrushToolButtons.CLEAR);
+            await pointermove(canvas.width / 2, canvas.height / 2);
+            await canvaspointerdown(canvas.width / 2, canvas.height / 2)
+            await pointermove(canvas.width / 2 - 10, canvas.height / 2);
+            await pointermove(canvas.width / 2 - 20, canvas.height / 2);
+            await pointermove(canvas.width / 2 - 30, canvas.height / 2);
+            await pointerup(canvas.width / 2 - 30, canvas.height / 2);
+
+            strokes = testmodel().strokes.filter(s => s.photosphereId == photosphere.id);
+            expect(strokes.length).toBe(0);
+
+            await ctrlZ();
+
+            strokes = testmodel().strokes.filter(s => s.photosphereId == photosphere.id);
+            expect(strokes.length).toBe(2);
+
+            await ctrlZ();
+            strokes = testmodel().strokes.filter(s => s.photosphereId == photosphere.id);
+            expect(strokes.length).toBe(1);
+
+            await ctrlZ();
+            strokes = testmodel().strokes.filter(s => s.photosphereId == photosphere.id);
+            expect(strokes.length).toBe(0);
+        });
     });
 
     describe('surface tests', function () {
@@ -180,6 +236,8 @@ describe('Test Photosphere Wrapper', function () {
             expect(areas.length).toBe(2);
             expect(areas[0].points.length).toBe(6);
             expect(areas[1].points.length).toBe(6);
+
+            expect('working').toBe(true);
         });
 
 

@@ -38,7 +38,9 @@ export function MenuController() {
         new MeshButton(ItemButtons.RECENTER, 'Recenter', BUTTON_SIZE, 0xff0000),
         new MeshButton(MenuNavButtons.SPHERE_SETTINGS, 'Sphere Settings', BUTTON_SIZE),
         new MeshButton(MenuNavButtons.SETTINGS, 'Settings', BUTTON_SIZE, 0xff0000),
-        new MeshButton(MenuNavButtons.ADD, 'Add', BUTTON_SIZE)
+        new MeshButton(MenuNavButtons.ADD, 'Add', BUTTON_SIZE),
+        new MeshButton(ItemButtons.UNDO, 'Undo', BUTTON_SIZE),
+        new MeshButton(ItemButtons.REDO, 'Redo', BUTTON_SIZE),
     ]);
     mCurrentMenuId = MenuNavButtons.MAIN_MENU;
     mCurrentMenu = mMenus[MenuNavButtons.MAIN_MENU];

@@ -1,7 +1,7 @@
 
 import { cleanup, setup } from './test_utils/test_environment.js';
 
-import { clickButtonInput, createAndOpenStoryMoment, testmodel } from './test_utils/test_actions.js';
+import { clickButtonInput, createAndOpenStoryMoment, ctrlZ, testmodel } from './test_utils/test_actions.js';
 
 
 describe('Test MomentPanel', function () {
@@ -25,6 +25,16 @@ describe('Test MomentPanel', function () {
             expect(testmodel().moments.length == 1);
             await clickButtonInput('#moment-delete-button');
             expect(testmodel().moments.length == 0);
+        });
+
+        it('should undo the delete', async function () {
+            await createAndOpenStoryMoment();
+            expect(testmodel().moments.length == 1);
+            await clickButtonInput('#moment-delete-button');
+            expect(testmodel().moments.length == 0);
+
+            await ctrlZ()
+            expect(testmodel().moments.length == 1);
         });
     });
 });

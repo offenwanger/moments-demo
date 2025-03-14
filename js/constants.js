@@ -33,7 +33,6 @@ export const ServerMessage = {
     UPDATE_STORY: 'updatestory',
     UPDATE_PARTICIPANT: 'updateparticipant',
     NEW_ASSET: 'newasset',
-    UPDATE_ASSET: 'updateasset',
     CREATE_MOMENT: 'createMoment',
     ERROR: 'error',
 }
@@ -99,6 +98,8 @@ export const MenuNavButtons = {
 export const ItemButtons = {
     RECENTER: 'recenter',
     NEW_MOMENT: 'newMoment',
+    UNDO: 'undo',
+    REDO: 'redo',
 }
 
 export const AttributeButtons = {
@@ -107,7 +108,6 @@ export const AttributeButtons = {
     SPHERE_SCALE_DOWN: 'decreaseScale',
 }
 
-export const ASSET_UPDATE_COMMAND = 'assetUpdate'
 export const TELEPORT_COMMAND = 'updateCurrentMoment'
 
 export const MENU_WIDTH = 1.5;

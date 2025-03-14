@@ -41,11 +41,11 @@ class DataItem {
             } else if (key != 'id' && item == linkedId) {
                 addThis = true;
             } else if (item instanceof DataItem) {
-                results = item.findAllLinked(childId, results);
+                results = item.findAllLinked(linkedId, results);
             } else if (Array.isArray(item)) {
                 for (let arrItem of item) {
                     if (arrItem instanceof DataItem) {
-                        results = item.findAllLinked(childId, results);
+                        results = arrItem.findAllLinked(linkedId, results);
                     } else if (arrItem == null || arrItem == undefined) {
                         console.error('Invalid array item!');
                     } else {
