@@ -34,7 +34,7 @@ export function PhotosphereWrapper(parent) {
     let mSurfaceOffsets = [];
 
     let mInputStrokes = [];
-    let mInputPath3D = [];
+    let mInputPath = [];
     let mDrawingDeletedStrokes = [];
     let mDrawingNewStrokes = [];
     let mDrawingSurfaceAreas = [];
@@ -88,7 +88,7 @@ export function PhotosphereWrapper(parent) {
 
     async function update(photosphere, model, assetUtil) {
         mInputStrokes = [];
-        mInputPath3D = [];
+        mInputPath = [];
         mDrawingDeletedStrokes = [];
         mDrawingNewStrokes = [];
         mDrawingSurfaceAreas = [];
@@ -432,7 +432,7 @@ export function PhotosphereWrapper(parent) {
                 mInputStrokes[mInputStrokes.length - 1].push(...intersect.uv);
                 mInputStrokes[mInputStrokes.length - 1] = simplify(mInputStrokes[mInputStrokes.length - 1])
             }
-            mInputPath3D.push(new THREE.Vector3().copy(intersect.point).normalize());
+            mInputPath.push({ point3d: new THREE.Vector3().copy(intersect.point).normalize(), uv: intersect.uv });
 
             if (toolMode.tool == ToolButtons.BRUSH) {
                 if (toolMode.brushSettings.mode == BrushToolButtons.CLEAR) {
@@ -470,7 +470,7 @@ export function PhotosphereWrapper(parent) {
             } else if (toolMode.tool == ToolButtons.SURFACE) {
                 if (toolMode.surfaceSettings.mode == SurfaceToolButtons.FLATTEN ||
                     toolMode.surfaceSettings.mode == SurfaceToolButtons.RESET) {
-                    let areas = inputPathToAreas(mInputPath3D, mInputStrokes);
+                    let areas = inputPathToAreas(mInputPath, mInputStrokes);
                     mDrawingSurfaceAreas = areas;
                 } else if (toolMode.surfaceSettings.mode == SurfaceToolButtons.PULL) {
                     mDrawAllSurfaceAreas = false;
@@ -484,7 +484,7 @@ export function PhotosphereWrapper(parent) {
         }
         mInteractionTarget.idle = (toolMode) => {
             mInputStrokes = [];
-            mInputPath3D = [];
+            mInputPath = [];
             mDrawingDeletedStrokes = [];
             mDrawingNewStrokes = [];
             mDrawingSurfaceAreas = [];
@@ -536,21 +536,59 @@ export function PhotosphereWrapper(parent) {
         return { deletedStrokes, newStrokes };
     }
 
-    function inputPathToAreas(path3D, paths) {
+    function inputPathToAreas(inputPath, paths) {
         // no paths no area
         if (paths.length == 0) return [];
         // less than 3 points, no area
         if (paths.flat().length < 6) return [];
 
-        // We only make an area that's total angle is less than 120degrees. 
-        for (let i = 0; i < path3D.length; i++) {
-            for (let j = i; j < path3D.length; j++) {
-                if (path3D[i].angleTo(path3D[j]) > (2 / 3 * Math.PI)) {
+        // We only make an area that's widest angle is less than 120degrees.
+        // Any more than that and flattening won't make sense. 
+        for (let i = 0; i < inputPath.length; i++) {
+            for (let j = i; j < inputPath.length; j++) {
+                if (inputPath[i].point3d.angleTo(inputPath[j].point3d) > (2 / 3 * Math.PI)) {
                     // too big
                     return [];
                 }
             }
         }
+
+        // project all points into the plane defined by the central vector
+        // get the convex hull
+        let centralVector = inputPath.reduce((sum, { point3d }) => sum.add(new THREE.Vector3()
+            .copy(point3d).normalize()),
+            new THREE.Vector3())
+            .normalize();
+        mPlaneHelper.setFromNormalAndCoplanarPoint(centralVector, new THREE.Vector3());
+        let v1 = new THREE.Vector3(0, 1, 0);
+        if (v1.equals(centralVector)) v1 = new THREE.Vector3(0, 0, 1)
+        v1 = mPlaneHelper.projectPoint(v1, new THREE.Vector3());
+        v1.normalize();
+        let v2 = new THREE.Vector3().crossVectors(v1, centralVector);
+
+        let path2D = inputPath.map(({ point3d }) => {
+            let p = mPlaneHelper.projectPoint(point3d, new THREE.Vector3());
+            let x = v1.dot(p);
+            let y = v2.dot(p);
+            return [x, y]
+        }).flat();
+
+        let hull = new Array(...(new Delaunator(path2D).hull))
+            .map(i => inputPath[i].uv);
+
+        let projectedPole = mPlaneHelper.projectPoint(new THREE.Vector3(0, 1, 0), new THREE.Vector3());
+        projectedPole = {
+            x: v1.dot(projectedPole),
+            y: v2.dot(projectedPole)
+        }
+        Util.pointInPolygon(point, shape)
+
+
+
+        // project the pole into the hull
+        // if the pole is in the hull, find the point where it crosses the meridian
+        // if the pole is not in the hull, determine if the hull crosses the meridian twice or not
+
 
         // first determine if we close by crossing the seam or not
         // we do this by checking the first and last points. 
@@ -639,8 +677,8 @@ export function PhotosphereWrapper(parent) {
                 let newSurface = new Data.PhotosphereSurface();
 
                 let normal = new THREE.Vector3();
-                for (let p of mInputPath3D) {
-                    normal.add(p);
+                for (let p of mInputPath) {
+                    normal.add(new THREE.Vector3().copy(p.point3D).normalize());
                 }
                 normal.normalize();
 

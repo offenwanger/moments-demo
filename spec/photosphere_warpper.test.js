@@ -209,7 +209,7 @@ describe('Test Photosphere Wrapper', function () {
             expect(areas[0].points.length).toBe(8);
         });
 
-        it('should flatten across the seam', async function () {
+        fit('should flatten across the seam', async function () {
             await createAndOpenStoryMoment();
 
             let photosphere = testmodel().photospheres[0];
