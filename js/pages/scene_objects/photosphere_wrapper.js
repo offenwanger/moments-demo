@@ -34,7 +34,7 @@ export function PhotosphereWrapper(parent) {
     let mSurfaceOffsets = [];
 
     let mInputStrokes = [];
-    let mInputPath3D = [];
+    let mInputPath = [];
     let mDrawingDeletedStrokes = [];
     let mDrawingNewStrokes = [];
     let mDrawingSurfaceAreas = [];
@@ -88,7 +88,7 @@ export function PhotosphereWrapper(parent) {
 
     async function update(photosphere, model, assetUtil) {
         mInputStrokes = [];
-        mInputPath3D = [];
+        mInputPath = [];
         mDrawingDeletedStrokes = [];
         mDrawingNewStrokes = [];
         mDrawingSurfaceAreas = [];
@@ -270,13 +270,15 @@ export function PhotosphereWrapper(parent) {
                 for (let sId of surfaceIds) {
                     let surface = mSurfaces.find(s => s.id == sId);
                     if (!surface) { console.error("invalid surface id: " + sId); continue; }
-                    let surfacePoint = new THREE.Vector3();
                     mPlaneHelper.normal.set(...surface.normal);
                     mPlaneHelper.constant = surface.dist;
                     mRayHelper.direction.copy(point);
-                    mRayHelper.intersectPlane(mPlaneHelper, surfacePoint);
-                    if (surfacePoint.length() == 0) {
-                        console.error('Invalid point: ' + [u, v] + ", " + surfacePoint.toArray())
+                    let surfacePoint = mRayHelper.intersectPlane(mPlaneHelper, new THREE.Vector3());
+                    if (!surfacePoint || surfacePoint.length() == 0) {
+                        // this happens when a point is for some reason in a surface that's in the totally wrong direction.
+                        console.error('Invalid point: ' + [u, v] + ", for surface plane (normal: " + mPlaneHelper.normal.toArray() + ", constant:" + mPlaneHelper.constant + "),"
+                            + (surfacePoint ? surfacePoint.toArray() : "failed to get surface point."));
+                        continue;
                     }
                     scaledPoint.add(surfacePoint);
                 };
@@ -355,7 +357,8 @@ export function PhotosphereWrapper(parent) {
 
         let targetedId = mPhotosphere.id;
         if (toolMode.tool == ToolButtons.SURFACE &&
-            toolMode.surfaceSettings.mode == SurfaceToolButtons.PULL) {
+            toolMode.surfaceSettings.mode == SurfaceToolButtons.PULL ||
+            toolMode.surfaceSettings.mode == SurfaceToolButtons.DELETE) {
             let surfaceIds = getSurfacesForPoint(intersect.uv.x, intersect.uv.y);
             if (surfaceIds.length == 0) return [];
             else targetedId = surfaceIds[0];
@@ -394,14 +397,14 @@ export function PhotosphereWrapper(parent) {
                     draw();
                 }
             } else if (toolMode.tool == ToolButtons.SURFACE &&
-                toolMode.surfaceSettings.mode == SurfaceToolButtons.PULL) {
+                (toolMode.surfaceSettings.mode == SurfaceToolButtons.PULL ||
+                    toolMode.surfaceSettings.mode == SurfaceToolButtons.DELETE)) {
                 let surfaceIndex = mSurfaces.findIndex(s => s.id == targetedId);
                 if (surfaceIndex == -1) { console.error('Invalid surface: ' + targetedId); return; }
                 drawSurfaceArea();
                 draw();
             } else if (toolMode.tool == ToolButtons.SURFACE &&
-                (toolMode.surfaceSettings.mode == SurfaceToolButtons.RESET
-                    || toolMode.surfaceSettings.mode == SurfaceToolButtons.FLATTEN)) {
+                toolMode.surfaceSettings.mode == SurfaceToolButtons.FLATTEN) {
                 mDrawAllSurfaceAreas = true;
                 draw();
             } else {
@@ -432,7 +435,7 @@ export function PhotosphereWrapper(parent) {
                 mInputStrokes[mInputStrokes.length - 1].push(...intersect.uv);
                 mInputStrokes[mInputStrokes.length - 1] = simplify(mInputStrokes[mInputStrokes.length - 1])
             }
-            mInputPath3D.push(new THREE.Vector3().copy(intersect.point).normalize());
+            mInputPath.push({ point3d: new THREE.Vector3().copy(intersect.point).normalize(), uv: intersect.uv });
 
             if (toolMode.tool == ToolButtons.BRUSH) {
                 if (toolMode.brushSettings.mode == BrushToolButtons.CLEAR) {
@@ -468,11 +471,11 @@ export function PhotosphereWrapper(parent) {
                     draw();
                 }
             } else if (toolMode.tool == ToolButtons.SURFACE) {
-                if (toolMode.surfaceSettings.mode == SurfaceToolButtons.FLATTEN ||
-                    toolMode.surfaceSettings.mode == SurfaceToolButtons.RESET) {
-                    let areas = inputPathToAreas(mInputPath3D, mInputStrokes);
+                if (toolMode.surfaceSettings.mode == SurfaceToolButtons.FLATTEN) {
+                    let areas = inputPathToAreas(mInputPath, mInputStrokes);
                     mDrawingSurfaceAreas = areas;
-                } else if (toolMode.surfaceSettings.mode == SurfaceToolButtons.PULL) {
+                } else if (toolMode.surfaceSettings.mode == SurfaceToolButtons.PULL ||
+                    toolMode.surfaceSettings.mode == SurfaceToolButtons.DELETE) {
                     mDrawAllSurfaceAreas = false;
                     mDrawingSurfaceAreas = mSurfaceAreas.filter(s => s.photosphereSurfaceId == targetedId);
                 } else {
@@ -484,7 +487,7 @@ export function PhotosphereWrapper(parent) {
         }
         mInteractionTarget.idle = (toolMode) => {
             mInputStrokes = [];
-            mInputPath3D = [];
+            mInputPath = [];
             mDrawingDeletedStrokes = [];
             mDrawingNewStrokes = [];
             mDrawingSurfaceAreas = [];
@@ -536,75 +539,152 @@ export function PhotosphereWrapper(parent) {
         return { deletedStrokes, newStrokes };
     }
 
-    function inputPathToAreas(path3D, paths) {
+    function inputPathToAreas(inputPath, paths) {
         // no paths no area
         if (paths.length == 0) return [];
         // less than 3 points, no area
         if (paths.flat().length < 6) return [];
 
-        // We only make an area that's total angle is less than 120degrees. 
-        for (let i = 0; i < path3D.length; i++) {
-            for (let j = i; j < path3D.length; j++) {
-                if (path3D[i].angleTo(path3D[j]) > (2 / 3 * Math.PI)) {
+        // We only make an area that's widest angle is less than 120degrees.
+        // Any more than that and flattening won't make sense. 
+        for (let i = 0; i < inputPath.length; i++) {
+            for (let j = i; j < inputPath.length; j++) {
+                if (inputPath[i].point3d.angleTo(inputPath[j].point3d) > (2 / 3 * Math.PI)) {
                     // too big
                     return [];
                 }
             }
         }
 
-        // first determine if we close by crossing the seam or not
-        // we do this by checking the first and last points. 
-        let p1 = paths[0].slice(0, 2);
-        let lastPath = paths[paths.length - 1];
-        let pn = lastPath.slice(lastPath.length - 2);
+        // project all points into the plane defined by the central vector
+        // get the convex hull
+        let centralVector = inputPath.reduce((sum, { point3d }) => sum.add(new THREE.Vector3()
+            .copy(point3d).normalize()),
+            new THREE.Vector3())
+            .normalize();
+        mPlaneHelper.setFromNormalAndCoplanarPoint(centralVector, new THREE.Vector3());
+        let v1 = new THREE.Vector3(0, 1, 0);
+        if (v1.equals(centralVector)) v1 = new THREE.Vector3(0, 0, 1)
+        v1 = mPlaneHelper.projectPoint(v1, new THREE.Vector3());
+        v1.normalize();
+        let v2 = new THREE.Vector3().crossVectors(v1, centralVector);
 
-        if (Math.abs(p1[0] - pn[0]) > 0.5) {
-            // closer to go around. 
-            // extend the last path to the first point, and add a second segment
-            paths[paths.length - 1] = paths[paths.length - 1].concat([
-                p1[0] > 0.5 ? p1[0] - 1 : p1[0] + 1,
-                p1[1]
-            ]);
-            paths.push([
-                pn[0] > 0.5 ? pn[0] - 1 : pn[0] + 1,
-                pn[1],
-            ])
-        } else {
-            // closer to go direct, no changes needed.
+        let path2D = inputPath.map(({ point3d }) => {
+            let p = mPlaneHelper.projectPoint(point3d, new THREE.Vector3());
+            let x = v1.dot(p);
+            let y = v2.dot(p);
+            return [x, y]
+        }).flat();
+
+        let delaunay = new Delaunator(path2D);
+
+        let projectedHull = new Array(...(delaunay.hull))
+            .map(i => { return { x: path2D[i * 2], y: path2D[i * 2 + 1] } });
+        let projectedPole = mPlaneHelper.projectPoint(new THREE.Vector3(0, 1, 0), new THREE.Vector3());
+        projectedPole = {
+            x: v1.dot(projectedPole),
+            y: v2.dot(projectedPole)
         }
 
-        if (paths.length == 1) {
-            // if there's only one path, then it's a closed shape, 
-            // making one area
+        // get the uv hull now since all paths use it
+        let hull = new Array(...(delaunay.hull)).map(i => inputPath[i].uv);
+        if (Util.pointInPolygon(projectedPole, projectedHull)) {
+            // we contain the pole, which means we return one area with 
+            // extra points to go over the bottom
+
+            // which pole is it, top or bottom?
+            let yMax = Math.max(...hull.map(uv => uv.y - 0.5));
+            let yMin = Math.min(...hull.map(uv => uv.y - 0.5));
+            // if it's the bottom, then yMin should be father from 0 than yMax
+            // otherwise if yMax is father from 0 then it's the top
+            let yCoverVal = yMax > Math.abs(yMin) ? 1 : 0;
+
+            // it's a convex hull, so there will be one crossing point
+            // rearrange so the cross is the start
+            for (let i = 0; i < hull.length - 1; i++) {
+                if (Math.abs(hull[i].x - hull[i + 1].x) > 0.5) {
+                    let yCross =
+                        (hull[i + 1].x * hull[i].y - hull[i].x * hull[i + 1].y) /
+                        (hull[i + 1].x - hull[i].x);
+
+                    hull = [
+                        { x: hull[i + 1].x > 0.5 ? 1 : 0, y: yCoverVal },
+                        { x: hull[i + 1].x > 0.5 ? 1 : 0, y: yCross },
+                        ...hull.slice(i + 1),
+                        ...hull.slice(0, i + 1),
+                        { x: hull[i].x > 0.5 ? 1 : 0, y: yCross },
+                        { x: hull[i].x > 0.5 ? 1 : 0, y: yCoverVal },
+                    ];
+                    break;
+                }
+            }
+
             let area = new Data.PhotosphereArea();
-            area.points = paths[0];
-            area.photosphereId = mPhotosphere.id;
+            area.points = hull.map(uv => [uv.x, uv.y]).flat();;
             return [area];
-        }
+        } else {
+            let xMax = Math.max(...hull.map(uv => uv.x));
+            let xMin = Math.min(...hull.map(uv => uv.x));
+            if (xMax - xMin > 0.5) {
+                // we don't contain the bottom point, and must be less than 120 degrees, 
+                // so the only way we can have points which span more than half the sphere is if we
+                // are wrapping around the boundry
+                // Therefore, return two areas. 
 
-        // there's more than one path, start by connecting the start and end
-        let start = paths.shift();
-        paths[paths.length - 1].push(...start);
+                // rearrange so that we start at one cross. 
+                // there must be at least one more in the array now. 
+                for (let i = 0; i < hull.length - 1; i++) {
+                    if (Math.abs(hull[i].x - hull[i + 1].x) > 0.5) {
+                        let yCross =
+                            (hull[i + 1].x * hull[i].y - hull[i].x * hull[i + 1].y) /
+                            (hull[i + 1].x - hull[i].x);
 
-        let avgY = paths.flat()
-            .filter((v, i) => i % 2 == 1)
-            .reduce((sum, y) => sum + y)
-            / (paths.flat().length / 2);
+                        hull = [
+                            { x: hull[i + 1].x > 0.5 ? 1 : 0, y: yCross },
+                            ...hull.slice(i + 1),
+                            ...hull.slice(0, i + 1),
+                            { x: hull[i].x > 0.5 ? 1 : 0, y: yCross },
+                        ];
+                        break;
+                    }
+                }
 
-        // now we add points so that wrapping paths include the 
-        // whole bottom, and otherwise just return everything as an area. 
-        for (let path of paths) {
-            if (path[0] < 0 && path[path.length - 2] > 1) {
-                path.unshift(path[0], avgY > 0.5 ? 1.1 : -0.1);
-                path.push(path[path.length - 2], avgY > 0.5 ? 1.1 : -0.1);
+                let hull2;
+                for (let i = 0; i < hull.length - 1; i++) {
+                    if (Math.abs(hull[i].x - hull[i + 1].x) > 0.5) {
+                        let yCross =
+                            (hull[i + 1].x * hull[i].y - hull[i].x * hull[i + 1].y) /
+                            (hull[i + 1].x - hull[i].x);
+
+                        hull2 = [
+                            { x: hull[i + 1].x > 0.5 ? 1 : 0, y: yCross },
+                            ...hull.slice(i + 1),
+                        ];
+                        hull = [
+                            ...hull.slice(0, i + 1),
+                            { x: hull[i].x > 0.5 ? 1 : 0, y: yCross },
+                        ]
+                        break;
+                    }
+                }
+                if (!hull2) {
+                    console.error('Did not find the second cross, malformed.');
+                    let area = new Data.PhotosphereArea();
+                    area.points = hull.map(uv => [uv.x, uv.y]).flat();
+                    return [area];
+                }
+
+                let area = new Data.PhotosphereArea();
+                area.points = hull.map(uv => [uv.x, uv.y]).flat();
+                let area2 = new Data.PhotosphereArea();
+                area2.points = hull2.map(uv => [uv.x, uv.y]).flat();
+                return [area, area2];
+            } else {
+                let area = new Data.PhotosphereArea();
+                area.points = hull.map(uv => [uv.x, uv.y]).flat();
+                return [area];
             }
         }
-
-        return paths.map(points => {
-            let area = new Data.PhotosphereArea();
-            area.points = points;
-            return area;
-        })
     }
 
     function createInteractionTarget() {
@@ -632,15 +712,21 @@ export function PhotosphereWrapper(parent) {
                     console.error('Invalid interaction target: ' + surfaceId);
                 }
             } else if (toolMode.tool == ToolButtons.SURFACE &&
-                toolMode.surfaceSettings.mode == SurfaceToolButtons.RESET) {
-                console.error('not implimented')
+                toolMode.surfaceSettings.mode == SurfaceToolButtons.DELETE) {
+                let surfaceId = target.getId();
+                let surface = mSurfaces.find(s => s.id == surfaceId);
+                if (surface) {
+                    actions.push(new Action(ActionType.DELETE, surfaceId))
+                } else {
+                    console.error('Invalid interaction target: ' + surfaceId);
+                }
             } else if (toolMode.tool == ToolButtons.SURFACE &&
                 toolMode.surfaceSettings.mode == SurfaceToolButtons.FLATTEN) {
                 let newSurface = new Data.PhotosphereSurface();
 
                 let normal = new THREE.Vector3();
-                for (let p of mInputPath3D) {
-                    normal.add(p);
+                for (let p of mInputPath) {
+                    normal.add(new THREE.Vector3().copy(p.point3d).normalize());
                 }
                 normal.normalize();
 

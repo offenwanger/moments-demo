@@ -43,6 +43,7 @@ export const InteractionType = {
     TWO_HAND_MOVE: 'twoHandMove',
     TWO_HAND_POSE: 'twoHandPose',
     BRUSHING: 'brushing',
+    DELETING: 'deleting',
     RECORDING: 'recording',
     NONE: 'none'
 }
@@ -68,7 +69,7 @@ export const BrushToolButtons = {
 export const SurfaceToolButtons = {
     PULL: 'surfaceToolPull',
     FLATTEN: 'surfaceToolFlatten',
-    RESET: 'surfaceToolReset',
+    DELETE: 'surfaceToolDelete',
 }
 
 export const RecordToolButtons = {

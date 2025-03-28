@@ -4,15 +4,15 @@ import { Util } from "../../../utils/utility.js";
 
 // defines simplify2
 import '../../../../lib/simplify2.js';
-import { Action, ActionType, Transaction } from '../../../utils/transaction_util.js';
 
 function pointerMove(raycaster, orientation, isPrimary, interactionState, toolMode, model, sessionController, sceneController, helperPointController) {
-
     if (isPrimary) {
         if (interactionState.type == InteractionType.NONE) {
             let targets = sceneController.getTargets(raycaster, toolMode)
             if (targets.length > 1) { console.error('Unexpected target result!'); }
             Util.updateHoverTargetHighlight(targets[0], interactionState, toolMode, isPrimary, sessionController, helperPointController);
+        } else if (interactionState.type == InteractionType.DELETING) {
+            // do nothing.
         } else if (interactionState.type == InteractionType.BRUSHING) {
             let targets = sceneController.getTargets(raycaster, toolMode)
             if (targets.length == 0) { /* we moved off the sphere, do nothing. */ } else {
@@ -46,9 +46,11 @@ function pointerDown(raycaster, orientation, isPrimary, interactionState, toolMo
     let hovered = isPrimary ? interactionState.primaryHovered : interactionState.secondaryHovered;
     if (hovered) {
         if (interactionState.type == InteractionType.NONE) {
-            if (toolMode.surfaceSettings.mode == SurfaceToolButtons.FLATTEN ||
-                toolMode.surfaceSettings.mode == SurfaceToolButtons.RESET) {
+            if (toolMode.surfaceSettings.mode == SurfaceToolButtons.FLATTEN) {
                 interactionState.type = InteractionType.BRUSHING;
+                interactionState.data = { target: hovered };
+            } else if (toolMode.surfaceSettings.mode == SurfaceToolButtons.DELETE) {
+                interactionState.type = InteractionType.DELETING;
                 interactionState.data = { target: hovered };
             } else if (toolMode.surfaceSettings.mode == SurfaceToolButtons.PULL) {
                 startOneHandMove(raycaster, orientation, hovered, interactionState);
@@ -75,11 +77,11 @@ function pointerUp(raycaster, orientation, isPrimary, interactionState, toolMode
 
     helperPointController.hidePoint();
 
-    if (type == InteractionType.BRUSHING || type == InteractionType.ONE_HAND_MOVE) {
+    if (type == InteractionType.BRUSHING || type == InteractionType.DELETING || type == InteractionType.ONE_HAND_MOVE) {
         // we are either flattening or resetting.
         let transaction = data.target.getTransaction(toolMode);
         if (transaction) reaction = transaction;
-    } 
+    }
 
     return reaction;
 }

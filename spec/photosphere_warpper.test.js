@@ -193,11 +193,11 @@ describe('Test Photosphere Wrapper', function () {
             await lookHead(0, 0, 0);
 
             await canvasClickMenuButton(SurfaceToolButtons.FLATTEN);
-            await pointermove(canvas.width / 2, canvas.height / 2);
-            await canvaspointerdown(canvas.width / 2, canvas.height / 2)
+            await pointermove(canvas.width / 2 - 10, canvas.height / 2);
+            await canvaspointerdown(canvas.width / 2 - 10, canvas.height / 2)
             await pointermove(canvas.width / 2 - 10, canvas.height / 2);
             await pointermove(canvas.width / 2 - 30, canvas.height / 2);
-            await pointermove(canvas.width / 2 - 30, canvas.height / 2 - 10);
+            await pointermove(canvas.width / 2 - 30, canvas.height / 2 - 5);
             await pointermove(canvas.width / 2 - 30, canvas.height / 2 - 30);
             await pointermove(canvas.width / 2 - 10, canvas.height / 2 - 30);
             await pointerup(canvas.width / 2 - 30, canvas.height / 2 - 30);
@@ -206,10 +206,10 @@ describe('Test Photosphere Wrapper', function () {
             expect(surfaces.length).toBe(1);
             let areas = testmodel().areas.filter(a => a.photosphereSurfaceId == surfaces[0].id);
             expect(areas.length).toBe(1);
-            expect(areas[0].points.length).toBe(8);
+            expect(areas[0].points.length).toBe(10);
         });
 
-        it('should flatten across the seam', async function () {
+        it('should flatten a simple shape across the seam', async function () {
             await createAndOpenStoryMoment();
 
             let photosphere = testmodel().photospheres[0];
@@ -234,15 +234,126 @@ describe('Test Photosphere Wrapper', function () {
             expect(surfaces.length).toBe(1);
             let areas = testmodel().areas.filter(a => a.photosphereSurfaceId == surfaces[0].id);
             expect(areas.length).toBe(2);
-            expect(areas[0].points.length).toBe(6);
-            expect(areas[1].points.length).toBe(6);
+            expect(areas[0].points.length).toBe(8);
+            expect(areas[1].points.length).toBe(8);
+        });
 
-            expect('working').toBe(true);
+        it('should flatten a complex shape across the seam', async function () {
+            await createAndOpenStoryMoment();
+
+            let photosphere = testmodel().photospheres[0];
+            let surfaces = testmodel().surfaces.filter(s => s.photosphereId == photosphere.id);
+            expect(surfaces.length).toBe(0);
+
+            let canvas = document.querySelector('#main-canvas');
+            await canvasClickMenuButton(ToolButtons.SURFACE);
+            await movePageHead(0, 0, -1);
+            await lookHead(0, 0, 0);
+
+            await canvasClickMenuButton(SurfaceToolButtons.FLATTEN);
+            await pointermove(canvas.width / 2, canvas.height / 2);
+            await canvaspointerdown(canvas.width / 2, canvas.height / 2)
+            for (let i = 0; i < 10; i++) {
+                for (let j = 0; j < 10; j++) {
+                    await pointermove(
+                        canvas.width / 2 + Math.cos(((2 * Math.PI) + 0.5) * -i / 10) * 200,
+                        canvas.height / 2 + Math.sin(((2 * Math.PI) + 0.5) * -i / 10) * 200
+                    );
+                }
+            }
+            await pointermove(canvas.width / 2, canvas.height / 2);
+            await pointerup(canvas.width / 2, canvas.height / 2);
+
+            surfaces = testmodel().surfaces.filter(s => s.photosphereId == photosphere.id);
+            expect(surfaces.length).toBe(1);
+
+            let areas = testmodel().areas.filter(a => a.photosphereSurfaceId == surfaces[0].id);
+            expect(areas.length).toBe(2);
+            // 10 points plus 4 for the overlap = 14*2 = 28
+            expect(areas[0].points.length).toBe(12);
+            expect(areas[1].points.length).toBe(16);
+        });
+
+        it('should flatten the bottom pole', async function () {
+            await createAndOpenStoryMoment();
+
+            let photosphere = testmodel().photospheres[0];
+            let surfaces = testmodel().surfaces.filter(s => s.photosphereId == photosphere.id);
+            expect(surfaces.length).toBe(0);
+
+            let canvas = document.querySelector('#main-canvas');
+            await canvasClickMenuButton(ToolButtons.SURFACE);
+            await movePageHead(0, 0, 0);
+            await lookHead(0, -1, 0);
+
+            await canvasClickMenuButton(SurfaceToolButtons.FLATTEN);
+            await pointermove(canvas.width / 2, canvas.height / 2);
+            await canvaspointerdown(canvas.width / 2, canvas.height / 2)
+            await pointermove(canvas.width / 2 + 30, canvas.height / 2 - 30);
+            await pointermove(canvas.width / 2 - 30, canvas.height / 2 - 30);
+            await pointermove(canvas.width / 2 - 30, canvas.height / 2 + 30);
+            await pointermove(canvas.width / 2 + 30, canvas.height / 2 + 30);
+            await pointerup(canvas.width / 2 + 30, canvas.height / 2 + 30);
+
+            surfaces = testmodel().surfaces.filter(s => s.photosphereId == photosphere.id);
+            expect(surfaces.length).toBe(1);
+            let areas = testmodel().areas.filter(a => a.photosphereSurfaceId == surfaces[0].id);
+            expect(areas.length).toBe(1);
+            // four points plus the four for the edges and corners
+            expect(areas[0].points.length).toBe(16);
         });
 
 
+        it('should delete a surface', async function () {
+            await createAndOpenStoryMoment();
+
+            let photosphere = testmodel().photospheres[0];
+            let surfaces = testmodel().surfaces.filter(s => s.photosphereId == photosphere.id);
+            expect(surfaces.length).toBe(0);
+
+            let canvas = document.querySelector('#main-canvas');
+            await canvasClickMenuButton(ToolButtons.SURFACE);
+            await movePageHead(0, 0, -1);
+            await lookHead(0, 0, 0);
+
+            await canvasClickMenuButton(SurfaceToolButtons.FLATTEN);
+            await pointermove(canvas.width / 2, canvas.height / 2);
+            await canvaspointerdown(canvas.width / 2, canvas.height / 2)
+            for (let i = 0; i < 10; i++) {
+                for (let j = 0; j < 10; j++) {
+                    await pointermove(
+                        canvas.width / 2 + Math.cos(((2 * Math.PI) + 0.5) * -i / 10) * 50,
+                        canvas.height / 2 + Math.sin(((2 * Math.PI) + 0.5) * -i / 10) * 50
+                    );
+                }
+            }
+            await pointermove(canvas.width / 2, canvas.height / 2);
+            await pointerup(canvas.width / 2, canvas.height / 2);
+
+
+            await pointermove(canvas.width / 2 + 100, canvas.height / 2 + 100);
+            await canvaspointerdown(canvas.width / 2 + 100, canvas.height / 2 + 100)
+            for (let i = 0; i < 10; i++) {
+                for (let j = 0; j < 10; j++) {
+                    await pointermove(
+                        canvas.width / 2 + Math.cos(((2 * Math.PI) + 0.5) * -i / 10) * 50 + 100,
+                        canvas.height / 2 + Math.sin(((2 * Math.PI) + 0.5) * -i / 10) * 50 + 100
+                    );
+                }
+            }
+            await pointermove(canvas.width / 2, canvas.height / 2 + 100);
+            await pointerup(canvas.width / 2, canvas.height / 2 + 100);
+
+            surfaces = testmodel().surfaces.filter(s => s.photosphereId == photosphere.id);
+            expect(surfaces.length).toBe(2);
+
+            await canvasClickMenuButton(SurfaceToolButtons.DELETE);
+            await pointermove(canvas.width / 2 + 100, canvas.height / 2 + 100);
+            await canvaspointerdown(canvas.width / 2 + 100, canvas.height / 2 + 100)
+            await pointerup(canvas.width / 2, canvas.height / 2 + 100);
+
+            surfaces = testmodel().surfaces.filter(s => s.photosphereId == photosphere.id);
+            expect(surfaces.length).toBe(1);
+        });
     });
-
-
-
 });
