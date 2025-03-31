@@ -46,8 +46,8 @@ export function ButtonMenu(id, width, paginate = 0) {
                 contentDirection: 'row',
                 backgroundOpacity: 0,
                 alignItems: 'start',
-                fontFamily: "/css/fonts/Roboto-msdf.json",
-                fontTexture: "/css/fonts/Roboto-msdf.png",
+                fontFamily: "./css/fonts/Roboto-msdf.json",
+                fontTexture: "./css/fonts/Roboto-msdf.png",
             });
             row.add(...buttons.map(b => b.getObject()));
             mRows.push(row);
