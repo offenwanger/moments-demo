@@ -17,8 +17,6 @@ export function ButtonMenu(id, width, paginate = 0) {
         width,
         borderRadius: 0.1,
         alignItems: 'start',
-        fontFamily: "../../../css/fonts/Roboto-msdf.json",
-        fontTexture: "../../../css/fonts/Roboto-msdf.png",
     });
     mContainer.userData.id = id;
     mContainer.onAfterUpdate = function () {
@@ -48,8 +46,8 @@ export function ButtonMenu(id, width, paginate = 0) {
                 contentDirection: 'row',
                 backgroundOpacity: 0,
                 alignItems: 'start',
-                fontFamily: "../../../assets/menu_fonts/Roboto-msdf.json",
-                fontTexture: "../../../assets/menu_fonts/Roboto-msdf.png",
+                fontFamily: "/css/fonts/Roboto-msdf.json",
+                fontTexture: "/css/fonts/Roboto-msdf.png",
             });
             row.add(...buttons.map(b => b.getObject()));
             mRows.push(row);
