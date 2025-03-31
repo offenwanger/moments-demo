@@ -46,11 +46,17 @@ export function SceneController(audioListener) {
         mModel = model;
         mAssetUtil = assetUtil;
 
-        if (!mCurrentMomentId || !mModel.find(mCurrentMomentId)) {
-            mCurrentMomentId = null;
+        if (mCurrentMomentId) {
+            let moment = mModel.find(mCurrentMomentId);
+            if (!moment) {
+                // moment doesn't or no longer exists
+                mCurrentMomentId = null;
+            } else {
+                await mMomentWrapper.update(moment, model, assetUtil);
+            }
+        } else {
+            await mMomentWrapper.update(null, model, assetUtil);
         }
-
-        await mMomentWrapper.update(mCurrentMomentId, model, assetUtil);
     }
 
     async function setCurrentMoment(momentId = null) {

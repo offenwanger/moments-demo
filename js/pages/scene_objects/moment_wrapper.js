@@ -1,6 +1,4 @@
 import * as THREE from 'three';
-import { Data } from "../../data.js";
-import { SceneUtil } from '../../utils/scene_util.js';
 import { AudioWrapper } from './audio_wrapper.js';
 import { PhotosphereWrapper } from './photosphere_wrapper.js';
 import { PictureWrapper } from "./picture_wrapper.js";
@@ -8,8 +6,6 @@ import { PoseableAssetWrapper } from "./poseable_asset_wrapper.js";
 import { TeleportWrapper } from './teleport_wrapper.js';
 
 export function MomentWrapper(parent, audioListener) {
-    let mModel = new Data.StoryModel();
-
     let mStoryGroup = new THREE.Group();
 
     let mPhotosphereWrapper = new PhotosphereWrapper(mStoryGroup);
@@ -18,68 +14,28 @@ export function MomentWrapper(parent, audioListener) {
     let mAudioWrappers = [];
     let mTeleportWrappers = [];
 
-    async function update(momentId, model, assetUtil) {
-        mModel = model;
-
-        if (!momentId) {
+    async function update(moment, model, assetUtil) {
+        if (!moment) {
             parent.remove(mStoryGroup);
         } else {
-            let moment = model.find(momentId);
-            if (!moment) { console.error("Invalid moment!"); }
-
             parent.add(mStoryGroup);
 
-            let photosphere = model.photospheres.find(p => p.momentId == momentId);
+            let photosphere = model.photospheres.find(p => p.momentId == moment.id);
+            if (!photosphere) { console.error('Malformed! Photosphere missing!'); }
             await mPhotosphereWrapper.update(photosphere, model, assetUtil);
 
-            await SceneUtil.updateWrapperArray(mPoseableAssetWrappers,
-                mModel.poseableAssets.filter(p => p.momentId == momentId),
-                mModel,
-                assetUtil,
-                async (poseableAsset) => {
-                    let newPoseableAssetWrapper = new PoseableAssetWrapper(mStoryGroup, audioListener);
-                    return newPoseableAssetWrapper;
-                });
+            await updateWrapperArray(mPoseableAssetWrappers, model.poseableAssets.filter(p => p.momentId == moment.id),
+                model, assetUtil, () => new PoseableAssetWrapper(mStoryGroup, audioListener));
 
-            await SceneUtil.updateWrapperArray(mPictureWrappers,
-                mModel.pictures.filter(p => p.momentId == moment.id),
-                mModel,
-                assetUtil,
-                async (picture) => {
-                    let newPictureWrapper = new PictureWrapper(mStoryGroup, audioListener);
-                    return newPictureWrapper;
-                });
+            await updateWrapperArray(mPictureWrappers, model.pictures.filter(p => p.momentId == moment.id),
+                model, assetUtil, () => new PictureWrapper(mStoryGroup, audioListener));
 
-            await SceneUtil.updateWrapperArray(mAudioWrappers,
-                mModel.audios.filter(a => a.momentId == moment.id && !a.attachedId),
-                mModel,
-                assetUtil,
-                async (audio) => {
-                    let newAudioWrapper = new AudioWrapper(mStoryGroup, audioListener);
-                    return newAudioWrapper;
-                });
+            await updateWrapperArray(mAudioWrappers, model.audios.filter(a => a.momentId == moment.id && !a.attachedId),
+                model, assetUtil, () => new AudioWrapper(mStoryGroup, audioListener));
 
-            await SceneUtil.updateWrapperArray(mTeleportWrappers,
-                mModel.teleports.filter(t => t.momentId == moment.id && !t.attachedId),
-                mModel,
-                assetUtil,
-                async (teleport) => {
-                    let newTeleportWrapper = new TeleportWrapper(mStoryGroup);
-                    return newTeleportWrapper;
-                });
+            await updateWrapperArray(mTeleportWrappers, model.teleports.filter(t => t.momentId == moment.id && !t.attachedId),
+                model, assetUtil, () => new TeleportWrapper(mStoryGroup));
         }
-    }
-
-    function render() {
-
-    }
-
-    function globalToLocalPosition(globalPosition) {
-        return globalPosition;
-    }
-
-    function localToGlobalPosition(localPosition) {
-        return localPosition;
     }
 
     function getTargets(ray, toolMode) {
@@ -92,7 +48,21 @@ export function MomentWrapper(parent, audioListener) {
         ]
     }
 
+
+    async function updateWrapperArray(wrappers, dataItems, model, assetUtil, createFunction) {
+        for (let i = 0; i < dataItems.length; i++) {
+            if (!wrappers[i]) {
+                wrappers.push(createFunction(dataItems[i]));
+            }
+            await wrappers[i].update(dataItems[i], model, assetUtil);
+        }
+
+        let deleteWrappers = wrappers.splice(dataItems.length)
+        for (let wrapper of deleteWrappers) {
+            wrapper.remove();
+        }
+    }
+
     this.update = update;
-    this.render = render;
     this.getTargets = getTargets;
 }

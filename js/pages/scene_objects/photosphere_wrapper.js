@@ -24,6 +24,7 @@ export function PhotosphereWrapper(parent) {
     let mParent = parent;
     let mModel = new Data.StoryModel();
     let mPhotosphere = new Data.Photosphere();
+    mPhotosphere.assetId = 'awaiting load';
     let mStrokes = [];
     let mSurfaces = [];
     let mSurfacePivots = [];
@@ -87,6 +88,7 @@ export function PhotosphereWrapper(parent) {
     const mRayHelper = new THREE.Ray();
 
     async function update(photosphere, model, assetUtil) {
+        // reset the interaction parameters
         mInputStrokes = [];
         mInputPath = [];
         mDrawingDeletedStrokes = [];
@@ -94,8 +96,12 @@ export function PhotosphereWrapper(parent) {
         mDrawingSurfaceAreas = [];
         mDrawAllSurfaceAreas = false;
 
-        mPhotosphere = photosphere;
+        // update the internal model pointers
         mModel = model;
+
+        let oldPhotosphere = mPhotosphere;
+        mPhotosphere = photosphere;
+        mSphere.userData.id = mPhotosphere.id;
 
         if (!mPhotosphere || !mPhotosphere.enabled) {
             mParent.remove(mSphere);
@@ -104,51 +110,83 @@ export function PhotosphereWrapper(parent) {
             mParent.add(mSphere)
         }
 
-        mStrokes = model.strokes.filter(s => s.photosphereId == mPhotosphere.id);
+        // check if we actually need to recalculate the surface or redraw it, expensive operations.
+        let resurface = false;
+        let redraw = false;
+        if (!oldPhotosphere ||
+            mPhotosphere.id != oldPhotosphere.id ||
+            oldPhotosphere.enabled != mPhotosphere.enabled) {
+            resurface = true;
+            redraw = true;
+        }
 
+        let oldSurfaces = mSurfaces;
         mSurfaces = model.surfaces.filter(s => s.photosphereId == mPhotosphere.id);
-        mSurfacePivots = [];
-        mSurfaceAreas = [];
-
-        mSurfaces.forEach(s => {
-            let areas = model.areas.filter(a => a.photosphereSurfaceId == s.id);
-            mSurfaceAreas.push(...areas);
-
-            // make the pivot
-            let center = new THREE.Vector3();
-            for (let area of areas) {
-                for (let i = 0; i < area.points.length; i += 2) {
-                    center.add(Util.uvToPoint(area.points[i], area.points[i + 1]));
+        if (mSurfaces.map(s => s.id).sort().join('') != oldSurfaces.map(s => s.id).sort().join('')) {
+            resurface = true;
+        } else {
+            for (let s of mSurfaces) {
+                let oldS = oldSurfaces.find(old => old.id == s.id);
+                if (oldS.dist != s.dist ||
+                    oldS.normal[0] != s.normal[0] ||
+                    oldS.normal[1] != s.normal[1] ||
+                    oldS.normal[2] != s.normal[2]) {
+                    resurface = true;
                 }
             }
-            center.normalize();
-
-            let pivot = new THREE.Vector3();
-            mPlaneHelper.normal.set(...s.normal);
-            mPlaneHelper.constant = s.dist;
-            mRayHelper.direction.copy(center);
-            mRayHelper.intersectPlane(mPlaneHelper, pivot);
-            if (pivot.length() == 0) {
-                console.error('Invalid pivot:' + pivot.toArray())
-                pivot.copy(center);
-            }
-            mSurfacePivots.push(pivot);
-        })
-
-        updateMesh();
-
-        if (mPhotosphere.assetId) {
-            mImage = await assetUtil.loadImage(mPhotosphere.assetId);
-        } else {
-            mImage = await (new THREE.ImageLoader()).loadAsync(DEFAULT_TEXTURE)
         }
-        mSphere.userData.id = mPhotosphere.id;
 
-        drawBlur();
-        drawColor();
-        drawSurfaceArea();
+        if (resurface) {
+            mSurfacePivots = [];
+            mSurfaceAreas = [];
+            mSurfaces.forEach(s => {
+                let areas = model.areas.filter(a => a.photosphereSurfaceId == s.id);
+                mSurfaceAreas.push(...areas);
 
-        draw();
+                // make the pivot
+                let center = new THREE.Vector3();
+                for (let area of areas) {
+                    for (let i = 0; i < area.points.length; i += 2) {
+                        center.add(Util.uvToPoint(area.points[i], area.points[i + 1]));
+                    }
+                }
+                center.normalize();
+
+                let pivot = new THREE.Vector3();
+                mPlaneHelper.normal.set(...s.normal);
+                mPlaneHelper.constant = s.dist;
+                mRayHelper.direction.copy(center);
+                mRayHelper.intersectPlane(mPlaneHelper, pivot);
+                if (pivot.length() == 0) {
+                    console.error('Invalid pivot:' + pivot.toArray())
+                    pivot.copy(center);
+                }
+                mSurfacePivots.push(pivot);
+            })
+            updateMesh();
+        }
+
+        if (!oldPhotosphere || mPhotosphere.assetId != oldPhotosphere.assetId) {
+            if (mPhotosphere.assetId) {
+                mImage = await assetUtil.loadImage(mPhotosphere.assetId);
+            } else {
+                mImage = await (new THREE.ImageLoader()).loadAsync(DEFAULT_TEXTURE)
+            }
+            redraw = true;
+        }
+
+        let oldStrokes = mStrokes.map(s => s.id).sort().join('');
+        mStrokes = model.strokes.filter(s => s.photosphereId == mPhotosphere.id);
+        if (mStrokes.map(s => s.id).sort().join('') != oldStrokes) {
+            redraw = true;
+        }
+
+        if (redraw) {
+            drawBlur();
+            drawColor();
+            drawSurfaceArea();
+            draw();
+        }
     }
 
     function draw() {
