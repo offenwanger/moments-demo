@@ -15,7 +15,7 @@ import { ModelController } from './controllers/model_controller.js';
 import { PictureEditorController } from './controllers/picture_editor_controller.js';
 import { SceneInterfaceController } from './controllers/scene_interface_controller.js';
 import { SidebarController } from './controllers/sidebar_controller.js';
-import { AssetPicker } from './editor_panels/asset_picker.js';
+import { AssetList } from './editor_panels/asset_list.js';
 
 export function EditorPage(parentContainer, mWebsocketController) {
     const RESIZE_TARGET_SIZE = 20;
@@ -89,8 +89,8 @@ export function EditorPage(parentContainer, mWebsocketController) {
         await updateModel();
     })
 
-    let mAssetPicker = new AssetPicker(parentContainer);
-    mAssetPicker.onAssetsUpload(async (files) => {
+    let mAssetList = new AssetList(parentContainer);
+    mAssetList.onAssetsUpload(async (files) => {
         let transaction = new Transaction();
         for (let file of files) {
             try {
@@ -131,6 +131,23 @@ export function EditorPage(parentContainer, mWebsocketController) {
             await updateModel();
         }
     })
+    mAssetList.onAssetsClear(async () => {
+        let transaction = new Transaction();
+        let model = mModelController.getModel()
+        transaction.actions = model.assets.filter(a => {
+            if (model.findAllLinked(a.id).length > 0) {
+                return false;
+            } else return true;
+        }).map(a => {
+            return new Action(ActionType.DELETE, a.id);
+        });
+
+        if (transaction.actions.length > 0) {
+            pushUndo(mModelController.getModel(), transaction)
+            await mModelController.applyTransaction(transaction);
+            await updateModel();
+        }
+    });
 
     let mSidebarController = new SidebarController(mSidebarContainer);
     mSidebarController.onAddMoment(async () => {
@@ -171,7 +188,7 @@ export function EditorPage(parentContainer, mWebsocketController) {
         await mWebsocketController.shareStory(mModelController.getModel(), mWorkspace);
     })
     mSidebarController.onShowAssetManager(async () => {
-        await mAssetPicker.showOpenAssetPicker();
+        await mAssetList.show();
     })
 
     mWebsocketController.onStoryUpdate(async transaction => {
@@ -322,7 +339,7 @@ export function EditorPage(parentContainer, mWebsocketController) {
         try {
             let model = mModelController.getModel();
             await mAssetUtil.updateModel(model);
-            await mAssetPicker.updateModel(model);
+            await mAssetList.updateModel(model);
 
             await mSidebarController.updateModel(model);
             await mSceneInterface.updateModel(model, mAssetUtil);

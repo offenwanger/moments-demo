@@ -1,3 +1,5 @@
+
+// This is the old data structure for reference. 
 import { IdUtil } from "./utils/id_util.js";
 
 class DataItem {
@@ -30,35 +32,6 @@ class DataItem {
         }
         // we iterated all the items and didn't find it.
         return null;
-    }
-
-    findAllLinked(linkedId, results = []) {
-        let addThis = false;
-        for (let key of Object.keys(this)) {
-            let item = this[key];
-            if (!item) {
-                continue;
-            } else if (key != 'id' && item == linkedId) {
-                addThis = true;
-            } else if (item instanceof DataItem) {
-                results = item.findAllLinked(linkedId, results);
-            } else if (Array.isArray(item)) {
-                for (let arrItem of item) {
-                    if (arrItem instanceof DataItem) {
-                        results = arrItem.findAllLinked(linkedId, results);
-                    } else if (arrItem == null || arrItem == undefined) {
-                        console.error('Invalid array item!');
-                    } else {
-                        // not an array of data items, skip it.
-                        break;
-                    }
-                }
-            } else {
-                continue;
-            }
-        }
-        if (addThis) { results.push(this); }
-        return results;
     }
 
     clone(newIds = false) {
@@ -185,7 +158,6 @@ function cloneItem(item, newIds) {
 // Story model is the database, which stores the tables
 // All other objects have arrays of pointers.
 class StoryModel extends DataItem {
-    /* Top level data structure. */
     name = "A Story in Moments"
     // An array of the file names 
     // that have been loaded into this story
@@ -194,47 +166,41 @@ class StoryModel extends DataItem {
     assetPoses = [];
     moments = [];
     photospheres = [];
-    strokes = [];
-    surfaces = [];
-    areas = [];
+    surfaces = []
     poseableAssets = [];
     pictures = [];
     audios = [];
     teleports = [];
-
-    version = 0.1;
 }
 
 class Moment extends DataItem {
-    /* independant attributes */
     name = "Moment"
+    // 3D models in the scenes
+    poseableAssetIds = []
+    // 2D imagry in the scenes
+    pictureIds = []
+    // points of spatial audio
+    audioIds = []
+    teleportIds = []
+    photosphereId = null;
 }
 
-
 class Asset extends DataItem {
-    /* independant attributes */
     name = "Asset";
     type = null;
     filename = null;
     updated = Date.now();
+    // the default poses for the model.
+    poseIds = []
 }
 
 class PoseableAsset extends DataItem {
-    /* required id links */
-    assetId = null;
-    momentId = null;
-
-    /* independant attributes */
     name = "3D Model"
+    assetId = null;
+    poseIds = [];
 }
 
 class AssetPose extends DataItem {
-    /* required id links */
-    // The parent can be either an asset (in which case this is a default pose)
-    // or a Poseable asset. 
-    parentId = null;
-
-    /* independant attributes */
     name = "Pose";
     // indicates if this pose is relative, i.e. part of a chain,
     // or a root item
@@ -245,19 +211,19 @@ class AssetPose extends DataItem {
 }
 
 class Photosphere extends DataItem {
-    /* required id links */
-    momentId = null;
-
-    /* optional id links */
-    // the id of the photosphere image asset
-    assetId = null;
-
-    /* independant attributes */
     enabled = true;
-    blur = true;
     scale = 1;
+    // the id of the original photosphere image asset
+    imageAssetId = null;
+    // the id of the photosphere blur asset, which is 
+    // a mask specifying what of the image should be blurred
+    colorAssetId = null;
+    // the id of the photosphere color image asset, which is 
+    // an image with the coloring that gets drawn on top of 
+    // everything.
+    blurAssetId = null;
+    surfaceIds = []
 
-    /* procedural linked attributes */
     // We add this here as it's integral to the data structure. 
     // photosphere surface references these indices. Any changes
     // here will invalidate save models. 
@@ -279,78 +245,41 @@ class Photosphere extends DataItem {
 }
 
 class PhotosphereSurface extends DataItem {
-    /* required id links */
-    photosphereId = null;
-
-    /* independant attributes */
-    normal = [0, 0, 1]
-    dist = -1;
-}
-
-class PhotosphereArea extends DataItem {
-    /* required id links */
-    photosphereSurfaceId = null;
-
-    /* independant attributes */
     // uv array of u,v. 
     points = []
-}
+    /**
+     * array of basePoint indices. 
+     * this relies on the assumption that all photospheres
+     * will have the same number of base points.
+     */
+    basePointIndices = []
+    normal = [0, 0, 1]
+    dist = -1;
 
-const StrokeType = {
-    FOCUS: 'focus',
-    COLOR: 'color'
-}
-class Stroke extends DataItem {
-    /* required id links */
-    photosphereId = null;
-
-    /* independant attributes */
-    // uv array of u,v. 
-    points = [];
-    // width in percent of canvas height.  
-    width = 0.1;
-    color = '#000000';
-    type = StrokeType.COLOR;
 }
 
 class Picture extends DataItem {
-    /* required id links */
-    assetId = null;
-    momentId = null;
-
-    /* independant attributes */
     name = "Picture";
     x = 0; y = 0; z = 0;
     orientation = [0, 0, 0, 1];
     scale = 0.3;
+    assetId = null;
 }
 
 class Audio extends DataItem {
-    /* required id links */
-    assetId = null;
-    momentId = null;
-
-    /* optional id links */
-    attachedId = null;
-
-    /* independant attributes */
     name = "Audio";
+    assetId = null;
     x = 0; y = 0; z = 0;
+    attachedId = null;
     volume = 1;
     ambient = false;
 }
 
 class Teleport extends DataItem {
-    /* required id links */
-    momentId = null;
-    destinationId = null;
-
-    /* optional id links */
-    attachedId = null;
-
-    /* independant attributes */
     name = "Teleport";
+    momentId = null;
     x = 0; y = 0; z = 0;
+    attachedId = null;
     sceneX = 0;
     sceneY = 0;
     sceneZ = 0;
@@ -362,14 +291,11 @@ class Teleport extends DataItem {
 export const Data = {
     StoryModel,
     Asset,
-    Moment,
-    PoseableAsset,
     AssetPose,
+    Moment,
     Photosphere,
     PhotosphereSurface,
-    PhotosphereArea,
-    StrokeType,
-    Stroke,
+    PoseableAsset,
     Picture,
     Audio,
     Teleport,

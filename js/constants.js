@@ -105,6 +105,7 @@ export const ItemButtons = {
 
 export const AttributeButtons = {
     SPHERE_TOGGLE: 'sphereToggle',
+    SPHERE_BLUR_TOGGLE: 'sphereBlurToggle',
     SPHERE_SCALE_UP: 'increaseScale',
     SPHERE_SCALE_DOWN: 'decreaseScale',
 }

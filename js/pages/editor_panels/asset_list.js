@@ -3,8 +3,9 @@ import { FileUtil } from "../../utils/file_util.js";
 import { Util } from "../../utils/utility.js";
 import { ButtonInput } from "../components/button_input.js";
 
-export function AssetPicker(container) {
+export function AssetList(container) {
     let mAssetsUploadCallback = async (files) => { }
+    let mAssetsClearCallback = async () => { }
 
     let userAssetTypes = [
         AssetTypes.AUDIO,
@@ -44,11 +45,20 @@ export function AssetPicker(container) {
 
     let mAssetsContainer = document.createElement('div');
     mAssetsContainer.setAttribute('id', 'assets-container');
-    mDialog.appendChild(mAssetsContainer)
+    mAssetsContainer.style['height'] = '400px';
+    mAssetsContainer.style['overflow'] = 'scroll';
+    mContent.appendChild(mAssetsContainer)
     let mAssetList = []
 
     let mSelectedAssetId = null;
     let mSelectionType = null;
+
+    let mClearAssetsButton = new ButtonInput(mContent)
+        .setId("dialog-clear-button")
+        .setLabel("Clear Unused Assets")
+        .setOnClick(async () => {
+            await mAssetsClearCallback();
+        });
 
     let mCloseButton = new ButtonInput(mContent)
         .setId("dialog-close-button")
@@ -68,7 +78,7 @@ export function AssetPicker(container) {
         refreshList();
     }
 
-    async function showOpenAssetPicker(type = null) {
+    async function show(type = null) {
         mSelectionType = type;
         refreshList();
         mDialog.show();
@@ -90,6 +100,7 @@ export function AssetPicker(container) {
     }
 
     this.updateModel = updateModel;
-    this.showOpenAssetPicker = showOpenAssetPicker;
+    this.show = show;
     this.onAssetsUpload = (func) => mAssetsUploadCallback = func;
+    this.onAssetsClear = (func) => mAssetsClearCallback = func;
 }

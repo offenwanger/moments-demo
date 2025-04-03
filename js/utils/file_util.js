@@ -1,5 +1,6 @@
-import { AssetTypes, BOX_ASSET_PREFIXES, STORY_JSON_FILE } from '../constants.js';
+import { STORY_JSON_FILE } from '../constants.js';
 import { Data } from '../data.js';
+import { logInfo } from './log_util.js';
 
 async function getJSONFromFile(dir, filename) {
     let handle = await dir.getFileHandle(filename)
@@ -61,7 +62,10 @@ async function pacakgeToZip(model, assetFolder) {
 async function unpackageAssetsFromZip(zipBlob, assetFolder) {
     const zipFileReader = new zip.BlobReader(zipBlob);
     const zipReader = new zip.ZipReader(zipFileReader);
-    for (const entry of await zipReader.getEntries()) {
+    const entries = await zipReader.getEntries();
+    for (let i = 0; i < entries.length; i++) {
+        logInfo('Processing file ' + (i + 1) + '/' + entries.length);
+        let entry = entries[i]
         if (entry.filename == STORY_JSON_FILE) continue;
         const stream = new TransformStream();
         const fileDataPromise = new Response(stream.readable).arrayBuffer();
@@ -83,6 +87,9 @@ async function getModelFromZip(zipBlob) {
         if (entry.filename == STORY_JSON_FILE) return true;
         return false;
     });
+    if (!storyFile) {
+        throw new Error('Invalid archieve, story file not found.');
+    }
     const stream = new TransformStream();
     const streamPromise = new Response(stream.readable).text();
     await storyFile.getData(stream.writable);

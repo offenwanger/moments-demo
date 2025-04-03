@@ -177,7 +177,8 @@ export function PhotosphereWrapper(parent) {
 
         let oldStrokes = mStrokes.map(s => s.id).sort().join('');
         mStrokes = model.strokes.filter(s => s.photosphereId == mPhotosphere.id);
-        if (mStrokes.map(s => s.id).sort().join('') != oldStrokes) {
+        if (mPhotosphere.blur != oldPhotosphere.blur ||
+            mStrokes.map(s => s.id).sort().join('') != oldStrokes) {
             redraw = true;
         }
 
@@ -206,13 +207,17 @@ export function PhotosphereWrapper(parent) {
 
     function drawBlur() {
         mBlurCtx.reset();
-        // Draw the focus strokes.
-        let focusStokes = mStrokes
-            .filter(s => !mDrawingDeletedStrokes.includes(s.id))
-            .concat(mDrawingNewStrokes)
-            .filter(s => s.type == Data.StrokeType.FOCUS)
-        for (let s of focusStokes) {
-            drawStroke(mBlur, mBlurCtx, s);
+        if (mPhotosphere.blur) {
+            // Draw the focus strokes.
+            let focusStokes = mStrokes
+                .filter(s => !mDrawingDeletedStrokes.includes(s.id))
+                .concat(mDrawingNewStrokes)
+                .filter(s => s.type == Data.StrokeType.FOCUS)
+            for (let s of focusStokes) {
+                drawStroke(mBlur, mBlurCtx, s);
+            }
+        } else {
+            fill(mBlur, mBlurCtx);
         }
     }
 
@@ -249,6 +254,13 @@ export function PhotosphereWrapper(parent) {
         ctx.stroke();
         ctx.closePath();
     }
+
+    function fill(canvas, ctx) {
+        ctx.globalCompositeOperation = 'source-over'
+        ctx.color = 'black';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
 
     function drawArea(canvas, ctx, area) {
         ctx.globalCompositeOperation = 'source-over'

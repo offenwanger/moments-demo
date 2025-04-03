@@ -315,6 +315,15 @@ export function SceneInterfaceController(parentContainer, mWebsocketController, 
                 photosphere.id, {
                 enabled: !photosphere.enabled
             })]));
+        } else if (buttonId == AttributeButtons.SPHERE_BLUR_TOGGLE) {
+            let moment = mModel.moments.find(m => m.id == mCurrentMomentId);
+            if (!moment) { console.error("invalid moment id: " + mCurrentMomentId); return; }
+            let photosphere = mModel.photospheres.find(p => p.momentId == moment.id);
+            if (!photosphere) { console.error("invalid moment id, no photosphere: " + moment.id); return; }
+            await mModelUpdateCallback(new Transaction([new Action(ActionType.UPDATE,
+                photosphere.id, {
+                blur: !photosphere.blur
+            })]));
         } else if (IdUtil.getClass(buttonId) == Data.Asset) {
             let photosphere = mModel.photospheres.find(p => p.momentId == mCurrentMomentId);
             if (!photosphere) { console.error("invalid moment, no photosphere: " + mCurrentMomentId); return; }

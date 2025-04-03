@@ -48,7 +48,8 @@ export function MenuController() {
 
     mMenus[MenuNavButtons.SPHERE_SETTINGS] = createMenu(MenuNavButtons.SPHERE_SETTINGS, [
         new MeshButton(MenuNavButtons.BACK_BUTTON, 'Back', BUTTON_SIZE),
-        new MeshButton(AttributeButtons.SPHERE_TOGGLE, 'Toggle', BUTTON_SIZE),
+        new MeshButton(AttributeButtons.SPHERE_TOGGLE, 'Toggle Sphere', BUTTON_SIZE),
+        new MeshButton(AttributeButtons.SPHERE_BLUR_TOGGLE, 'Toggle Blur', BUTTON_SIZE),
         new MeshButton(AttributeButtons.SPHERE_SCALE_UP, 'Scale Up', BUTTON_SIZE),
         new MeshButton(MenuNavButtons.SPHERE_IMAGE, 'Image', BUTTON_SIZE),
         new MeshButton(MenuNavButtons.SPHERE_COLOR, 'Color', BUTTON_SIZE, 0xff0000),
