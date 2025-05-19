@@ -68,8 +68,8 @@ function mockChildProcess() {
                 on: () => { },
             }
         },
-        spawnSync: function () {
-
+        execSync: function () {
+            return 'Did thing';
         },
     }
 }
