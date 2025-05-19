@@ -1,4 +1,3 @@
-import { Canvas } from 'canvas';
 import * as fs from 'fs';
 import mime from 'mime';
 import { dirname } from 'path';
@@ -83,8 +82,8 @@ export function mockFile(filename, type = null, text = null) {
             let len = bytes.byteLength;
             for (let i = 0; i < len; i++) { str += String.fromCharCode(bytes[i]); }
             global.fileSystem[filename] = str;
-        } else if (stream instanceof Canvas) {
-            global.fileSystem[filename] = stream.toDataURL();
+        } else if (stream.isMockCanvas) {
+            global.fileSystem[filename] = stream.toFile();
         } else if (typeof stream == 'string') {
             global.fileSystem[filename] = stream;
         } else {

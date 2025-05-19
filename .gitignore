@@ -5,6 +5,7 @@ package-lock.json
 coverage
 brainstorming
 experiments
-token.js
 uploads
 spec/test_utils/testoutput/*
+token.js
+token.txt

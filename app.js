@@ -1,5 +1,5 @@
 import bodyParser from 'body-parser';
-import { spawn, spawnSync } from 'child_process';
+import { spawn, execSync } from 'child_process';
 import express from 'express';
 import * as fs from 'fs';
 import http from 'http';
@@ -10,7 +10,6 @@ import { ServerMessage } from './js/constants.js';
 import { Data } from './js/data.js';
 import { ModelController } from './js/pages/controllers/model_controller.js';
 import { logInfo } from './js/utils/log_util.js';
-import { TOKEN } from './token.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const UPLOAD_FOLDER = __dirname + '/uploads/'
@@ -56,13 +55,27 @@ server.listen(port);
 
 //////////////// ngrok /////////////////
 try {
-    logInfo('Spawning ngrok. Public URL: https://careful-loosely-moose.ngrok-free.app')
-    spawnSync(`ngrok config add-authtoken ${TOKEN}`);
-    const ngrok = spawn("ngrok", ["http", "--domain", "careful-loosely-moose.ngrok-free.app", port]);
-    ngrok.stdout.on('data', function (data) { logInfo(data.toString()); });
-    ngrok.stderr.on('data', function (data) { console.error(data.toString()) })
-    ngrok.on("error", function (error) { console.error(error) })
-} catch (e) { console.error(e); }
+    // please create token.js yourself and add you grok token. 
+    // If you don't have one, create and export TOKEN = ''
+    let TOKEN = fs.readFileSync('./token.txt', 'utf8');
+    logInfo('ngrok token found');
+
+    if (TOKEN) {
+        logInfo('Spawning ngrok. Public URL: https://careful-loosely-moose.ngrok-free.app')
+        const result = execSync(`ngrok config add-authtoken ${TOKEN}`);
+        logInfo(result.toString("utf8"));
+        const ngrok = spawn("ngrok", ["http", "--domain", "careful-loosely-moose.ngrok-free.app", port]);
+        ngrok.stdout.on('data', function (data) { logInfo(data.toString()); });
+        ngrok.stderr.on('data', function (data) { console.error(data.toString()) })
+        ngrok.on("error", function (error) { console.error(error) })
+    } else {
+        logInfo('No ngrok token, skipping ngrok server start.')
+    }
+} catch (e) {
+    console.error(e);
+    logInfo('If this failure was due to a missing auth token, please create a file token.txt in the same folder as ' +
+        'app.js and place your ngrok auth token in the file in plain text.');
+}
 
 
 ///////////// websockets ///////////////

@@ -1,23 +1,22 @@
-import { createCanvas as createCan } from 'canvas';
 import fs from 'fs';
 import { logInfo } from '../../js/utils/log_util.js';
 const RUN = Math.random();
 let fileCount = 0;
 
-export function createCanvas() {
-    let canvas = createCan(1, 1);
-    canvas.screenx = 0;
-    canvas.screeny = 0;
+export function mockCanvas() {
+    let canvas = { isMockCanvas: true };
 
-    canvas.internalGetContext = canvas.getContext;
+    canvas.toFile = function () {
+        console.error('IMpliment me!')
+    }
+
+    canvas.height = 1
+    canvas.width = 1
+    canvas.screenx = 0
+    canvas.screeny = 0
 
     canvas.getContext = function (type) {
-        let context = canvas.internalGetContext(type);
-        context.reset = function () {
-            canvas.height = canvas.height;
-            canvas.width = canvas.width;
-            this.setTransform(createCan(1, 1).getContext("2d").getTransform());
-        };
+        let context = new mockContext(type, canvas);
         return context;
     }
 
@@ -57,5 +56,35 @@ export function createCanvas() {
         }
     }
 
+    return canvas;
+}
+
+export function mockContext(type, canvas) {
+    let ctx = {}
+    let commands = []
+    ctx.reset = function () {
+        canvas.height = canvas.height;
+        canvas.width = canvas.width;
+    };
+    ctx.createLinearGradient = function (...args) {
+        return {
+            args,
+            addColorStop: () => { }
+        }
+    }
+    ctx.fillRect = function (...args) { commands.push({ cmd: 'fillRect', args }) }
+    ctx.beginPath = function (...args) { commands.push({ cmd: 'beginPath', args }) }
+    ctx.closePath = function (...args) { commands.push({ cmd: 'closePath', args }) }
+    ctx.arc = function (...args) { commands.push({ cmd: 'arc', args }) }
+    ctx.stroke = function (...args) { commands.push({ cmd: 'stroke', args }) }
+    ctx.fill = function (...args) { commands.push({ cmd: 'fill', args }) }
+    ctx.drawImage = function (...args) { commands.push({ cmd: 'drawImage', args }) }
+    ctx.moveTo = function (...args) { commands.push({ cmd: 'moveTo', args }) }
+    ctx.lineTo = function (...args) { commands.push({ cmd: 'lineTo', args }) }
+    return ctx;
+}
+
+export function createCanvas() {
+    let canvas = new mockCanvas();
     return canvas;
 }
