@@ -73,5 +73,5 @@ export function XRSessionController() {
     this.getCamera = mXRInputController.getCamera;
     this.setUserPositionAndDirection = mXRInputController.setUserPositionAndDirection;
     this.getUserPositionAndDirection = mXRInputController.getUserPositionAndDirection;
-    this.getMenuContainers = mXRInputController.getMenuContainers;
+    this.getMenuContainer = mXRInputController.getMenuContainer;
 }

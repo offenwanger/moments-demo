@@ -161,7 +161,7 @@ export function PageSessionController(parentContainer) {
     this.render = () => {/* nothing special to do */ }
     this.getCamera = () => mPageCamera;
 
-    this.getMenuContainers = () => [mMenuContainer];
+    this.getMenuContainer = () => mMenuContainer;
     this.onUserMoved = (func) => { mUserMovedCallback = func }
     this.onPointerMove = (func) => { mPointerMoveCallback = func }
     this.onPointerDown = (func) => { mPointerDownCallback = func }

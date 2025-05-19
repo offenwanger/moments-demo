@@ -66,7 +66,7 @@ export function SceneInterfaceController(parentContainer, mWebsocketController, 
         let { pos, dir } = mCurrentSessionController.getUserPositionAndDirection();
 
         scene.add(controller.getObject());
-        mMenuController.setContainer(...controller.getMenuContainers())
+        mMenuController.setContainer(controller.getMenuContainer())
         controller.getRenderer().setAnimationLoop(render);
         controller.setUserPositionAndDirection(pos, dir);
         mCurrentSessionController = controller;
@@ -241,13 +241,6 @@ export function SceneInterfaceController(parentContainer, mWebsocketController, 
             }
             mToolMode.tool = buttonId;
             mMenuController.setToolMode(mToolMode);
-            if (mToolMode.tool == ToolButtons.BRUSH ||
-                mToolMode.tool == ToolButtons.SURFACE ||
-                mToolMode.tool == ToolButtons.RECORD) {
-                mMenuController.showSubMenu(mToolMode.tool);
-            } else {
-                mMenuController.showSubMenu(null);
-            }
         } else if (Object.values(BrushToolButtons).includes(buttonId)) {
             mToolMode.brushSettings.mode = buttonId;
             mMenuController.setToolMode(mToolMode);

@@ -68,7 +68,7 @@ export function XRInputController(sceneContainer) {
 
     const mLeftMenuContainer = new THREE.Group();
     mLeftMenuContainer.scale.set(0.1, 0.1, 0.1)
-    mLeftMenuContainer.position.set(-0.075, 0, 0.1);
+    mLeftMenuContainer.position.set(-0.075, 0.07, 0);
     mLeftMenuContainer.rotateX(-Math.PI / 4);
     const mRightMenuContainer = mLeftMenuContainer.clone();
 
@@ -334,9 +334,18 @@ export function XRInputController(sceneContainer) {
         raycaster.ray.direction.copy(mDummyVector);
     }
 
+    function getMenuContainer() {
+        // future proofing in case we want to add a hand switch option in future.
+        if (true/** Right handed */) {
+            return mLeftMenuContainer
+        } else {
+            return mRightMenuContainer
+        };
+    }
+
     this.getCamera = () => mXRCamera;
     this.getGroup = () => mUserGroup;
-    this.getMenuContainers = () => [mLeftMenuContainer, mRightMenuContainer];
+    this.getMenuContainer = getMenuContainer
     this.getPrimaryRPressed = () => mPrimaryRPressed;
     this.getUserPositionAndDirection = () => { return { pos: getHeadPosition(), dir: getHeadDirection() } };
     this.getHeadPosition = getHeadPosition;

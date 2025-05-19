@@ -82,6 +82,7 @@ export const RecordToolButtons = {
 
 export const MenuNavButtons = {
     MAIN_MENU: 'mainMenu',
+    TOOL_MENU: 'toolMenu',
     SPHERE_SETTINGS: 'sphereSettings',
     SETTINGS: 'settings',
     ADD: 'add',

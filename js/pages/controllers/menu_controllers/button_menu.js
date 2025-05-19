@@ -2,46 +2,38 @@ import * as ThreeMeshUI from 'three-mesh-ui';
 import { MeshButton } from './mesh_button.js';
 
 export function ButtonMenu(id, width, paginate = 0) {
-    const PADDING = 0.1;
-    let mOnAfterUpdateCallback = () => { }
-    let mVOffset = 0
-    let mPaginate = paginate;
-    let mItemOffset = 0;
-
     // set of MeshButtons
     let mButtons = [];
+    let mDynamicButtons = []
+    let mDisplayButtons = []
     let mRows = []
 
+    // scrolling menu parameters
+    let mItemOffset = 0;
+    let mPaginate = paginate;
+
     const mContainer = new ThreeMeshUI.Block({
-        padding: PADDING,
+        padding: 0.1,
+        margin: 0.02,
         width,
         borderRadius: 0.1,
         alignItems: 'start',
     });
     mContainer.userData.id = id;
-    mContainer.onAfterUpdate = function () {
-        updatePosition();
-        mOnAfterUpdateCallback()
-    }
 
     function layout() {
         mContainer.remove(...mRows)
         mRows = [];
-        let buttonsSubset = mButtons;
-        if (mPaginate > 0) {
-            let dynamicButtons = mButtons.filter(b => b.isDynamic());
-            // wrap into the offset range, then ensure it's positive, then make sure it's not over the end of the line.
-            let offset = ((mItemOffset % dynamicButtons.length) + dynamicButtons.length) % dynamicButtons.length;
-            if (dynamicButtons.length > paginate) {
-                let buttons = dynamicButtons.slice(offset, offset + mPaginate);
-                if (buttons.length < mPaginate) {
-                    buttons.unshift(...dynamicButtons.slice(0, mPaginate - buttons.length));
-                }
-                buttonsSubset = mButtons.filter(b => !b.isDynamic()).concat(buttons);
-            }
+        mDisplayButtons = mButtons.concat(mDynamicButtons);
+
+        // if we are paginating only include a subset of the dynamic buttons
+        if (mPaginate > 0 && mDynamicButtons.length > mPaginate) {
+            let subset = mDynamicButtons.slice(mItemOffset, mItemOffset + mPaginate);
+            mDisplayButtons = mButtons.concat(subset);
         }
-        for (let i = 0; i < buttonsSubset.length; i += 3) {
-            let buttons = buttonsSubset.slice(i, i + 3);
+
+        for (let i = 0; i < mDisplayButtons.length; i += 3) {
+            let buttons = mDisplayButtons.slice(i, i + 3);
             let row = new ThreeMeshUI.Block({
                 contentDirection: 'row',
                 backgroundOpacity: 0,
@@ -57,24 +49,13 @@ export function ButtonMenu(id, width, paginate = 0) {
         mContainer.update(true, true, false);
     }
 
-    function setVOffset(offset) {
-        mVOffset = offset + PADDING;
-        updatePosition();
-    }
-
-    function updatePosition() {
-        mContainer.position.set(
-            mContainer.getWidth() / 2 + PADDING / 2,
-            -mContainer.getHeight() / 2 - PADDING / 2 - mVOffset,
-            0);
-    }
-
     /**
      * Add mesh buttons.
      * @param  {...MeshButton} buttons 
      */
     function add(...buttons) {
-        mButtons.push(...buttons);
+        mButtons.push(...buttons.filter(b => !b.isDynamic()));
+        mDynamicButtons.push(...buttons.filter(b => b.isDynamic()));
         layout();
     }
 
@@ -85,31 +66,38 @@ export function ButtonMenu(id, width, paginate = 0) {
     function remove(...buttons) {
         let ids = buttons.map(b => b.getId())
         mButtons = mButtons.filter(b => !ids.includes(b.getId()));
+        mDynamicButtons = mDynamicButtons.filter(b => !ids.includes(b.getId()));
+        constrainOffset();
         layout();
     }
 
-    function empty(dynamic = false) {
-        if (dynamic) mButtons = mButtons.filter(b => !b.isDynamic());
-        else mButtons = [];
+    function empty(dynamicOnly = false) {
+        mDynamicButtons = [];
+        if (!dynamicOnly) mButtons = [];
+        constrainOffset();
         layout();
     }
 
     function incrementItemOffset() {
-        mItemOffset += 3;
+        mItemOffset += 1;
+        constrainOffset();
         layout();
     }
     function decrementItemOffset() {
-        mItemOffset -= 3;
+        mItemOffset -= 1;
+        constrainOffset();
         layout();
+    }
+
+    function constrainOffset() {
+        mItemOffset = Math.max(0, Math.min(mItemOffset, mDynamicButtons.length - mPaginate))
     }
 
     this.add = add;
     this.remove = remove;
     this.empty = empty;
     this.getObject = () => mContainer;
-    this.getButtons = () => [...mButtons];
-    this.onAfterUpdate = (func) => mOnAfterUpdateCallback = func;
-    this.setVOffset = setVOffset;
+    this.getButtons = () => [...mDisplayButtons];
     this.incrementItemOffset = incrementItemOffset;
     this.decrementItemOffset = decrementItemOffset;
 }
