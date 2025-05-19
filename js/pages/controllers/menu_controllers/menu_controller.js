@@ -1,6 +1,6 @@
 import * as ThreeMeshUI from 'three-mesh-ui';
 import { AssetTypes, AttributeButtons, BrushToolButtons, ItemButtons, MENU_WIDTH, MenuNavButtons, RecordToolButtons, SurfaceToolButtons, ToolButtons } from '../../../constants.js';
-import { ToolMode } from '../system_state.js';
+import { ToolState } from '../system_state.js';
 import { ButtonMenu } from './button_menu.js';
 import { MeshButton } from './mesh_button.js';
 
@@ -8,7 +8,7 @@ export function MenuController() {
     const BUTTON_SIZE = 0.4;
     const PADDING = 0.1
 
-    let mToolMode = new ToolMode();
+    let mToolState = new ToolState();
 
     let mMenuContainer = new ThreeMeshUI.Block({ backgroundOpacity: 0, });
     mMenuContainer.onAfterUpdate = function () {
@@ -133,17 +133,17 @@ export function MenuController() {
         layoutMenu();
     }
 
-    function setToolMode(toolMode) {
+    function setToolState(toolState) {
         // Highlight the right buttons
-        mMenus[MenuNavButtons.TOOL_MENU].getButtons().find(b => b.getId() == mToolMode.tool)?.deactivate();
-        mMenus[ToolButtons.BRUSH].getButtons().find(b => b.getId() == mToolMode.brushSettings.mode)?.deactivate();
-        mMenus[ToolButtons.SURFACE].getButtons().find(b => b.getId() == mToolMode.surfaceSettings.mode)?.deactivate();
+        mMenus[MenuNavButtons.TOOL_MENU].getButtons().find(b => b.getId() == mToolState.tool)?.deactivate();
+        mMenus[ToolButtons.BRUSH].getButtons().find(b => b.getId() == mToolState.brushSettings.mode)?.deactivate();
+        mMenus[ToolButtons.SURFACE].getButtons().find(b => b.getId() == mToolState.surfaceSettings.mode)?.deactivate();
 
-        mToolMode = toolMode.clone();
+        mToolState = toolState.clone();
 
-        mMenus[MenuNavButtons.TOOL_MENU].getButtons().find(b => b.getId() == mToolMode.tool)?.activate();
-        mMenus[ToolButtons.BRUSH].getButtons().find(b => b.getId() == mToolMode.brushSettings.mode)?.activate();
-        mMenus[ToolButtons.SURFACE].getButtons().find(b => b.getId() == mToolMode.surfaceSettings.mode)?.activate();
+        mMenus[MenuNavButtons.TOOL_MENU].getButtons().find(b => b.getId() == mToolState.tool)?.activate();
+        mMenus[ToolButtons.BRUSH].getButtons().find(b => b.getId() == mToolState.brushSettings.mode)?.activate();
+        mMenus[ToolButtons.SURFACE].getButtons().find(b => b.getId() == mToolState.surfaceSettings.mode)?.activate();
 
         layoutMenu();
     }
@@ -153,8 +153,8 @@ export function MenuController() {
 
         mDisplayedMenus = [];
         mDisplayedMenus.push(mMenus[MenuNavButtons.TOOL_MENU])
-        if (mMenus[mToolMode.tool]) {
-            mDisplayedMenus.push(mMenus[mToolMode.tool])
+        if (mMenus[mToolState.tool]) {
+            mDisplayedMenus.push(mMenus[mToolState.tool])
         }
 
         let navMenu = mMenus[mCurrentNavId];
@@ -204,7 +204,7 @@ export function MenuController() {
         ThreeMeshUI.update();
     }
 
-    function getTargets(raycaster, toolMode) {
+    function getTargets(raycaster, toolState) {
         for (let button of mDisplayedMenus.map(m => m.getButtons()).flat()) {
             const intersection = raycaster.intersectObject(button.getObject(), true);
             if (intersection[0]) {
@@ -229,12 +229,12 @@ export function MenuController() {
     }
 
     this.setContainer = setContainer;
-    this.setToolMode = setToolMode;
+    this.setToolState = setToolState;
     this.updateModel = updateModel;
     this.showMenu = showMenu;
     this.getCurrentMenuId = () => mCurrentNavId;
     this.onToolChange = func => mToolChangeCallback = func;
-    this.getMode = () => mToolMode;
+    this.getMode = () => mToolState;
     this.render = render
     this.getTargets = getTargets;
 }

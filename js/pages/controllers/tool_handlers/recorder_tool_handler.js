@@ -4,11 +4,11 @@ import { InteractionTargetInterface } from "../../scene_objects/interaction_targ
 let mRecorder = null;
 let mDummyTarget = new InteractionTargetInterface();
 
-function pointerMove(raycaster, orientation, isPrimary, interactionState, toolMode, model, sessionController, sceneController, helperPointController) {
+function pointerMove(raycaster, orientation, isPrimary, interactionState, toolState, model, sessionController, sceneController, helperPointController) {
     interactionState.primaryHovered = mDummyTarget;
 }
 
-function pointerDown(raycaster, orientation, isPrimary, interactionState, toolMode, model, sessionController, sceneController, helperPointController) {
+function pointerDown(raycaster, orientation, isPrimary, interactionState, toolState, model, sessionController, sceneController, helperPointController) {
     // start recording
     if (!mRecorder) { console.error('Recorder tool not initialized, no recorder.'); return; }
     if (!isPrimary) return; // nothing for secondary controller to do.
@@ -18,7 +18,7 @@ function pointerDown(raycaster, orientation, isPrimary, interactionState, toolMo
     interactionState.type = InteractionType.RECORDING;
 }
 
-function pointerUp(raycaster, orientation, isPrimary, interactionState, toolMode, model, sessionController, sceneController, helperPointController) {
+function pointerUp(raycaster, orientation, isPrimary, interactionState, toolState, model, sessionController, sceneController, helperPointController) {
     // stop recording. 
     if (!mRecorder) { console.error('Recorder tool not initialized, no recorder.'); return null; }
     if (!isPrimary) return null; // nothing for secondary controller to do.

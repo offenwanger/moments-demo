@@ -38,13 +38,13 @@ export function MomentWrapper(parent, audioListener) {
         }
     }
 
-    function getTargets(ray, toolMode) {
+    function getTargets(ray, toolState) {
         return [
-            ...mPoseableAssetWrappers.map(w => w.getTargets(ray, toolMode)).flat(),
-            ...mPictureWrappers.map(w => w.getTargets(ray, toolMode)).flat(),
-            ...mTeleportWrappers.map(w => w.getTargets(ray, toolMode)).flat(),
-            ...mAudioWrappers.map(w => w.getTargets(ray, toolMode)).flat(),
-            ...mPhotosphereWrapper.getTargets(ray, toolMode),
+            ...mPoseableAssetWrappers.map(w => w.getTargets(ray, toolState)).flat(),
+            ...mPictureWrappers.map(w => w.getTargets(ray, toolState)).flat(),
+            ...mTeleportWrappers.map(w => w.getTargets(ray, toolState)).flat(),
+            ...mAudioWrappers.map(w => w.getTargets(ray, toolState)).flat(),
+            ...mPhotosphereWrapper.getTargets(ray, toolState),
         ]
     }
 

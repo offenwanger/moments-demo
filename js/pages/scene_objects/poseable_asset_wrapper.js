@@ -160,9 +160,9 @@ export function PoseableAssetWrapper(parent, audioListener) {
         });
     }
 
-    function getTargets(ray, toolMode) {
+    function getTargets(ray, toolState) {
         if (!mGLTF) return [];
-        if (toolMode.tool != ToolButtons.MOVE) return [];
+        if (toolState.tool != ToolButtons.MOVE) return [];
 
         const intersects = ray.intersectObjects(mTargets);
         let targets = intersects.map(i => {
@@ -305,7 +305,7 @@ export function PoseableAssetWrapper(parent, audioListener) {
                 return obj
             }
 
-            interactionTarget.highlight = (toolMode) => {
+            interactionTarget.highlight = (toolState) => {
                 let obj = interactionTarget.getObject3D();
                 if (obj.isMesh) {
                     obj.material.color.set(0x0000ff);
@@ -318,12 +318,12 @@ export function PoseableAssetWrapper(parent, audioListener) {
                 }
                 obj.userData.state = 'highlighted';
             };
-            interactionTarget.select = (toolMode) => {
+            interactionTarget.select = (toolState) => {
                 let obj = mGLTF.getObjectByName(pose.name);
                 if (obj.userData.interactionAudio) try { mSounds[pose.id].play(); } catch (e) { console.error(e); }
                 obj.userData.state = 'selected';
             };
-            interactionTarget.idle = (toolMode) => {
+            interactionTarget.idle = (toolState) => {
                 let obj = interactionTarget.getObject3D();
                 if (obj.userData.interactionAudio) try { mSounds[pose.id].pause(); } catch (e) { console.error(e); }
 

@@ -61,9 +61,9 @@ export function MeshButton(id, label, size, color = 0xffffff, dynamic = false) {
         let target = new InteractionTargetInterface();
         target.isButton = () => true;
         target.getId = () => id;
-        target.highlight = (toolMode) => { mButton.setState('highlight') }
-        target.select = (toolMode) => { mButton.setState('selected') }
-        target.idle = (toolMode) => { mButton.setState('idle') }
+        target.highlight = (toolState) => { mButton.setState('highlight') }
+        target.select = (toolState) => { mButton.setState('selected') }
+        target.idle = (toolState) => { mButton.setState('idle') }
         return target;
     }
 

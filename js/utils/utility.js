@@ -277,16 +277,16 @@ function getPoint(lat, long) {
 }
 
 
-function updateHoverTargetHighlight(target, interactionState, toolMode, isPrimary, sessionController, helperPointController) {
+function updateHoverTargetHighlight(target, interactionState, toolState, isPrimary, sessionController, helperPointController) {
     let currentTarget = isPrimary ? interactionState.primaryHovered : interactionState.secondaryHovered;
     let currentId = currentTarget?.getId()
     let targetId = target?.getId();
     if (currentTarget && currentId != targetId) {
         if (isPrimary) {
-            interactionState.primaryHovered.idle(toolMode);
+            interactionState.primaryHovered.idle(toolState);
             interactionState.primaryHovered = null;
         } else {
-            interactionState.secondaryHovered.idle(toolMode);
+            interactionState.secondaryHovered.idle(toolState);
             interactionState.secondaryHovered = null;
         }
         helperPointController.hidePoint(isPrimary);
@@ -297,10 +297,10 @@ function updateHoverTargetHighlight(target, interactionState, toolMode, isPrimar
 
         if (isPrimary) {
             interactionState.primaryHovered = target;
-            interactionState.primaryHovered.highlight(toolMode);
+            interactionState.primaryHovered.highlight(toolState);
         } else {
             interactionState.secondaryHovered = target;
-            interactionState.secondaryHovered.highlight(toolMode);
+            interactionState.secondaryHovered.highlight(toolState);
         }
     }
 

@@ -45,8 +45,8 @@ export function TeleportWrapper(parent) {
         mParent.remove(mSphere);
     }
 
-    function getTargets(ray, toolMode) {
-        if (toolMode.tool == ToolButtons.MOVE) {
+    function getTargets(ray, toolState) {
+        if (toolState.tool == ToolButtons.MOVE) {
             let intersect = ray.intersectObject(mSphere);
             if (intersect.length == 0) return [];
             intersect = intersect[0];
@@ -59,13 +59,13 @@ export function TeleportWrapper(parent) {
         let target = new InteractionTargetInterface();
         target.getObject3D = () => { return mSphere; }
         target.getId = () => mTeleport.id;
-        target.highlight = function (toolMode) {
+        target.highlight = function (toolState) {
             mSphere.material.color.setHex(0xff2299)
         };
-        target.select = function (toolMode) {
+        target.select = function (toolState) {
             mSphere.material.color.setHex(0xffffff)
         };
-        target.idle = (toolMode) => {
+        target.idle = (toolState) => {
             mSphere.material.color.setHex(0xaaaa99)
         }
         target.getLocalPosition = () => {

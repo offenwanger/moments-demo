@@ -1,6 +1,6 @@
 import { BrushToolButtons, SurfaceToolButtons, ToolButtons } from "../../constants.js";
 
-export class ToolMode {
+export class ToolState {
     tool = ToolButtons.MOVE;
     brushSettings = {
         mode: BrushToolButtons.UNBLUR,
@@ -11,10 +11,10 @@ export class ToolMode {
         mode: SurfaceToolButtons.FLATTEN,
     };
     clone = function () {
-        let mode = new ToolMode();
-        Object.assign(mode, this)
-        mode.brushSettings = Object.assign({}, this.brushSettings);
-        mode.surfaceSettings = Object.assign({}, this.surfaceSettings);
-        return mode;
+        let state = new ToolState();
+        Object.assign(state, this)
+        state.brushSettings = Object.assign({}, this.brushSettings);
+        state.surfaceSettings = Object.assign({}, this.surfaceSettings);
+        return state;
     }
 }

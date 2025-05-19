@@ -15,12 +15,12 @@ export class InteractionTargetInterface {
     setScale = (scale) => { }
 
     // Gets the transaction for modifications made via interaction
-    getTransaction = (toolMode) => { return null; }
+    getTransaction = (toolState) => { return null; }
 
     // update visual state
-    highlight = (toolMode) => { };
-    select = (toolMode) => { };
-    idle = (toolMode) => { };
+    highlight = (toolState) => { };
+    select = (toolState) => { };
+    idle = (toolState) => { };
 
     getIntersection = () => { return {} }
     getObject3D = () => { return null; }

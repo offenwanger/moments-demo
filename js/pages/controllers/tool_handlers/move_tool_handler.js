@@ -25,7 +25,7 @@ mTeleportTarget.userData.id = 'teleportTarget';
 const mTeleportTargetInteractionWrapper = new InteractionTargetInterface();
 mTeleportTargetInteractionWrapper.getId = () => TELEPORT_TARGET;
 
-function pointerMove(raycaster, orientation, isPrimary, interactionState, toolMode, model, sessionController, sceneController, helperPointController) {
+function pointerMove(raycaster, orientation, isPrimary, interactionState, toolState, model, sessionController, sceneController, helperPointController) {
     if (!raycaster) {
         // unhighlight things, hide interface stuff, that's it.
         return;
@@ -33,9 +33,9 @@ function pointerMove(raycaster, orientation, isPrimary, interactionState, toolMo
 
     if (interactionState.type == InteractionType.NONE) {
         if (isPrimary) {
-            let targets = sceneController.getTargets(raycaster, toolMode);
+            let targets = sceneController.getTargets(raycaster, toolState);
             let closest = Util.getClosestTarget(raycaster.ray, targets);
-            Util.updateHoverTargetHighlight(closest, interactionState, toolMode, isPrimary, sessionController, helperPointController);
+            Util.updateHoverTargetHighlight(closest, interactionState, toolState, isPrimary, sessionController, helperPointController);
         } else {
             // do nothing.
         }
@@ -68,17 +68,17 @@ function pointerMove(raycaster, orientation, isPrimary, interactionState, toolMo
         // if there was no teleport target look for other targets
         if (targets.length == 0) {
             let moveClass = IdUtil.getClass(interactionState.data.rootTarget.getId());
-            targets = getDropTargets(raycaster, toolMode, moveClass, sceneController);
+            targets = getDropTargets(raycaster, toolState, moveClass, sceneController);
             let closest = Util.getClosestTarget(raycaster.ray, targets);
-            Util.updateHoverTargetHighlight(closest, interactionState, toolMode, isPrimary, sessionController, helperPointController);
+            Util.updateHoverTargetHighlight(closest, interactionState, toolState, isPrimary, sessionController, helperPointController);
         }
     } else if (interactionState.type == InteractionType.ONE_HAND_MOVE && !isPrimary) {
         // highlight 2 handed interactions
-        let targets = sceneController.getTargets(raycaster, toolMode)
+        let targets = sceneController.getTargets(raycaster, toolState)
         // the only valid targets are the dragged object or bones belonging to it. 
         targets = targets.filter(t => t.getRoot().getId() == interactionState.data.rootTarget.getId());
         let closest = Util.getClosestTarget(raycaster.ray, targets);
-        Util.updateHoverTargetHighlight(closest, interactionState, toolMode, isPrimary, sessionController, helperPointController);
+        Util.updateHoverTargetHighlight(closest, interactionState, toolState, isPrimary, sessionController, helperPointController);
     } else if (interactionState.type == InteractionType.TWO_HAND_MOVE) {
         if (isPrimary) {
             let fromRay = interactionState.data.primaryStartRay;
@@ -146,7 +146,7 @@ function pointerMove(raycaster, orientation, isPrimary, interactionState, toolMo
     }
 }
 
-function pointerDown(raycaster, orientation, isPrimary, interactionState, toolMode, model, sessionController, sceneController, helperPointController) {
+function pointerDown(raycaster, orientation, isPrimary, interactionState, toolState, model, sessionController, sceneController, helperPointController) {
     let hovered = isPrimary ? interactionState.primaryHovered : interactionState.secondaryHovered;
     if (hovered) {
         if (interactionState.type == InteractionType.NONE) {
@@ -167,7 +167,7 @@ function pointerDown(raycaster, orientation, isPrimary, interactionState, toolMo
     }
 }
 
-function pointerUp(raycaster, orientation, isPrimary, interactionState, toolMode, model, sessionController, sceneController, helperPointController) {
+function pointerUp(raycaster, orientation, isPrimary, interactionState, toolState, model, sessionController, sceneController, helperPointController) {
     let type = interactionState.type;
     let data = interactionState.data;
 
@@ -178,9 +178,9 @@ function pointerUp(raycaster, orientation, isPrimary, interactionState, toolMode
 
     if (type == InteractionType.ONE_HAND_MOVE) {
         // idle the hovered
-        Util.updateHoverTargetHighlight(data.target, interactionState, toolMode, isPrimary, sessionController, helperPointController);
+        Util.updateHoverTargetHighlight(data.target, interactionState, toolState, isPrimary, sessionController, helperPointController);
         // idle the target
-        Util.updateHoverTargetHighlight(null, interactionState, toolMode, isPrimary, sessionController, helperPointController);
+        Util.updateHoverTargetHighlight(null, interactionState, toolState, isPrimary, sessionController, helperPointController);
 
 
         let targets = [];
@@ -197,7 +197,7 @@ function pointerUp(raycaster, orientation, isPrimary, interactionState, toolMode
         if (targets.length == 0) {
             // if we're not teleporting, check if we dropped on a valid target.
             let moveClass = IdUtil.getClass(data.rootTarget.getId());
-            targets = getDropTargets(raycaster, toolMode, moveClass, sceneController);
+            targets = getDropTargets(raycaster, toolState, moveClass, sceneController);
             if (targets.length > 0) {
                 let closest = Util.getClosestTarget(raycaster.ray, targets);
                 let targetId = closest.getId();
@@ -377,9 +377,9 @@ function getTeleportDropTarget(raycaster) {
     } else return null
 }
 
-function getDropTargets(raycaster, toolMode, moveClass, sceneController) {
+function getDropTargets(raycaster, toolState, moveClass, sceneController) {
     if (moveClass == Data.Teleport || moveClass == Data.Audio) {
-        let targets = sceneController.getTargets(raycaster, toolMode);
+        let targets = sceneController.getTargets(raycaster, toolState);
         targets = targets.filter(t => {
             t = t.getRoot();
             // right now both audio and teleport have the 

@@ -9,7 +9,7 @@ import { HelperPointController } from "./helper_point_controller.js";
 import { MenuController } from "./menu_controllers/menu_controller.js";
 import { PageSessionController } from './page_session_controller.js';
 import { SceneController } from "./scene_controller.js";
-import { ToolMode } from "./system_state.js";
+import { ToolState } from "./system_state.js";
 import { BrushToolHandler } from "./tool_handlers/brush_tool_handler.js";
 import { MoveToolHandler } from "./tool_handlers/move_tool_handler.js";
 import { RecorderToolHandler } from "./tool_handlers/recorder_tool_handler.js";
@@ -42,14 +42,14 @@ export function SceneInterfaceController(parentContainer, mWebsocketController, 
     }
 
     let mModel = new Data.StoryModel();
-    let mToolMode = new ToolMode();
+    let mToolState = new ToolState();
     let mCurrentMomentId = null;
 
     const mAudioListener = new THREE.AudioListener();
 
     let mSceneController = new SceneController(mAudioListener);
     let mMenuController = new MenuController();
-    mMenuController.setToolMode(mToolMode);
+    mMenuController.setToolState(mToolState);
     let mOtherUsers = {};
 
     let mXRSessionController = new XRSessionController();
@@ -135,32 +135,32 @@ export function SceneInterfaceController(parentContainer, mWebsocketController, 
             Util.updateHoverTargetHighlight(
                 null,
                 mInteractionState,
-                mToolMode,
+                mToolState,
                 isPrimary,
                 mCurrentSessionController,
                 mHelperPointController)
         }
 
         let menuTargets = mInteractionState.type == InteractionType.NONE ?
-            mMenuController.getTargets(raycaster, mToolMode) : [];
+            mMenuController.getTargets(raycaster, mToolState) : [];
         if (menuTargets.length > 0) {
             let closest = Util.getClosestTarget(raycaster.ray, menuTargets);
             Util.updateHoverTargetHighlight(
                 closest,
                 mInteractionState,
-                mToolMode,
+                mToolState,
                 isPrimary,
                 mCurrentSessionController,
                 mHelperPointController);
         } else {
-            let handler = getToolHandler(mToolMode.tool)
-            if (!handler) { console.error("Tool not handled: " + mToolMode.tool); return; }
+            let handler = getToolHandler(mToolState.tool)
+            if (!handler) { console.error("Tool not handled: " + mToolState.tool); return; }
             handler.pointerMove(
                 raycaster,
                 orientation,
                 isPrimary,
                 mInteractionState,
-                mToolMode,
+                mToolState,
                 mModel,
                 mCurrentSessionController,
                 mSceneController,
@@ -179,14 +179,14 @@ export function SceneInterfaceController(parentContainer, mWebsocketController, 
         } else if (hovered.isButton()) {
             await menuButtonClicked(hovered);
         } else {
-            let handler = getToolHandler(mToolMode.tool)
-            if (!handler) { console.error("Tool not handled: " + mToolMode.tool); return; }
+            let handler = getToolHandler(mToolState.tool)
+            if (!handler) { console.error("Tool not handled: " + mToolState.tool); return; }
             let selectedTargetId = await handler.pointerDown(
                 raycaster,
                 orientation,
                 isPrimary,
                 mInteractionState,
-                mToolMode,
+                mToolState,
                 mModel,
                 mCurrentSessionController,
                 mSceneController,
@@ -198,14 +198,14 @@ export function SceneInterfaceController(parentContainer, mWebsocketController, 
     mPageSessionController.onPointerUp(onPointerUp);
     mXRSessionController.onPointerUp(onPointerUp);
     async function onPointerUp(raycaster, orientation = null, isPrimary = true) {
-        let handler = getToolHandler(mToolMode.tool)
-        if (!handler) { console.error("Tool not handled: " + mToolMode.tool); return; }
+        let handler = getToolHandler(mToolState.tool)
+        if (!handler) { console.error("Tool not handled: " + mToolState.tool); return; }
         let reaction = handler.pointerUp(
             raycaster,
             orientation,
             isPrimary,
             mInteractionState,
-            mToolMode,
+            mToolState,
             mModel,
             mCurrentSessionController,
             mSceneController,
@@ -224,29 +224,29 @@ export function SceneInterfaceController(parentContainer, mWebsocketController, 
     }
 
     async function menuButtonClicked(target) {
-        target.select(mToolMode);
+        target.select(mToolState);
         let buttonId = target.getId();
         let menuId = mMenuController.getCurrentMenuId();
         if (Object.values(ToolButtons).includes(buttonId)) {
             // unhighlight evertying. 
-            if (mInteractionState.primaryHovered) mInteractionState.primaryHovered.idle(mToolMode);
+            if (mInteractionState.primaryHovered) mInteractionState.primaryHovered.idle(mToolState);
             mInteractionState.primaryHovered = null;
             mHelperPointController.hidePoint(true);
-            if (mInteractionState.secondaryHovered) mInteractionState.secondaryHovered.idle(mToolMode);
+            if (mInteractionState.secondaryHovered) mInteractionState.secondaryHovered.idle(mToolState);
             mInteractionState.secondaryHovered = null;
             mHelperPointController.hidePoint(false);
 
-            if (mToolMode.tool == buttonId && buttonId != ToolButtons.MOVE) {
+            if (mToolState.tool == buttonId && buttonId != ToolButtons.MOVE) {
                 buttonId = ToolButtons.MOVE;
             }
-            mToolMode.tool = buttonId;
-            mMenuController.setToolMode(mToolMode);
+            mToolState.tool = buttonId;
+            mMenuController.setToolState(mToolState);
         } else if (Object.values(BrushToolButtons).includes(buttonId)) {
-            mToolMode.brushSettings.mode = buttonId;
-            mMenuController.setToolMode(mToolMode);
+            mToolState.brushSettings.mode = buttonId;
+            mMenuController.setToolState(mToolState);
         } else if (Object.values(SurfaceToolButtons).includes(buttonId)) {
-            mToolMode.surfaceSettings.mode = buttonId;
-            mMenuController.setToolMode(mToolMode);
+            mToolState.surfaceSettings.mode = buttonId;
+            mMenuController.setToolState(mToolState);
         } else if (Object.values(MenuNavButtons).includes(buttonId)) {
             mMenuController.showMenu(buttonId);
         } else if (buttonId == ItemButtons.NEW_MOMENT) {
@@ -386,14 +386,14 @@ export function SceneInterfaceController(parentContainer, mWebsocketController, 
         Util.updateHoverTargetHighlight(
             null,
             mInteractionState,
-            mToolMode,
+            mToolState,
             true,
             mCurrentSessionController,
             mHelperPointController)
         Util.updateHoverTargetHighlight(
             null,
             mInteractionState,
-            mToolMode,
+            mToolState,
             false,
             mCurrentSessionController,
             mHelperPointController)

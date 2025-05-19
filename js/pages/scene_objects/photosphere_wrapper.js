@@ -391,12 +391,12 @@ export function PhotosphereWrapper(parent) {
         mParent.remove(mSphere);
     }
 
-    function getTargets(ray, toolMode) {
+    function getTargets(ray, toolState) {
         if (!mPhotosphere) return [];
 
-        if (toolMode.tool != ToolButtons.BRUSH &&
-            toolMode.tool != ToolButtons.SURFACE &&
-            toolMode.tool != ToolButtons.SCISSORS) {
+        if (toolState.tool != ToolButtons.BRUSH &&
+            toolState.tool != ToolButtons.SURFACE &&
+            toolState.tool != ToolButtons.SCISSORS) {
             // not a target for whatever this tool is
             return [];
         }
@@ -406,9 +406,9 @@ export function PhotosphereWrapper(parent) {
         intersect = intersect[0];
 
         let targetedId = mPhotosphere.id;
-        if (toolMode.tool == ToolButtons.SURFACE &&
-            toolMode.surfaceSettings.mode == SurfaceToolButtons.PULL ||
-            toolMode.surfaceSettings.mode == SurfaceToolButtons.DELETE) {
+        if (toolState.tool == ToolButtons.SURFACE &&
+            toolState.surfaceSettings.mode == SurfaceToolButtons.PULL ||
+            toolState.surfaceSettings.mode == SurfaceToolButtons.DELETE) {
             let surfaceIds = getSurfacesForPoint(intersect.uv.x, intersect.uv.y);
             if (surfaceIds.length == 0) return [];
             else targetedId = surfaceIds[0];
@@ -416,10 +416,10 @@ export function PhotosphereWrapper(parent) {
 
         mInteractionTarget.getIntersection = () => intersect;
         mInteractionTarget.getId = () => targetedId;
-        mInteractionTarget.highlight = function (toolMode) {
+        mInteractionTarget.highlight = function (toolState) {
             mDrawAllSurfaceAreas = false;
-            if (toolMode.tool == ToolButtons.BRUSH) {
-                if (toolMode.brushSettings.mode == BrushToolButtons.CLEAR) {
+            if (toolState.tool == ToolButtons.BRUSH) {
+                if (toolState.brushSettings.mode == BrushToolButtons.CLEAR) {
                     let { deletedStrokes, newStrokes } = eraseStrokesWithStrokes(mStrokes, [{
                         points: [intersect.uv.x, intersect.uv.y]
                     }]);
@@ -428,33 +428,33 @@ export function PhotosphereWrapper(parent) {
                     drawBlur();
                     drawColor();
                     draw();
-                } else if (toolMode.brushSettings.mode == BrushToolButtons.UNBLUR) {
+                } else if (toolState.brushSettings.mode == BrushToolButtons.UNBLUR) {
                     let stroke = new Data.Stroke();
                     stroke.points = [intersect.uv.x, intersect.uv.y]
                     stroke.type = Data.StrokeType.FOCUS;
-                    stroke.width = toolMode.brushSettings.width;
+                    stroke.width = toolState.brushSettings.width;
                     mDrawingNewStrokes = [stroke];
                     drawBlur();
                     draw();
-                } else if (toolMode.brushSettings.mode == BrushToolButtons.COLOR) {
+                } else if (toolState.brushSettings.mode == BrushToolButtons.COLOR) {
                     let stroke = new Data.Stroke();
                     stroke.points = [intersect.uv.x, intersect.uv.y]
                     stroke.type = Data.StrokeType.COLOR;
-                    stroke.width = toolMode.brushSettings.width;
-                    stroke.color = toolMode.brushSettings.color;
+                    stroke.width = toolState.brushSettings.width;
+                    stroke.color = toolState.brushSettings.color;
                     mDrawingNewStrokes = [stroke];
                     drawColor();
                     draw();
                 }
-            } else if (toolMode.tool == ToolButtons.SURFACE &&
-                (toolMode.surfaceSettings.mode == SurfaceToolButtons.PULL ||
-                    toolMode.surfaceSettings.mode == SurfaceToolButtons.DELETE)) {
+            } else if (toolState.tool == ToolButtons.SURFACE &&
+                (toolState.surfaceSettings.mode == SurfaceToolButtons.PULL ||
+                    toolState.surfaceSettings.mode == SurfaceToolButtons.DELETE)) {
                 let surfaceIndex = mSurfaces.findIndex(s => s.id == targetedId);
                 if (surfaceIndex == -1) { console.error('Invalid surface: ' + targetedId); return; }
                 drawSurfaceArea();
                 draw();
-            } else if (toolMode.tool == ToolButtons.SURFACE &&
-                toolMode.surfaceSettings.mode == SurfaceToolButtons.FLATTEN) {
+            } else if (toolState.tool == ToolButtons.SURFACE &&
+                toolState.surfaceSettings.mode == SurfaceToolButtons.FLATTEN) {
                 mDrawAllSurfaceAreas = true;
                 draw();
             } else {
@@ -462,7 +462,7 @@ export function PhotosphereWrapper(parent) {
             }
         };
 
-        mInteractionTarget.select = (toolMode) => {
+        mInteractionTarget.select = (toolState) => {
             // add a stroke to the input strokes. If it's very far away from the last one, start a new stroke
             // this can happen if the user exists and enters the sphere, 
             // or if they cross the seam.
@@ -472,7 +472,7 @@ export function PhotosphereWrapper(parent) {
                 let lastPoint = mInputStrokes[mInputStrokes.length - 1].slice(mInputStrokes[mInputStrokes.length - 1].length - 2);
                 if (intersect.uv.distanceTo({ x: lastPoint[0], y: lastPoint[1] }) > 0.5) {
                     mInputStrokes.push([]);
-                    if (1 - Math.abs(lastPoint[0] - intersect.uv) < toolMode.surfaceSettings.width * 1.5) {
+                    if (1 - Math.abs(lastPoint[0] - intersect.uv) < toolState.surfaceSettings.width * 1.5) {
                         // we crossed the boundry. Add the extended points to their respective arrays
                         mInputStrokes[mInputStrokes.length - 1].push(
                             lastPoint[0] < 0.5 ? lastPoint[0] + 1 : lastPoint[0] - 1,
@@ -487,32 +487,32 @@ export function PhotosphereWrapper(parent) {
             }
             mInputPath.push({ point3d: new THREE.Vector3().copy(intersect.point).normalize(), uv: intersect.uv });
 
-            if (toolMode.tool == ToolButtons.BRUSH) {
-                if (toolMode.brushSettings.mode == BrushToolButtons.CLEAR) {
+            if (toolState.tool == ToolButtons.BRUSH) {
+                if (toolState.brushSettings.mode == BrushToolButtons.CLEAR) {
                     let { deletedStrokes, newStrokes } = eraseStrokesWithStrokes(mStrokes,
-                        mInputStrokes.map(points => { return { points, width: toolMode.brushSettings.width } }));
+                        mInputStrokes.map(points => { return { points, width: toolState.brushSettings.width } }));
                     mDrawingNewStrokes = newStrokes;
                     mDrawingDeletedStrokes = deletedStrokes;
                     drawBlur();
                     drawColor();
                     draw();
-                } else if (toolMode.brushSettings.mode == BrushToolButtons.UNBLUR) {
+                } else if (toolState.brushSettings.mode == BrushToolButtons.UNBLUR) {
                     mDrawingNewStrokes = mInputStrokes.map(points => {
                         let s = new Data.Stroke();
                         s.photosphereId = mPhotosphere.id;
-                        s.width = toolMode.brushSettings.width;
+                        s.width = toolState.brushSettings.width;
                         s.type = Data.StrokeType.FOCUS;
                         s.points = points;
                         return s;
                     });
                     drawBlur();
                     draw();
-                } else if (toolMode.brushSettings.mode == BrushToolButtons.COLOR) {
+                } else if (toolState.brushSettings.mode == BrushToolButtons.COLOR) {
                     mDrawingNewStrokes = mInputStrokes.map(points => {
                         let s = new Data.Stroke();
                         s.photosphereId = mPhotosphere.id;
-                        s.width = toolMode.brushSettings.width;
-                        s.color = toolMode.brushSettings.color;
+                        s.width = toolState.brushSettings.width;
+                        s.color = toolState.brushSettings.color;
                         s.type = Data.StrokeType.COLOR;
                         s.points = points;
                         return s;
@@ -520,22 +520,22 @@ export function PhotosphereWrapper(parent) {
                     drawColor();
                     draw();
                 }
-            } else if (toolMode.tool == ToolButtons.SURFACE) {
-                if (toolMode.surfaceSettings.mode == SurfaceToolButtons.FLATTEN) {
+            } else if (toolState.tool == ToolButtons.SURFACE) {
+                if (toolState.surfaceSettings.mode == SurfaceToolButtons.FLATTEN) {
                     let areas = inputPathToAreas(mInputPath, mInputStrokes);
                     mDrawingSurfaceAreas = areas;
-                } else if (toolMode.surfaceSettings.mode == SurfaceToolButtons.PULL ||
-                    toolMode.surfaceSettings.mode == SurfaceToolButtons.DELETE) {
+                } else if (toolState.surfaceSettings.mode == SurfaceToolButtons.PULL ||
+                    toolState.surfaceSettings.mode == SurfaceToolButtons.DELETE) {
                     mDrawAllSurfaceAreas = false;
                     mDrawingSurfaceAreas = mSurfaceAreas.filter(s => s.photosphereSurfaceId == targetedId);
                 } else {
-                    console.error('Invalid tool state: ' + toolMode.surfaceSettings.mode);
+                    console.error('Invalid tool state: ' + toolState.surfaceSettings.mode);
                 }
                 drawSurfaceArea();
                 draw();
             }
         }
-        mInteractionTarget.idle = (toolMode) => {
+        mInteractionTarget.idle = (toolState) => {
             mInputStrokes = [];
             mInputPath = [];
             mDrawingDeletedStrokes = [];
@@ -740,17 +740,17 @@ export function PhotosphereWrapper(parent) {
     function createInteractionTarget() {
         let target = new InteractionTargetInterface();
         target.getObject3D = () => { return mSphere; }
-        target.getTransaction = (toolMode) => {
+        target.getTransaction = (toolState) => {
             let actions = [];
-            if (toolMode.tool == ToolButtons.BRUSH) {
+            if (toolState.tool == ToolButtons.BRUSH) {
                 actions.push(...mDrawingDeletedStrokes.map(id => new Action(ActionType.DELETE, id)))
                 actions.push(...mDrawingNewStrokes.map(s => {
                     let params = Object.assign({}, s);
                     delete params.id;
                     return new Action(ActionType.CREATE, s.id, params);
                 }));
-            } else if (toolMode.tool == ToolButtons.SURFACE &&
-                toolMode.surfaceSettings.mode == SurfaceToolButtons.PULL) {
+            } else if (toolState.tool == ToolButtons.SURFACE &&
+                toolState.surfaceSettings.mode == SurfaceToolButtons.PULL) {
                 let surfaceId = target.getId();
                 let surface = mSurfaces.find(s => s.id == surfaceId);
                 if (surface) {
@@ -761,8 +761,8 @@ export function PhotosphereWrapper(parent) {
                 } else {
                     console.error('Invalid interaction target: ' + surfaceId);
                 }
-            } else if (toolMode.tool == ToolButtons.SURFACE &&
-                toolMode.surfaceSettings.mode == SurfaceToolButtons.DELETE) {
+            } else if (toolState.tool == ToolButtons.SURFACE &&
+                toolState.surfaceSettings.mode == SurfaceToolButtons.DELETE) {
                 let surfaceId = target.getId();
                 let surface = mSurfaces.find(s => s.id == surfaceId);
                 if (surface) {
@@ -770,8 +770,8 @@ export function PhotosphereWrapper(parent) {
                 } else {
                     console.error('Invalid interaction target: ' + surfaceId);
                 }
-            } else if (toolMode.tool == ToolButtons.SURFACE &&
-                toolMode.surfaceSettings.mode == SurfaceToolButtons.FLATTEN) {
+            } else if (toolState.tool == ToolButtons.SURFACE &&
+                toolState.surfaceSettings.mode == SurfaceToolButtons.FLATTEN) {
                 let newSurface = new Data.PhotosphereSurface();
 
                 let normal = new THREE.Vector3();

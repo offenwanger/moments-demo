@@ -105,8 +105,8 @@ export function PictureWrapper(parent, audioListener) {
         try { mSound.stop(); } catch (e) { console.error(e); }
     }
 
-    function getTargets(ray, toolMode) {
-        if (toolMode.tool != ToolButtons.MOVE) return [];
+    function getTargets(ray, toolState) {
+        if (toolState.tool != ToolButtons.MOVE) return [];
 
         const intersect = ray.intersectObject(mPlanes);
         if (intersect.length > 0) {
@@ -159,20 +159,20 @@ export function PictureWrapper(parent, audioListener) {
         target.getParent = () => { return null; }
         target.getRoot = () => { return target; }
         target.getObject3D = () => { return mPlanes; }
-        target.highlight = (toolMode) => {
+        target.highlight = (toolState) => {
             mFrontPlane.material.color.set(0x0000ff);
             mFrontPlane.material.needsUpdate = true;
             mBackPlane.material.color.set(0xaaaaff);
             mBackPlane.material.needsUpdate = true;
         };
-        target.idle = (toolMode) => {
+        target.idle = (toolState) => {
             mFrontPlane.material.color.set(0xffffff);
             mFrontPlane.material.needsUpdate = true;
             mBackPlane.material.color.set(0xaaaaaa);
             mBackPlane.material.needsUpdate = true;
             if (mInteractionSound) { try { mSound.pause(); } catch (e) { console.error(e); } }
         }
-        target.select = (toolMode) => {
+        target.select = (toolState) => {
             if (mInteractionSound) { try { mSound.play(); } catch (e) { console.error(e); } }
         }
         target.getId = () => mPicture.id;

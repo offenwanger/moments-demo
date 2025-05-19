@@ -60,8 +60,8 @@ export function AudioWrapper(parent, audioListener) {
         try { mSound.stop(); } catch (e) { console.error(e); }
     }
 
-    function getTargets(ray, toolMode) {
-        if (toolMode.tool == ToolButtons.MOVE) {
+    function getTargets(ray, toolState) {
+        if (toolState.tool == ToolButtons.MOVE) {
             let intersect = ray.intersectObject(mSphere);
             if (intersect.length == 0) return [];
             intersect = intersect[0];
@@ -74,16 +74,16 @@ export function AudioWrapper(parent, audioListener) {
         let target = new InteractionTargetInterface();
         target.getObject3D = () => { return mSphere; }
         target.getId = () => mAudio.id;
-        target.highlight = function (toolMode) {
+        target.highlight = function (toolState) {
             mSphere.material.color.setHex(0xff2299)
         };
-        target.select = function (toolMode) {
+        target.select = function (toolState) {
             mSphere.material.color.setHex(0xffffff)
             if (!mAudio.ambient) {
                 try { mSound.play(); } catch (e) { console.error(e); }
             }
         };
-        target.idle = (toolMode) => {
+        target.idle = (toolState) => {
             mSphere.material.color.setHex(0xaaaa99);
             if (!mAudio.ambient) {
                 try { mSound.pause(); } catch (e) { console.error(e); }

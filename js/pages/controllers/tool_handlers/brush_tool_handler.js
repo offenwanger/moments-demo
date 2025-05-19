@@ -1,28 +1,28 @@
 import { InteractionType } from "../../../constants.js";
 import { Util } from "../../../utils/utility.js";
 
-function pointerMove(raycaster, orientation, isPrimary, interactionState, toolMode, model, sessionController, sceneController, helperPointController) {
+function pointerMove(raycaster, orientation, isPrimary, interactionState, toolState, model, sessionController, sceneController, helperPointController) {
     if (interactionState.type == InteractionType.NONE) {
         let targets = [];
         if (isPrimary) {
-            targets = sceneController.getTargets(raycaster, toolMode)
+            targets = sceneController.getTargets(raycaster, toolState)
             if (targets.length > 1) { console.error('Got more than one target! There should only be one photosphere to target!'); }
         } else {
             // do nothing.
         }
-        Util.updateHoverTargetHighlight(targets[0], interactionState, toolMode, isPrimary, sessionController, helperPointController);
+        Util.updateHoverTargetHighlight(targets[0], interactionState, toolState, isPrimary, sessionController, helperPointController);
     } else if (interactionState.type == InteractionType.BRUSHING) {
-        let targets = sceneController.getTargets(raycaster, toolMode);
+        let targets = sceneController.getTargets(raycaster, toolState);
         if (targets.length == 0) { /* we moved off the sphere, do nothing. */ } else {
             if (targets.length > 1) { console.error('Unexpected target result!'); }
             let target = targets[0];
-            target.select(toolMode);
+            target.select(toolState);
             helperPointController.showPoint(isPrimary, target.getIntersection().point);
         }
     }
 }
 
-function pointerDown(raycaster, orientation, isPrimary, interactionState, toolMode, model, sessionController, sceneController, helperPointController) {
+function pointerDown(raycaster, orientation, isPrimary, interactionState, toolState, model, sessionController, sceneController, helperPointController) {
     let hovered = isPrimary ? interactionState.primaryHovered : interactionState.secondaryHovered;
     if (hovered) {
         if (interactionState.type == InteractionType.NONE) {
@@ -34,7 +34,7 @@ function pointerDown(raycaster, orientation, isPrimary, interactionState, toolMo
     }
 }
 
-function pointerUp(raycaster, orientation, isPrimary, interactionState, toolMode, model, sessionController, sceneController, helperPointController) {
+function pointerUp(raycaster, orientation, isPrimary, interactionState, toolState, model, sessionController, sceneController, helperPointController) {
     let type = interactionState.type;
     let data = interactionState.data;
 
@@ -46,7 +46,7 @@ function pointerUp(raycaster, orientation, isPrimary, interactionState, toolMode
     helperPointController.hidePoint(isPrimary);
 
     if (type == InteractionType.BRUSHING) {
-        let transaction = data.target.getTransaction(toolMode);
+        let transaction = data.target.getTransaction(toolState);
         if (transaction) { reaction = transaction; };
     }
 
