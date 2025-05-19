@@ -28,30 +28,34 @@ export function MenuController() {
     let mParentLinks = {}
 
     // Dynamic menus
-    let mImageSelectMenu = createSelectMenu('ImageSelectMenu');
-    let mAudioSelectMenu = createSelectMenu('AudioSelectMenu');
-    let mModelSelectMenu = createSelectMenu('ModelSelectMenu');
-    let mMomentSelectMenu = createSelectMenu('MomentSelectMenu', 5);
+    let mImageSelectMenu = createSelectMenu('ImageSelectMenu', 'Pick an uploaded image to add it.');
+    let mAudioSelectMenu = createSelectMenu('AudioSelectMenu', 'Pixk an uploaded or recordded audio to add it.');
+    let mModelSelectMenu = createSelectMenu('ModelSelectMenu', 'Pick an uploaded 3D model to add it.');
+    let mMomentSelectMenu = createSelectMenu('MomentSelectMenu', 'These are all your current moments. Pick one to add a teleporter to it, or add a new moment.', 5);
     mMomentSelectMenu.add(new MeshButton(ItemButtons.NEW_MOMENT, '+', BUTTON_SIZE));
 
     /** Tool menu and tools settings menus **/
-    mMenus[MenuNavButtons.TOOL_MENU] = createMenu(MenuNavButtons.TOOL_MENU, [
+    mMenus[MenuNavButtons.TOOL_MENU] = createMenu(MenuNavButtons.TOOL_MENU,
+        'Tools. Move lets you move things in the environment. Brush lets you edit the surrounding image. Surface lets you morph the surrounding image. Scissors lets you cut out bits of the surrounding image to use as artifacts. Record lets you record your voice or other audio.', [
         new MeshButton(ToolButtons.MOVE, 'Move', BUTTON_SIZE),
         new MeshButton(ToolButtons.BRUSH, 'Brush', BUTTON_SIZE),
         new MeshButton(ToolButtons.SURFACE, 'Surface', BUTTON_SIZE),
         new MeshButton(ToolButtons.SCISSORS, 'Scissors', BUTTON_SIZE, 0xff0000),
         new MeshButton(ToolButtons.RECORD, 'Record', BUTTON_SIZE),
     ]);
-    mMenus[ToolButtons.BRUSH] = createMenu(ToolButtons.BRUSH, [
-        new MeshButton(BrushToolButtons.UNBLUR, 'Unblur', BUTTON_SIZE),
+    mMenus[ToolButtons.BRUSH] = createMenu(ToolButtons.BRUSH,
+        'Brush tool mode. Focuses makes parts of the surrounding image clear. Draw lets you add colors to the surrounding image. Clear removes the focus and the color.', [
+        new MeshButton(BrushToolButtons.UNBLUR, 'Focus', BUTTON_SIZE),
         new MeshButton(BrushToolButtons.COLOR, 'Draw', BUTTON_SIZE),
         new MeshButton(BrushToolButtons.CLEAR, 'Clear', BUTTON_SIZE),
     ]);
-    mMenus[BrushToolButtons.UNBLUR] = createMenu(ToolButtons.BRUSH, [
+    mMenus[BrushToolButtons.UNBLUR] = createMenu(ToolButtons.BRUSH,
+        'Adjust the focus brush size.', [
         new MeshButton(BrushToolSettings.BIGGER, 'Bigger', BUTTON_SIZE),
         new MeshButton(BrushToolSettings.SMALLER, 'Draw', BUTTON_SIZE),
     ]);
-    mMenus[BrushToolButtons.COLOR] = createMenu(ToolButtons.BRUSH, [
+    mMenus[BrushToolButtons.COLOR] = createMenu(ToolButtons.BRUSH,
+        'Brush color and size.', [
         new MeshButton(BrushToolSettings.HUE_INC, 'Color', BUTTON_SIZE),
         new MeshButton(BrushToolSettings.SAT_INC, 'Colorful', BUTTON_SIZE),
         new MeshButton(BrushToolSettings.LIGHT_INC, 'Lighter', BUTTON_SIZE),
@@ -61,16 +65,19 @@ export function MenuController() {
         new MeshButton(BrushToolSettings.BIGGER, 'Bigger', BUTTON_SIZE),
         new MeshButton(BrushToolSettings.SMALLER, 'Smaller', BUTTON_SIZE),
     ]);
-    mMenus[BrushToolButtons.CLEAR] = createMenu(ToolButtons.BRUSH, [
+    mMenus[BrushToolButtons.CLEAR] = createMenu(ToolButtons.BRUSH,
+        'Choose clear size. Heads up, it\'s not super accurate.', [
         new MeshButton(BrushToolSettings.BIGGER, 'Bigger', BUTTON_SIZE),
         new MeshButton(BrushToolSettings.SMALLER, 'Smaller', BUTTON_SIZE),
     ]);
-    mMenus[ToolButtons.SURFACE] = createMenu(ToolButtons.SURFACE, [
+    mMenus[ToolButtons.SURFACE] = createMenu(ToolButtons.SURFACE,
+        'Surface lets you make the surrounding image more 3D. Flatten lets you select a part of the surrounding image, and makes it flat. To use, point and the sphere, pull the trigger, and lassoo the area. Pull lets you pull flattened parts of the image towards you or push them away. To use, point at a flattned area, pull the trigger, and push or pull. Delete resets flattened areas. To use, point at the area and pull and release the trigger.', [
         new MeshButton(SurfaceToolButtons.FLATTEN, 'Flatten', BUTTON_SIZE),
         new MeshButton(SurfaceToolButtons.PULL, 'Pull', BUTTON_SIZE),
         new MeshButton(SurfaceToolButtons.DELETE, 'Delete', BUTTON_SIZE),
     ]);
-    mMenus[ToolButtons.RECORD] = createMenu(ToolButtons.RECORD, [
+    mMenus[ToolButtons.RECORD] = createMenu(ToolButtons.RECORD,
+        'Record allows you to record audio. To record, pull the trigger and start talking. Release the trigger to stop recording. You can listen to your recording with Play. When you are happy, click accept to create the audio node. You can delete the audio to start again.', [
         new MeshButton(RecordToolButtons.REWIND, 'Rewind', BUTTON_SIZE),
         new MeshButton(RecordToolButtons.PLAYPAUSE, 'Play/Pause', BUTTON_SIZE),
         new MeshButton(RecordToolButtons.FORWARD, 'Forward', BUTTON_SIZE),
@@ -79,21 +86,21 @@ export function MenuController() {
     ]);
 
     /** Settings, add menus, and misc functions **/
-    mMenus[MenuNavButtons.MAIN_MENU] = createMenu(MenuNavButtons.MAIN_MENU, [
+    mMenus[MenuNavButtons.MAIN_MENU] = createMenu(MenuNavButtons.MAIN_MENU,
+        'Additional tools, for example, add lets you add uploaded artifacts like pictures, and recenter will take you back to the middle of the scene.', [
         new MeshButton(MenuNavButtons.ADD, 'Add', BUTTON_SIZE),
-        new MeshButton(MenuNavButtons.SPHERE_SETTINGS, 'Sphere Settings', BUTTON_SIZE),
-        new MeshButton(MenuNavButtons.SETTINGS, 'Settings', BUTTON_SIZE, 0xff0000),
-        new MeshButton(ItemButtons.RECENTER, 'Recenter', BUTTON_SIZE, 0xff0000),
+        new MeshButton(MenuNavButtons.SPHERE_SETTINGS, 'Surround Image Settings', BUTTON_SIZE),
+        new MeshButton(ItemButtons.RECENTER, 'Recenter', BUTTON_SIZE),
         new MeshButton(ItemButtons.UNDO, 'Undo', BUTTON_SIZE),
         new MeshButton(ItemButtons.REDO, 'Redo', BUTTON_SIZE),
     ]);
-    mMenus[MenuNavButtons.SPHERE_SETTINGS] = createMenu(MenuNavButtons.SPHERE_SETTINGS, [
+    mMenus[MenuNavButtons.SPHERE_SETTINGS] = createMenu(MenuNavButtons.SPHERE_SETTINGS,
+        'Edit the settings on the surrounding image.', [
         new MeshButton(MenuNavButtons.BACK_BUTTON, 'Back', BUTTON_SIZE),
         new MeshButton(AttributeButtons.SPHERE_TOGGLE, 'Toggle Sphere', BUTTON_SIZE),
-        new MeshButton(AttributeButtons.SPHERE_BLUR_TOGGLE, 'Toggle Blur', BUTTON_SIZE),
         new MeshButton(AttributeButtons.SPHERE_SCALE_UP, 'Scale Up', BUTTON_SIZE),
         new MeshButton(MenuNavButtons.SPHERE_IMAGE, 'Image', BUTTON_SIZE),
-        new MeshButton(MenuNavButtons.SPHERE_COLOR, 'Color', BUTTON_SIZE, 0xff0000),
+        new MeshButton(AttributeButtons.SPHERE_BLUR_TOGGLE, 'Toggle Blur', BUTTON_SIZE),
         new MeshButton(AttributeButtons.SPHERE_SCALE_DOWN, 'Scale Down', BUTTON_SIZE),
     ]);
     mParentLinks[MenuNavButtons.SPHERE_SETTINGS] = MenuNavButtons.MAIN_MENU;
@@ -101,12 +108,14 @@ export function MenuController() {
     mMenus[MenuNavButtons.SPHERE_IMAGE] = mImageSelectMenu;
     mParentLinks[MenuNavButtons.SPHERE_IMAGE] = MenuNavButtons.SPHERE_SETTINGS;
 
-    mMenus[MenuNavButtons.SETTINGS] = createMenu(MenuNavButtons.SETTINGS, [
+    mMenus[MenuNavButtons.SETTINGS] = createMenu(MenuNavButtons.SETTINGS,
+        '', [
         new MeshButton(MenuNavButtons.BACK_BUTTON, 'Back', BUTTON_SIZE),
     ]);
     mParentLinks[MenuNavButtons.SETTINGS] = MenuNavButtons.MAIN_MENU;
 
-    mMenus[MenuNavButtons.ADD] = createMenu(MenuNavButtons.ADD, [
+    mMenus[MenuNavButtons.ADD] = createMenu(MenuNavButtons.ADD,
+        'Please pick an artifact to add. Picture and models have to be uploaded from the desktop, audio can be uploaded or created with the recorder tool.', [
         new MeshButton(MenuNavButtons.BACK_BUTTON, 'Back', BUTTON_SIZE),
         new MeshButton(MenuNavButtons.ADD_AUDIO, 'Audio', BUTTON_SIZE),
         new MeshButton(MenuNavButtons.ADD_PICTURE, 'Picture', BUTTON_SIZE),
@@ -250,16 +259,17 @@ export function MenuController() {
         return [];
     }
 
-    function createSelectMenu(id, paginate = 6) {
-        return createMenu(id, [
+    function createSelectMenu(id, tag, paginate = 6) {
+        return createMenu(id,
+            tag, [
             new MeshButton(MenuNavButtons.BACK_BUTTON, 'Back', BUTTON_SIZE),
             new MeshButton(MenuNavButtons.PREVIOUS_BUTTON, 'Prev', BUTTON_SIZE),
             new MeshButton(MenuNavButtons.NEXT_BUTTON, 'Next', BUTTON_SIZE),
         ], paginate);
     }
 
-    function createMenu(id, buttons, paginate = 0) {
-        let menu = new ButtonMenu(id, MENU_WIDTH, paginate);
+    function createMenu(id, tag, buttons, paginate = 0) {
+        let menu = new ButtonMenu(id, tag, MENU_WIDTH, paginate);
         menu.add(...buttons);
         return menu;
     }

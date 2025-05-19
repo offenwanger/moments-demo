@@ -1,7 +1,7 @@
 import * as ThreeMeshUI from 'three-mesh-ui';
 import { MeshButton } from './mesh_button.js';
 
-export function ButtonMenu(id, width, paginate = 0) {
+export function ButtonMenu(id, header = '', width, paginate = 0) {
     // set of MeshButtons
     let mButtons = [];
     let mDynamicButtons = []
@@ -20,6 +20,28 @@ export function ButtonMenu(id, width, paginate = 0) {
         alignItems: 'start',
     });
     mContainer.userData.id = id;
+
+    if (header) {
+        let height = (Math.round(header.length / 40)) * 0.078
+
+        const mTextBox = new ThreeMeshUI.Block({
+            margin: 0.02,
+            width: width - 0.2,
+            height,
+            backgroundOpacity: 0,
+            textAlign: 'left',
+            fontSize: 0.06
+        });
+        mTextBox.add(new ThreeMeshUI.Text({
+            content: header,
+            width,
+            height: 0.5,
+            fontFamily: "./css/fonts/Roboto-msdf.json",
+            fontTexture: "./css/fonts/Roboto-msdf.png",
+        }))
+        mContainer.add(mTextBox);
+    }
+
 
     function layout() {
         mContainer.remove(...mRows)

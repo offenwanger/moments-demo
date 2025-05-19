@@ -68,7 +68,7 @@ export function XRInputController(sceneContainer) {
 
     const mLeftMenuContainer = new THREE.Group();
     mLeftMenuContainer.scale.set(0.1, 0.1, 0.1)
-    mLeftMenuContainer.position.set(-0.075, 0.07, 0);
+    mLeftMenuContainer.position.set(-0.075, 0.12, -0.05);
     mLeftMenuContainer.rotateX(-Math.PI / 4);
     const mRightMenuContainer = mLeftMenuContainer.clone();
 

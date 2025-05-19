@@ -288,6 +288,10 @@ export function SceneInterfaceController(parentContainer, mWebsocketController, 
             mMenuController.showMenu(buttonId);
         } else if (buttonId == ItemButtons.NEW_MOMENT) {
             await mCreateMomentCallback()
+        } else if (buttonId == ItemButtons.RECENTER) {
+            mCurrentSessionController.setUserPositionAndDirection(
+                new THREE.Vector3(),
+                new THREE.Vector3(0, 0, -1));
         } else if (buttonId == ItemButtons.UNDO) {
             await mUndoCallback()
         } else if (buttonId == ItemButtons.REDO) {
