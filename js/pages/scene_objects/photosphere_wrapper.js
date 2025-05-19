@@ -244,7 +244,7 @@ export function PhotosphereWrapper(parent) {
         ctx.globalCompositeOperation = 'source-over'
         ctx.lineCap = 'round'
         ctx.lineWidth = stroke.width * canvas.height;
-        ctx.color = stroke.color;
+        ctx.strokeStyle = stroke.color;
 
         ctx.beginPath();
         ctx.moveTo((stroke.points[0] * canvas.width) - 1, ((1 - stroke.points[1]) * canvas.height) - 1)
@@ -432,7 +432,7 @@ export function PhotosphereWrapper(parent) {
                     let stroke = new Data.Stroke();
                     stroke.points = [intersect.uv.x, intersect.uv.y]
                     stroke.type = Data.StrokeType.FOCUS;
-                    stroke.width = toolState.brushSettings.width;
+                    stroke.width = toolState.brushSettings.unblurWidth;
                     mDrawingNewStrokes = [stroke];
                     drawBlur();
                     draw();
@@ -440,7 +440,7 @@ export function PhotosphereWrapper(parent) {
                     let stroke = new Data.Stroke();
                     stroke.points = [intersect.uv.x, intersect.uv.y]
                     stroke.type = Data.StrokeType.COLOR;
-                    stroke.width = toolState.brushSettings.width;
+                    stroke.width = toolState.brushSettings.colorWidth;
                     stroke.color = toolState.brushSettings.color;
                     mDrawingNewStrokes = [stroke];
                     drawColor();
@@ -490,7 +490,7 @@ export function PhotosphereWrapper(parent) {
             if (toolState.tool == ToolButtons.BRUSH) {
                 if (toolState.brushSettings.mode == BrushToolButtons.CLEAR) {
                     let { deletedStrokes, newStrokes } = eraseStrokesWithStrokes(mStrokes,
-                        mInputStrokes.map(points => { return { points, width: toolState.brushSettings.width } }));
+                        mInputStrokes.map(points => { return { points, width: toolState.brushSettings.clearWidth } }));
                     mDrawingNewStrokes = newStrokes;
                     mDrawingDeletedStrokes = deletedStrokes;
                     drawBlur();
@@ -500,7 +500,7 @@ export function PhotosphereWrapper(parent) {
                     mDrawingNewStrokes = mInputStrokes.map(points => {
                         let s = new Data.Stroke();
                         s.photosphereId = mPhotosphere.id;
-                        s.width = toolState.brushSettings.width;
+                        s.width = toolState.brushSettings.unblurWidth;
                         s.type = Data.StrokeType.FOCUS;
                         s.points = points;
                         return s;
@@ -511,7 +511,7 @@ export function PhotosphereWrapper(parent) {
                     mDrawingNewStrokes = mInputStrokes.map(points => {
                         let s = new Data.Stroke();
                         s.photosphereId = mPhotosphere.id;
-                        s.width = toolState.brushSettings.width;
+                        s.width = toolState.brushSettings.colorWidth;
                         s.color = toolState.brushSettings.color;
                         s.type = Data.StrokeType.COLOR;
                         s.points = points;

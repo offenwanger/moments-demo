@@ -66,6 +66,18 @@ export const BrushToolButtons = {
     COLOR: 'brushToolColor',
 }
 
+export const BrushToolSettings = {
+    BIGGER: 'brushToolSettingsBigger',
+    SMALLER: 'brushToolSettingsSmaller',
+    HUE_INC: 'brushToolSettingsHueIncrement',
+    HUE_DEC: 'brushToolSettingsHueDecrement',
+    LIGHT_INC: 'brushToolSettingsLightIncrement',
+    LIGHT_DEC: 'brushToolSettingsLightDecrement',
+    SAT_INC: 'brushToolSettingsSatIncrement',
+    SAT_DEC: 'brushToolSettingsSatDecrement',
+}
+
+
 export const SurfaceToolButtons = {
     PULL: 'surfaceToolPull',
     FLATTEN: 'surfaceToolFlatten',

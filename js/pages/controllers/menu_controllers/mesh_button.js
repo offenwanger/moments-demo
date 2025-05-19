@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import * as ThreeMeshUI from 'three-mesh-ui';
 import { InteractionTargetInterface } from '../../scene_objects/interaction_target_interface.js';
 
-export function MeshButton(id, label, size, color = 0xffffff, dynamic = false) {
+export function MeshButton(id, label, size, color = null, dynamic = false) {
     let mDynamic = dynamic;
     const mButton = new ThreeMeshUI.Block({
         padding: 0.05,
@@ -14,42 +14,47 @@ export function MeshButton(id, label, size, color = 0xffffff, dynamic = false) {
         borderRadius: 0.075,
         borderWidth: 0.01,
         borderColor: new THREE.Color(1, 1, 1),
-        borderOpacity: 0
+        borderOpacity: 0,
     });
     mButton.add(new ThreeMeshUI.Text({
         content: label,
-        fontSize: 0.055,
-        fontColor: new THREE.Color(color),
+        fontSize: 0.055
     }));
     mButton.userData.id = id;
     const mInteractionTarget = createTarget();
+
+    function setColor(hex) {
+        mButton.set({
+            backgroundColor: new THREE.Color(hex),
+            fontColor: new THREE.Color(color ? color : '#FFFFFF')
+        })
+    }
+    setColor('#555555')
+
+    mButton.setupState({
+        state: 'idle',
+        attributes: {
+            offset: 0.035,
+            backgroundOpacity: 0.3,
+        },
+    });
+
+    mButton.setupState({
+        state: 'highlight',
+        attributes: {
+            offset: 0.035,
+            backgroundOpacity: 1,
+        },
+    });
 
     mButton.setupState({
         state: 'selected',
         attributes: {
             offset: 0.02,
-            backgroundColor: new THREE.Color(0x777777),
-            fontColor: new THREE.Color(0x222222)
+            backgroundOpacity: 0.9,
         }
     });
-    mButton.setupState({
-        state: 'highlight',
-        attributes: {
-            offset: 0.035,
-            backgroundColor: new THREE.Color(0x999999),
-            backgroundOpacity: 1,
-            fontColor: new THREE.Color(0xffffff)
-        },
-    });
-    mButton.setupState({
-        state: 'idle',
-        attributes: {
-            offset: 0.035,
-            backgroundColor: new THREE.Color(0x555555),
-            backgroundOpacity: 0.3,
-            fontColor: new THREE.Color(0xffffff)
-        },
-    });
+
     mButton.setState('idle')
 
     function getTarget(intersection) {
@@ -69,7 +74,6 @@ export function MeshButton(id, label, size, color = 0xffffff, dynamic = false) {
 
     function deactivate() {
         mButton.set({ borderOpacity: 0 });
-
     }
 
     function activate() {
@@ -80,6 +84,7 @@ export function MeshButton(id, label, size, color = 0xffffff, dynamic = false) {
     this.getTarget = getTarget;
     this.getId = () => id;
     this.isDynamic = () => mDynamic;
+    this.setColor = setColor;
     this.deactivate = deactivate;
     this.activate = activate;
 }

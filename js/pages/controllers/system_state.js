@@ -5,7 +5,10 @@ export class ToolState {
     brushSettings = {
         mode: BrushToolButtons.UNBLUR,
         // percent of sphereheight.
-        width: 0.1,
+        clearWidth: 0.1,
+        colorWidth: 0.1,
+        unblurWidth: 0.1,
+        color: '#333355'
     };
     surfaceSettings = {
         mode: SurfaceToolButtons.FLATTEN,

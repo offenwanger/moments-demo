@@ -1,8 +1,9 @@
 import * as ThreeMeshUI from 'three-mesh-ui';
-import { AssetTypes, AttributeButtons, BrushToolButtons, ItemButtons, MENU_WIDTH, MenuNavButtons, RecordToolButtons, SurfaceToolButtons, ToolButtons } from '../../../constants.js';
+import { AssetTypes, AttributeButtons, BrushToolButtons, BrushToolSettings, ItemButtons, MENU_WIDTH, MenuNavButtons, RecordToolButtons, SurfaceToolButtons, ToolButtons } from '../../../constants.js';
 import { ToolState } from '../system_state.js';
 import { ButtonMenu } from './button_menu.js';
 import { MeshButton } from './mesh_button.js';
+import { ColorUtil } from '../../../utils/color_util.js';
 
 export function MenuController() {
     const BUTTON_SIZE = 0.4;
@@ -45,6 +46,24 @@ export function MenuController() {
         new MeshButton(BrushToolButtons.UNBLUR, 'Unblur', BUTTON_SIZE),
         new MeshButton(BrushToolButtons.COLOR, 'Draw', BUTTON_SIZE),
         new MeshButton(BrushToolButtons.CLEAR, 'Clear', BUTTON_SIZE),
+    ]);
+    mMenus[BrushToolButtons.UNBLUR] = createMenu(ToolButtons.BRUSH, [
+        new MeshButton(BrushToolSettings.BIGGER, 'Bigger', BUTTON_SIZE),
+        new MeshButton(BrushToolSettings.SMALLER, 'Draw', BUTTON_SIZE),
+    ]);
+    mMenus[BrushToolButtons.COLOR] = createMenu(ToolButtons.BRUSH, [
+        new MeshButton(BrushToolSettings.HUE_INC, 'Color', BUTTON_SIZE),
+        new MeshButton(BrushToolSettings.SAT_INC, 'Colorful', BUTTON_SIZE),
+        new MeshButton(BrushToolSettings.LIGHT_INC, 'Lighter', BUTTON_SIZE),
+        new MeshButton(BrushToolSettings.HUE_DEC, 'Color', BUTTON_SIZE),
+        new MeshButton(BrushToolSettings.SAT_DEC, 'Muted', BUTTON_SIZE),
+        new MeshButton(BrushToolSettings.LIGHT_DEC, 'Darker', BUTTON_SIZE),
+        new MeshButton(BrushToolSettings.BIGGER, 'Bigger', BUTTON_SIZE),
+        new MeshButton(BrushToolSettings.SMALLER, 'Smaller', BUTTON_SIZE),
+    ]);
+    mMenus[BrushToolButtons.CLEAR] = createMenu(ToolButtons.BRUSH, [
+        new MeshButton(BrushToolSettings.BIGGER, 'Bigger', BUTTON_SIZE),
+        new MeshButton(BrushToolSettings.SMALLER, 'Smaller', BUTTON_SIZE),
     ]);
     mMenus[ToolButtons.SURFACE] = createMenu(ToolButtons.SURFACE, [
         new MeshButton(SurfaceToolButtons.FLATTEN, 'Flatten', BUTTON_SIZE),
@@ -156,6 +175,12 @@ export function MenuController() {
         if (mMenus[mToolState.tool]) {
             mDisplayedMenus.push(mMenus[mToolState.tool])
         }
+        if (mToolState.tool == ToolButtons.BRUSH) {
+            mDisplayedMenus.push(mMenus[mToolState.brushSettings.mode])
+            if (mToolState.brushSettings.mode == BrushToolButtons.COLOR) {
+                updateColorPicker(mToolState);
+            }
+        }
 
         let navMenu = mMenus[mCurrentNavId];
         if (!navMenu) {
@@ -167,6 +192,17 @@ export function MenuController() {
 
         mMenuContainer.add(...mDisplayedMenus.map(m => m.getObject()));
         mMenuContainer.update(true, true, true)
+    }
+
+    function updateColorPicker(toolState) {
+        toolState.brushSettings.color;
+        let buttons = mMenus[BrushToolButtons.COLOR].getButtons();
+        buttons.find(b => b.getId() == BrushToolSettings.HUE_INC).setColor(ColorUtil.hueIncrement(toolState.brushSettings.color));
+        buttons.find(b => b.getId() == BrushToolSettings.LIGHT_INC).setColor(ColorUtil.lightIncrement(toolState.brushSettings.color));
+        buttons.find(b => b.getId() == BrushToolSettings.SAT_INC).setColor(ColorUtil.satIncrement(toolState.brushSettings.color));
+        buttons.find(b => b.getId() == BrushToolSettings.HUE_DEC).setColor(ColorUtil.hueDecrement(toolState.brushSettings.color));
+        buttons.find(b => b.getId() == BrushToolSettings.LIGHT_DEC).setColor(ColorUtil.lightDecrement(toolState.brushSettings.color));
+        buttons.find(b => b.getId() == BrushToolSettings.SAT_DEC).setColor(ColorUtil.satDecrement(toolState.brushSettings.color));
     }
 
     async function updateModel(model, assetUtil) {
