@@ -2,14 +2,13 @@ import { InteractionType } from "../../../constants.js";
 import { Util } from "../../../utils/utility.js";
 
 function pointerMove(raycaster, orientation, isPrimary, interactionState, toolState, model, sessionController, sceneController, helperPointController) {
+    // only main hand can brush.
+    if (!isPrimary) return;
+
     if (interactionState.type == InteractionType.NONE) {
         let targets = [];
-        if (isPrimary) {
-            targets = sceneController.getTargets(raycaster, toolState)
-            if (targets.length > 1) { console.error('Got more than one target! There should only be one photosphere to target!'); }
-        } else {
-            // do nothing.
-        }
+        targets = sceneController.getTargets(raycaster, toolState)
+        if (targets.length > 1) { console.error('Got more than one target! There should only be one photosphere to target!'); }
         Util.updateHoverTargetHighlight(targets[0], interactionState, toolState, isPrimary, sessionController, helperPointController);
     } else if (interactionState.type == InteractionType.BRUSHING) {
         let targets = sceneController.getTargets(raycaster, toolState);
@@ -23,13 +22,15 @@ function pointerMove(raycaster, orientation, isPrimary, interactionState, toolSt
 }
 
 function pointerDown(raycaster, orientation, isPrimary, interactionState, toolState, model, sessionController, sceneController, helperPointController) {
-    let hovered = isPrimary ? interactionState.primaryHovered : interactionState.secondaryHovered;
+    if (!isPrimary) return;
+
+    let hovered = interactionState.primaryHovered;
     if (hovered) {
         if (interactionState.type == InteractionType.NONE) {
             interactionState.type = InteractionType.BRUSHING;
             interactionState.data = { target: hovered };
         } else {
-            console.error("TODO: Handle this edge case");
+            console.error("Unhandled edge case!");
         }
     }
 }
