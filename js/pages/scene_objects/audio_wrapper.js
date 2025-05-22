@@ -38,7 +38,7 @@ export function AudioWrapper(parent, audioListener) {
         mSphere.position.set(audio.x, audio.y, audio.z);
         mSphere.userData.id = audio.id;
 
-        let buffer = await assetUtil.loadAudioBuffer(audio.assetId);
+        let buffer = await assetUtil.loadAudioAsset(audio.assetId);
         mSound.setBuffer(buffer);
         mSound.setLoop(true);
         mSound.setVolume(audio.volume);

@@ -100,7 +100,7 @@ export async function setupEnvironmentWith3DAsset(assetName) {
     await canvasClickMenuButton(MenuNavButtons.BACK_BUTTON);
 
     expect(document.querySelector('#assets-container').children.length).toBeGreaterThan(0);
-    document.querySelector('#assets-container').children[0].eventListeners.click();
+    document.querySelector('#dialog-close-button').eventListeners.click();
 
     expect(testmodel().poseableAssets.length).toBe(1);
     await clickButtonInput('#poseable-asset-button-' + testmodel().poseableAssets[0].id);
@@ -126,7 +126,7 @@ export async function setupEnvironmentWithPicture() {
     await canvasClickMenuButton(MenuNavButtons.BACK_BUTTON);
 
     expect(document.querySelector('#assets-container').children.length).toBeGreaterThan(0);
-    document.querySelector('#assets-container').children[0].eventListeners.click();
+    document.querySelector('#dialog-close-button').eventListeners.click();
 
     expect(testmodel().pictures.length).toBe(1);
     await clickButtonInput('#picture-button-' + testmodel().pictures[0].id);
@@ -143,7 +143,7 @@ export async function uploadImageAsset() {
 
     expect(document.querySelector('#assets-container').children.length).toBeGreaterThan(0);
     expect(testmodel().assets.filter(a => a.type == AssetTypes.IMAGE).length).toBeGreaterThan(0);
-    document.querySelector('#assets-container').children[0].eventListeners.click();
+    document.querySelector('#dialog-close-button').eventListeners.click();
 }
 
 export async function canvasClickMenuButton(buttonId) {

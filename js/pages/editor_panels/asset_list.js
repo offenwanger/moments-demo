@@ -1,19 +1,15 @@
-import { AssetTypes } from "../../constants.js";
 import { FileUtil } from "../../utils/file_util.js";
 import { Util } from "../../utils/utility.js";
 import { ButtonInput } from "../components/button_input.js";
+import { LabeledImage } from "../components/labeled_image.js";
 
 export function AssetList(container) {
     let mAssetsUploadCallback = async (files) => { }
     let mAssetsClearCallback = async () => { }
 
-    let userAssetTypes = [
-        AssetTypes.AUDIO,
-        AssetTypes.IMAGE,
-        AssetTypes.MODEL,
-    ]
-
     let mAssets = [];
+    let mAssetList = []
+    let mAssetUtil = null;
 
     let mDialog = document.createElement('dialog');
     mDialog.style['position'] = 'absolute';
@@ -24,23 +20,10 @@ export function AssetList(container) {
 
     let mNewAssetButton = new ButtonInput(mContent)
         .setId("asset-add-button")
-        .setLabel("New Asset [+]")
+        .setLabel("Upload Assets [+]")
         .setOnClick(async () => {
-            if (mSelectionType) {
-                let accept = null;
-                if (mSelectionType == AssetTypes.AUDIO) {
-                    accept = "audio/*";
-                } else if (mSelectionType == AssetTypes.IMAGE) {
-                    accept = "image/*";
-                } else if (mSelectionType == AssetTypes.MODEL) {
-                    accept = ".glb,.glTF";
-                }
-                let file = await FileUtil.showFilePicker(accept);
-                if (file) await mAssetsUploadCallback([file]);
-            } else {
-                let files = await FileUtil.showFilePicker(null, true);
-                await mAssetsUploadCallback(files);
-            }
+            let files = await FileUtil.showFilePicker("audio/*,image/*,.glb,.glTF", true);
+            await mAssetsUploadCallback(files);
         });
 
     let mAssetsContainer = document.createElement('div');
@@ -48,10 +31,6 @@ export function AssetList(container) {
     mAssetsContainer.style['height'] = '400px';
     mAssetsContainer.style['overflow'] = 'scroll';
     mContent.appendChild(mAssetsContainer)
-    let mAssetList = []
-
-    let mSelectedAssetId = null;
-    let mSelectionType = null;
 
     let mClearAssetsButton = new ButtonInput(mContent)
         .setId("dialog-clear-button")
@@ -78,29 +57,24 @@ export function AssetList(container) {
         refreshList();
     }
 
-    async function show(type = null) {
-        mSelectionType = type;
-        refreshList();
+    async function show() {
         mDialog.show();
     }
 
-    function refreshList() {
-        let typeAssets = mSelectionType ?
-            mAssets.filter(a => a.type == mSelectionType) :
-            mAssets.filter(a => userAssetTypes.includes(a.type));
-        Util.setComponentListLength(mAssetList, typeAssets.length, () => new ButtonInput(mAssetsContainer));
-        for (let i = 0; i < typeAssets.length; i++) {
-            mAssetList[i].setId("asset-button-" + typeAssets[i].id)
-                .setLabel(typeAssets[i].name)
-                .setOnClick(async () => {
-                    mSelectedAssetId = typeAssets[i].id;
-                    mDialog.close();
-                });
+    async function refreshList() {
+        Util.setComponentListLength(mAssetList, mAssets.length, () => new LabeledImage(mAssetsContainer));
+        for (let i = 0; i < mAssets.length; i++) {
+            mAssetList[i].setId("asset-" + mAssets[i].id).setLabel(mAssets[i].name);
+            if (mAssetUtil) {
+                let thumbnail = await mAssetUtil.loadThumbnail(mAssets[i].id);
+                if (thumbnail) mAssetList[i].setImage(thumbnail.src, true);
+            }
         }
     }
 
     this.updateModel = updateModel;
     this.show = show;
+    this.setAssetUtil = (util) => mAssetUtil = util;
     this.onAssetsUpload = (func) => mAssetsUploadCallback = func;
     this.onAssetsClear = (func) => mAssetsClearCallback = func;
 }

@@ -168,7 +168,7 @@ export function PhotosphereWrapper(parent) {
 
         if (!oldPhotosphere || mPhotosphere.assetId != oldPhotosphere.assetId) {
             if (mPhotosphere.assetId) {
-                mImage = await assetUtil.loadImage(mPhotosphere.assetId);
+                mImage = await assetUtil.loadImageAsset(mPhotosphere.assetId);
             } else {
                 mImage = await (new THREE.ImageLoader()).loadAsync(DEFAULT_TEXTURE)
             }

@@ -1,4 +1,4 @@
-import { ASSET_FOLDER, STORY_JSON_FILE, WORKSPACE_DATA_FILE } from "./constants.js";
+import { FILE_FOLDER, STORY_JSON_FILE, WORKSPACE_DATA_FILE } from "./constants.js";
 import { Data } from "./data.js";
 import { FileUtil } from "./utils/file_util.js";
 
@@ -76,37 +76,24 @@ export function WorkspaceManager(folderHandle) {
         return model;
     }
 
-    async function storeAsset(file) {
-        let oldFilename = file.name;
-        let nameBreakdown = oldFilename.split(".");
-        // simplify name otherwise it causes URL issues. 
-        nameBreakdown[0] = nameBreakdown[0].replace(/[^a-zA-Z0-9-_]/g, '');
-        nameBreakdown[0] += "-" + Date.now();
-        let newName = nameBreakdown.join('.');
+    async function storeFile(file, updateName = true) {
+        let name = file.name;
+        if (updateName) {
+            let nameBreakdown = file.name.split(".");
+            // simplify name otherwise it causes URL issues. 
+            nameBreakdown[0] = nameBreakdown[0].replace(/[^a-zA-Z0-9-_]/g, '');
+            nameBreakdown[0] += "-" + Date.now();
+            name = nameBreakdown.join('.');
+        }
         let arrayBuffer = await file.arrayBuffer();
-        let assetFolder = await mFolderHandle.getDirectoryHandle(ASSET_FOLDER, { create: true });
-        await FileUtil.writeFile(assetFolder, newName, arrayBuffer);
-        return newName;
-    }
-
-    async function updateAsset(file) {
-        // this assumes we already have a good filename.
-        let arrayBuffer = await file.arrayBuffer();
-        let assetFolder = await mFolderHandle.getDirectoryHandle(ASSET_FOLDER, { create: true });
-        await FileUtil.writeFile(assetFolder, file.name, arrayBuffer);
-    }
-
-    async function storeCanvas(name, canvas) {
-        let blob = await new Promise(resolve => canvas.toBlob(resolve));
-        name += "-" + Date.now() + ".png";
-        let assetFolder = await mFolderHandle.getDirectoryHandle(ASSET_FOLDER, { create: true });
-        await FileUtil.writeFile(assetFolder, name, blob);
+        let folder = await mFolderHandle.getDirectoryHandle(FILE_FOLDER, { create: true });
+        await FileUtil.writeFile(folder, name, arrayBuffer);
         return name;
     }
 
-    async function getAssetAsDataURI(filename) {
-        let assetFolder = await mFolderHandle.getDirectoryHandle(ASSET_FOLDER, { create: true });
-        let uri = await FileUtil.getDataUriFromFile(assetFolder, filename);
+    async function getFileAsDataURI(filename) {
+        let folder = await mFolderHandle.getDirectoryHandle(FILE_FOLDER, { create: true });
+        let uri = await FileUtil.getDataUriFromFile(folder, filename);
         return uri;
     }
 
@@ -123,8 +110,8 @@ export function WorkspaceManager(folderHandle) {
         try {
             let storyObj = await FileUtil.getJSONFromFile(await mFolderHandle.getDirectoryHandle(storyId), STORY_JSON_FILE)
             let model = Data.StoryModel.fromObject(storyObj);
-            let assetFolder = await mFolderHandle.getDirectoryHandle(ASSET_FOLDER, { create: true })
-            FileUtil.pacakgeToZip(model, assetFolder);
+            let folder = await mFolderHandle.getDirectoryHandle(FILE_FOLDER, { create: true })
+            FileUtil.pacakgeToZip(model, folder);
         } catch (error) {
             console.error(error);
         }
@@ -134,8 +121,8 @@ export function WorkspaceManager(folderHandle) {
         try {
             let model = await FileUtil.getModelFromZip(file);
             model = model.clone();
-            let assetFolder = await mFolderHandle.getDirectoryHandle(ASSET_FOLDER, { create: true })
-            await FileUtil.unpackageAssetsFromZip(file, assetFolder);
+            let folder = await mFolderHandle.getDirectoryHandle(FILE_FOLDER, { create: true })
+            await FileUtil.unpackageAssetsFromZip(file, folder);
             await newStory(model.id);
             await updateStory(model);
         } catch (error) {
@@ -143,21 +130,20 @@ export function WorkspaceManager(folderHandle) {
             console.error("Failed to load story!");
         }
     }
+    
     this.getStoryList = getStoryList;
     this.newStory = newStory;
     this.deleteStory = deleteStory;
     this.updateStory = updateStory;
     this.getStory = getStory;
-    this.storeAsset = storeAsset;
-    this.updateAsset = updateAsset;
-    this.storeCanvas = storeCanvas;
-    this.getAssetAsDataURI = getAssetAsDataURI;
+    this.storeFile = storeFile;
+    this.getFileAsDataURI = getFileAsDataURI;
     this.loadStory = loadStory;
     this.packageStory = packageStory;
 }
 
 export function RemoteWorkSpace(storyId) {
-    async function getAssetAsDataURI(filename) {
+    async function getFileAsDataURI(filename) {
         try {
             let result = await fetch('uploads/' + storyId + "/" + filename);
             if (result?.ok) {
@@ -174,7 +160,8 @@ export function RemoteWorkSpace(storyId) {
         }
     }
 
-    this.getAssetAsDataURI = getAssetAsDataURI;
+    this.getFileAsDataURI = getFileAsDataURI;
+    this.isRemote = true;
 }
 
 

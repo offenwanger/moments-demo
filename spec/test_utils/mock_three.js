@@ -22,6 +22,7 @@ export async function mockThreeSetup() {
             this.render = function (scene, camera) {
                 global.test_rendererAccess.lastRender = { scene, camera };
             }
+            this.setClearColor = () => { }
         },
         ImageLoader: function () {
             this.loadAsync = () => { return createCanvas() }

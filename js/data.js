@@ -216,7 +216,6 @@ class Asset extends DataItem {
     name = "Asset";
     type = null;
     filename = null;
-    updated = Date.now();
 }
 
 class PoseableAsset extends DataItem {

@@ -52,7 +52,7 @@ export function PoseableAssetWrapper(parent, audioListener) {
             mAudioSprites = {};
             mSounds = {};
             try {
-                mGLTF = await assetUtil.loadAssetModel(mPoseableAsset.assetId)
+                mGLTF = await assetUtil.loadModelAsset(mPoseableAsset.assetId)
                 mModelGroup.add(mGLTF);
 
                 mTargets = []
@@ -128,7 +128,7 @@ export function PoseableAssetWrapper(parent, audioListener) {
 
                 if (!mSounds[pose.id]) {
                     mSounds[pose.id] = new THREE.PositionalAudio(audioListener);
-                    let buffer = await assetUtil.loadAudioBuffer(audio.assetId);
+                    let buffer = await assetUtil.loadAudioAsset(audio.assetId);
                     mSounds[pose.id].setBuffer(buffer);
                     mSounds[pose.id].setLoop(true);
                     mSounds[pose.id].setVolume(audio.volume);

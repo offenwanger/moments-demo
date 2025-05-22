@@ -7,7 +7,6 @@ export function PictureWrapper(parent, audioListener) {
     let mParent = parent;
     let mPicture = new Data.Picture();
     let mCurrentAssetId = null;
-    let mAssetAge = 0;
     let mInteractionTarget = createInteractionTarget();
 
     let mRatio = 1;
@@ -36,15 +35,13 @@ export function PictureWrapper(parent, audioListener) {
     mParent.add(mPlanes);
 
     async function update(picture, model, assetUtil) {
-        let assetAge = assetUtil.getAssetAge(picture.assetId);
-        if (mCurrentAssetId != picture.assetId || (assetAge && mAssetAge < assetAge)) {
-            let image = await assetUtil.loadImage(picture.assetId);
+        if (mCurrentAssetId != picture.assetId) {
+            let image = await assetUtil.loadImageAsset(picture.assetId);
             if (!image || isNaN(image.height / image.width)) {
                 console.error('Invalid image: ' + picture.assetId);
                 mFrontPlane.material.map = null;
                 mFrontPlane.material.needsUpdate = true
                 mCurrentAssetId = null;
-                mAssetAge = 0;
                 mRatio = 1;
                 return;
             }
@@ -54,7 +51,6 @@ export function PictureWrapper(parent, audioListener) {
             mFrontPlane.material.needsUpdate = true
             mFrontPlane.material.map.needsUpdate = true
             mCurrentAssetId = picture.assetId;
-            mAssetAge = assetAge;
         }
 
         mPlanes.position.set(picture.x, picture.y, picture.z);
@@ -77,7 +73,7 @@ export function PictureWrapper(parent, audioListener) {
         if (audio) {
             mPlanes.add(mAudioSprite);
 
-            let buffer = await assetUtil.loadAudioBuffer(audio.assetId);
+            let buffer = await assetUtil.loadAudioAsset(audio.assetId);
             mSound.setBuffer(buffer);
             mSound.setLoop(true);
             mSound.setVolume(audio.volume);

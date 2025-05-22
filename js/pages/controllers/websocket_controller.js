@@ -1,4 +1,4 @@
-import { ServerMessage } from "../../constants.js";
+import { ServerMessage, THUMBNAIL_PREFIX, THUMBNAIL_SUFFIX } from "../../constants.js";
 import { logInfo } from "../../utils/log_util.js";
 
 export function WebsocketController() {
@@ -31,7 +31,6 @@ export function WebsocketController() {
     let mStoryConnectCallback = async () => { }
     let mStoryUpdateCallback = async () => { }
     let mNewAssetCallback = async () => { }
-    let mUpdateAssetCallback = async () => { }
     let mCreateMomentCallback = async () => { }
     let mParticipantUpdateCallback = () => { }
 
@@ -101,9 +100,12 @@ export function WebsocketController() {
         try {
             // This is not a good way to do this.
             // WE should really only upload when a thing is requested.
-            let filenames = model.assets.map(a => a.filename);
-            for (let filename of filenames) {
-                await uploadAsset(model.id, filename, workspace)
+            for (let asset of model.assets) {
+                await uploadAsset(model.id, asset.filename, workspace)
+                await uploadAsset(model.id, THUMBNAIL_PREFIX + asset.id + THUMBNAIL_SUFFIX, workspace)
+            }
+            for (let moment of model.moments) {
+                await uploadAsset(model.id, THUMBNAIL_PREFIX + moment.id + THUMBNAIL_SUFFIX, workspace)
             }
             logInfo("Files uploaded.")
             mWebSocket.emit(ServerMessage.START_SHARE, model);
@@ -131,21 +133,29 @@ export function WebsocketController() {
     }
 
     async function uploadAsset(storyId, filename, workspace) {
-        let url = await workspace.getAssetAsDataURI(filename);
-        logInfo("Uploading " + filename);
-        await fetch('/upload', {
-            method: "POST",
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                storyId,
-                filename,
-                url,
-            })
-        });
-        logInfo(filename + " uploaded.");
+        try {
+            let url = await workspace.getFileAsDataURI(filename);
+            if (url) {
+                logInfo("Uploading " + filename);
+                await fetch('/upload', {
+                    method: "POST",
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        storyId,
+                        filename,
+                        url,
+                    })
+                });
+                logInfo(filename + " uploaded.");
+            }
+        } catch (e) {
+            if (e.message.includes('A requested file or directory could not be found at the time an operation was processed')) {
+                // Probably just a missing thumbnail, ignore.
+            } else console.error(e)
+        }
     }
 
     async function newAsset(id, file, type) {

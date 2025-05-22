@@ -60,6 +60,12 @@ export function SceneController(audioListener) {
     }
 
     async function setCurrentMoment(momentId = null) {
+        // update the thumbnail
+        if (mCurrentMomentId && mAssetUtil) {
+            await mAssetUtil.generateThumbnail(mCurrentMomentId, mScene, Data.Moment);
+            mAssetUtil.clearCache(mCurrentMomentId);
+        }
+
         mCurrentMomentId = momentId;
         if (mAssetUtil) await updateModel(mModel, mAssetUtil);
     }

@@ -2,7 +2,7 @@ import * as THREE from 'three';
 
 export const WORKSPACE_DATA_FILE = 'workspace.json';
 export const STORY_JSON_FILE = 'story.json';
-export const ASSET_FOLDER = 'assets';
+export const FILE_FOLDER = 'assets';
 
 export const UP = new THREE.Vector3(0, 1, 0);
 
@@ -13,13 +13,11 @@ export const AssetTypes = {
     MODEL: 'model',
     IMAGE: 'image',
     AUDIO: 'audio',
-    BOX: 'box'
 }
 
 export const AssetExtensions = {};
 AssetExtensions[AssetTypes.MODEL] = '.glb'
 AssetExtensions[AssetTypes.IMAGE] = '.png'
-AssetExtensions[AssetTypes.BOX] = '.png'
 
 export const BOX_ASSET_PREFIXES = ['px_', 'nx_', 'py_', 'ny_', 'pz_', 'nz_'];
 
@@ -126,3 +124,7 @@ export const AttributeButtons = {
 export const TELEPORT_COMMAND = 'updateCurrentMoment'
 
 export const MENU_WIDTH = 1.5;
+
+export const THUMBNAIL_PREFIX = 'thumbnail_';
+export const THUMBNAIL_SUFFIX = '.jpg';
+export const THUMBNAIL_SIZE = 64;

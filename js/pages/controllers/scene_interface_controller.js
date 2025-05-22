@@ -327,13 +327,21 @@ export function SceneInterfaceController(parentContainer, mWebsocketController, 
         } else if (buttonId == RecordToolButtons.FORWARD) {
             mAudioRecorder.forwardAudioFile();
         } else if (buttonId == RecordToolButtons.ACCEPT) {
-            if (mAudioRecorder.hasContent()) {
+            if (mCurrentMomentId && mAudioRecorder.hasContent()) {
                 let point = target.getIntersection().point;
                 let audioBlob = mAudioRecorder.getAudioBlob();
                 mAudioRecorder.clearRecorder();
                 let assetId = IdUtil.getUniqueId(Data.Asset);
                 let filename = assetId + mAudioRecorder.getExtension();
-                await mAssetCreateCallback(assetId, filename, AssetTypes.AUDIO, audioBlob);
+                let recordingName = 'Recorded ' + new Date().toLocaleString(undefined, {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
+                    hour: '2-digit',
+                    minute: '2-digit',
+                });
+
+                await mAssetCreateCallback(assetId, recordingName, filename, AssetTypes.AUDIO, audioBlob);
 
                 let actions = DataUtil.getAudioCreationActions(mModel, mCurrentMomentId, assetId, point);
                 await mModelUpdateCallback(new Transaction(actions));

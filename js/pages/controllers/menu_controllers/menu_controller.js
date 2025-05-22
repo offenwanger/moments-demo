@@ -222,24 +222,30 @@ export function MenuController() {
         mMomentSelectMenu.empty(true)
 
         for (let asset of model.assets) {
-            let menu;
+            let button = new MeshButton(asset.id, asset.name, BUTTON_SIZE, 0xffffff, true);
+            let thumbnail = await assetUtil.loadThumbnail(asset.id)
+
             if (asset.type == AssetTypes.MODEL) {
-                menu = mModelSelectMenu;
+                if (thumbnail) { button.setImage(thumbnail.src); }
+                mModelSelectMenu.add(button);
             } else if (asset.type == AssetTypes.IMAGE) {
-                menu = mImageSelectMenu;
+                if (thumbnail) { button.setImage(thumbnail.src); }
+                mImageSelectMenu.add(button);
             } else if (asset.type == AssetTypes.AUDIO) {
-                menu = mAudioSelectMenu;
+                if (thumbnail) { button.setImage(thumbnail.src, false); }
+                mAudioSelectMenu.add(button);
             } else {
                 console.error('Invalid type: ' + asset.type);
                 continue;
             }
-            let button = new MeshButton(asset.id, asset.name, BUTTON_SIZE, 0xffffff, true);
-            menu.add(button);
         }
 
         for (let moment of model.moments) {
             let button = new MeshButton(moment.id, moment.name, BUTTON_SIZE, 0xffffff, true);
             mMomentSelectMenu.add(button);
+
+            let thumbnail = await assetUtil.loadThumbnail(moment.id)
+            if (thumbnail) { button.setImage(thumbnail.src, false); }
         }
 
         mMenuContainer.update(true, true, true)

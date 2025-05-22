@@ -44,7 +44,7 @@ async function getAssetCreationActions(id, name, filename, type, asset = null) {
     }));
 
     if (type == AssetTypes.MODEL) {
-        let targets = GLTKUtil.getInteractionTargetsFromGTLKScene(asset.scene);
+        let targets = GLTKUtil.getInteractionTargetsFromGTLKScene(asset);
 
         if (Util.unique(targets.map(t => t.name)).length < targets.length) {
             console.error("Invalid asset, assets components must have unique names.");

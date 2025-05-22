@@ -114,13 +114,16 @@ export function EditorPage(parentContainer, mWebsocketController) {
                 if (!mWorkspace) {
                     await mWebsocketController.newAsset(id, file, type)
                 } else {
-                    let newFilename = await mWorkspace.storeAsset(file);
-                    let asset = null;
-                    if (type == AssetTypes.MODEL) {
-                        asset = await mAssetUtil.loadGLTFModel(newFilename);
-                    }
+                    let newFilename = await mWorkspace.storeFile(file);
+                    let asset = await mAssetUtil.loadAssetFile(newFilename, type);
+                    let thumbnailFilename = await mAssetUtil.generateThumbnail(id, asset, type);
                     transaction.actions.push(...(await DataUtil.getAssetCreationActions(
                         id, file.name, newFilename, type, asset)));
+
+                    if (mWebsocketController.isSharing()) {
+                        await mWebsocketController.uploadAsset(mModelController.getModel().id, newFilename, mWorkspace);
+                        await mWebsocketController.uploadAsset(mModelController.getModel().id, thumbnailFilename, mWorkspace);
+                    }
                 }
             } catch (e) {
                 console.error(e);
@@ -200,33 +203,31 @@ export function EditorPage(parentContainer, mWebsocketController) {
 
     mWebsocketController.onNewAsset(async (id, name, buffer, type) => {
         let file = new File([buffer], name);
-        let newFilename = await mWorkspace.storeAsset(file);
+        let newFilename = await mWorkspace.storeFile(file);
+        let asset = await mAssetUtil.loadAssetFile(newFilename, type);
+        let thumbnailFilename = await mAssetUtil.generateThumbnail(id, asset, type);
         await mWebsocketController.uploadAsset(mModelController.getModel().id, newFilename, mWorkspace);
-
-        let asset = null;
-        if (type == AssetTypes.MODEL) {
-            asset = await mAssetUtil.loadGLTFModel(newFilename);
-        }
+        await mWebsocketController.uploadAsset(mModelController.getModel().id, thumbnailFilename, mWorkspace);
         let actions = await DataUtil.getAssetCreationActions(id, file.name, newFilename, type, asset);
         await mModelController.applyTransaction(new Transaction(actions));
         updateModel();
     })
 
-    mSceneInterface.onAssetCreate(async (id, name, type, blob) => {
-        let file = new File([blob], name);
+    mSceneInterface.onAssetCreate(async (id, name, filename, type, blob) => {
+        let file = new File([blob], filename);
         if (!mWorkspace) {
             await mWebsocketController.newAsset(id, file, type)
         } else {
-            let newFilename = await mWorkspace.storeAsset(file);
+            let newFilename = await mWorkspace.storeFile(file);
+            let asset = await mAssetUtil.loadAssetFile(newFilename, type);
+            let thumbnailFilename = await mAssetUtil.generateThumbnail(id, asset, type);
+            let actions = await DataUtil.getAssetCreationActions(id, name, newFilename, type, asset)
+
             if (mWebsocketController.isSharing()) {
                 await mWebsocketController.uploadAsset(mModelController.getModel().id, newFilename, mWorkspace);
+                await mWebsocketController.uploadAsset(mModelController.getModel().id, thumbnailFilename, mWorkspace);
             }
-            let asset = null;
-            if (type == AssetTypes.MODEL) {
-                asset = await mAssetUtil.loadGLTFModel(newFilename);
-            }
-            let actions = await DataUtil.getAssetCreationActions(
-                id, file.name, newFilename, type, asset)
+
             await mModelController.applyTransaction(new Transaction(actions));
             updateModel();
         }
@@ -293,6 +294,7 @@ export function EditorPage(parentContainer, mWebsocketController) {
             }
         }
 
+        mAssetList.setAssetUtil(mAssetUtil);
         mModelController.addUpdateListener(mWebsocketController.updateStory);
 
         resize(mWidth, mHeight);

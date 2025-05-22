@@ -16,11 +16,14 @@ export function MeshButton(id, label, size, color = null, dynamic = false) {
         borderColor: new THREE.Color(1, 1, 1),
         borderOpacity: 0,
     });
-    mButton.add(new ThreeMeshUI.Text({
+    mButton.userData.id = id;
+
+    let mText = new ThreeMeshUI.Text({
         content: label,
         fontSize: 0.055
-    }));
-    mButton.userData.id = id;
+    })
+    mButton.add(mText);
+
     const mInteractionTarget = createTarget();
 
     function setColor(hex) {
@@ -30,6 +33,13 @@ export function MeshButton(id, label, size, color = null, dynamic = false) {
         })
     }
     setColor('#555555')
+
+    function setImage(image, hideText = true) {
+        new THREE.TextureLoader().load(image, (texture) => {
+            mButton.set({ backgroundTexture: texture, backgroundColor: null });
+            if (hideText) { mText.content = ''; }
+        });
+    }
 
     mButton.setupState({
         state: 'idle',
@@ -85,6 +95,7 @@ export function MeshButton(id, label, size, color = null, dynamic = false) {
     this.getId = () => id;
     this.isDynamic = () => mDynamic;
     this.setColor = setColor;
+    this.setImage = setImage;
     this.deactivate = deactivate;
     this.activate = activate;
 }

@@ -35,4 +35,5 @@ export function mockAudioContext() {
 
 function mockAudioBuffer(arrayBuffer) {
     this.buf = arrayBuffer;
+    this.getChannelData = function () { return Float32Array.from(this.buf); }
 }
