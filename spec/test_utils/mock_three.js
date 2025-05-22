@@ -102,6 +102,7 @@ function mockThreeMeshUI() {
     };
     function Text() {
         let o = new THREE.Group();
+        o.set = () => { };
         list.push(o);
         return o;
     };

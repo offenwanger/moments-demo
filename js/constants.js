@@ -83,9 +83,9 @@ export const SurfaceToolButtons = {
 }
 
 export const RecordToolButtons = {
-    REWIND: 'recordToolRewind',
+    DISPLAY: 'recordToolDisplay',
+    RECORD: 'recordToolRecord',
     PLAYPAUSE: 'recordToolPlaypause',
-    FORWARD: 'recordToolForward',
     ACCEPT: 'recordToolAccept',
     DELETE: 'recordToolDelete',
 }

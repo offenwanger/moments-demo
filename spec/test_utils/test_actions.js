@@ -68,13 +68,10 @@ export async function createAndOpenStoryMoment() {
 
 export async function createAudioInCanvasEnvironment() {
     await canvasClickMenuButton(ToolButtons.RECORD);
-
-    let canvas = document.querySelector('#main-canvas');
-    await pointermove(canvas.width / 2, canvas.height / 2);
-    await canvaspointerdown(canvas.width / 2, canvas.height / 2)
-    await pointermove(canvas.width / 2 - 100, canvas.height / 2);
-    await pointerup(canvas.width / 2 - 100, canvas.height / 2);
-
+    await canvasClickMenuButton(RecordToolButtons.RECORD);
+    await global.test_rendererAccess.animationLoop();
+    await global.test_rendererAccess.animationLoop();
+    await canvasClickMenuButton(RecordToolButtons.RECORD);
     await canvasClickMenuButton(RecordToolButtons.ACCEPT);
     await canvasClickMenuButton(ToolButtons.MOVE);
 

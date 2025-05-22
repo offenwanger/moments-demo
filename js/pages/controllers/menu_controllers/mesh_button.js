@@ -37,8 +37,12 @@ export function MeshButton(id, label, size, color = null, dynamic = false) {
     function setImage(image, hideText = true) {
         new THREE.TextureLoader().load(image, (texture) => {
             mButton.set({ backgroundTexture: texture, backgroundColor: null });
-            if (hideText) { mText.content = ''; }
+            if (hideText) { mText.set({ content: '' }); }
         });
+    }
+
+    function setText(text) {
+        mText.set({ content: text });
     }
 
     mButton.setupState({
@@ -96,6 +100,7 @@ export function MeshButton(id, label, size, color = null, dynamic = false) {
     this.isDynamic = () => mDynamic;
     this.setColor = setColor;
     this.setImage = setImage;
+    this.setText = setText;
     this.deactivate = deactivate;
     this.activate = activate;
 }

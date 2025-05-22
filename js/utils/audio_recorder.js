@@ -1,9 +1,12 @@
 export function AudioRecorder() {
     const BUFFER_LENGTH = 2048;
     let mIsPlaying = false;
+    let mIsRecording = false;
 
     let mCanvas = document.createElement('canvas');
     const mCtx = mCanvas.getContext("2d");
+
+    let mOnChunkCallback = async () => { }
 
     let mMediaRecorder;
 
@@ -28,8 +31,9 @@ export function AudioRecorder() {
                 const source = mAudioCtx.createMediaStreamSource(stream);
                 source.connect(mAnalyser);
 
-                mMediaRecorder.ondataavailable = function (e) {
+                mMediaRecorder.ondataavailable = async function (e) {
                     mChunks.push(e.data);
+                    await mOnChunkCallback(e.data);
                 };
 
                 mMediaRecorder.onstart = function (e) {
@@ -51,10 +55,12 @@ export function AudioRecorder() {
 
     function startRecording() {
         mMediaRecorder?.resume();
+        mIsRecording = true;
     }
 
     function stopRecording() {
         mMediaRecorder?.pause();
+        mIsRecording = false;
     }
 
     function clearRecorder() {
@@ -163,5 +169,7 @@ export function AudioRecorder() {
     this.getAudioBlob = getAudioBlob;
     this.getExtension = getExtension;
     this.isPlaying = () => mIsPlaying;
+    this.isRecording = () => mIsRecording;
     this.getCanvas = () => mCanvas;
+    this.onChunk = (func) => mOnChunkCallback = func;
 }

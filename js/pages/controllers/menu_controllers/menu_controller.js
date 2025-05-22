@@ -76,13 +76,15 @@ export function MenuController() {
         new MeshButton(SurfaceToolButtons.PULL, 'Pull', BUTTON_SIZE),
         new MeshButton(SurfaceToolButtons.DELETE, 'Delete', BUTTON_SIZE),
     ]);
+    let mAudioDisplayButton = new MeshButton(RecordToolButtons.DISPLAY, 'Ready to Record', BUTTON_SIZE, '#000000')
+    mAudioDisplayButton.setColor('#ffffff')
     mMenus[ToolButtons.RECORD] = createMenu(ToolButtons.RECORD,
-        'Record allows you to record audio. To record, pull the trigger and start talking. Release the trigger to stop recording. You can listen to your recording with Play. When you are happy, click accept to create the audio node. You can delete the audio to start again.', [
-        new MeshButton(RecordToolButtons.REWIND, 'Rewind', BUTTON_SIZE),
+        'Record allows you to record audio. Use Start/Stop record to start and stop the recording, and Play/Pause to listen. When you are happy, click Accept to create an audio node. Delete will allow you to start over recording.', [
+        new MeshButton(RecordToolButtons.RECORD, 'Start/Stop Recording', BUTTON_SIZE),
         new MeshButton(RecordToolButtons.PLAYPAUSE, 'Play/Pause', BUTTON_SIZE),
-        new MeshButton(RecordToolButtons.FORWARD, 'Forward', BUTTON_SIZE),
         new MeshButton(RecordToolButtons.ACCEPT, 'Accept', BUTTON_SIZE),
         new MeshButton(RecordToolButtons.DELETE, 'Delete', BUTTON_SIZE),
+        mAudioDisplayButton,
     ]);
 
     /** Settings, add menus, and misc functions **/
@@ -287,6 +289,7 @@ export function MenuController() {
     this.getCurrentMenuId = () => mCurrentNavId;
     this.onToolChange = func => mToolChangeCallback = func;
     this.getMode = () => mToolState;
+    this.getAudioDisplay = () => mAudioDisplayButton;
     this.render = render
     this.getTargets = getTargets;
 }

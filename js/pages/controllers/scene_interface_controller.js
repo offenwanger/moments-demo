@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { AssetTypes, AttributeButtons, BrushToolButtons, BrushToolSettings, InteractionType, ItemButtons, MenuNavButtons, RecordToolButtons, SurfaceToolButtons, TELEPORT_COMMAND, ToolButtons } from "../../constants.js";
 import { Data } from "../../data.js";
+import { ColorUtil } from "../../utils/color_util.js";
 import { DataUtil } from "../../utils/data_util.js";
 import { IdUtil } from "../../utils/id_util.js";
 import { Action, ActionType, Transaction } from "../../utils/transaction_util.js";
@@ -12,10 +13,8 @@ import { SceneController } from "./scene_controller.js";
 import { ToolState } from "./system_state.js";
 import { BrushToolHandler } from "./tool_handlers/brush_tool_handler.js";
 import { MoveToolHandler } from "./tool_handlers/move_tool_handler.js";
-import { RecorderToolHandler } from "./tool_handlers/recorder_tool_handler.js";
 import { SurfaceToolHandler } from "./tool_handlers/surface_tool_handler.js";
 import { XRSessionController } from './xr_controllers/xr_session_controller.js';
-import { ColorUtil } from "../../utils/color_util.js";
 
 /**
  * Handles the display of the story, including the event handling and 
@@ -30,8 +29,6 @@ export function SceneInterfaceController(parentContainer, mWebsocketController, 
     let mUndoCallback = async () => { }
     let mRedoCallback = async () => { }
     let mSelectCallback = async () => { }
-
-    RecorderToolHandler.setRecorder(mAudioRecorder);
 
     let isVR = false;
 
@@ -59,6 +56,15 @@ export function SceneInterfaceController(parentContainer, mWebsocketController, 
 
     let mHelperPointController = new HelperPointController(mSceneController.getScene());
 
+    const CHUNK_CHARACTERS = ['.', '-', 'o', '|', 'O']
+    let mChunkString = '';
+    mAudioRecorder.onChunk(chunk => {
+        if (!mAudioRecorder.isRecording()) return;
+        mChunkString += CHUNK_CHARACTERS[Math.round(Math.random() * (CHUNK_CHARACTERS.length - 1))]
+        mChunkString = '\n' + mChunkString.slice(-7).trim();
+        mMenuController.getAudioDisplay().setText("Recording" + mChunkString);
+    })
+
     async function setCurrentSession(controller) {
         let scene = mSceneController.getScene();
 
@@ -84,8 +90,6 @@ export function SceneInterfaceController(parentContainer, mWebsocketController, 
 
         await mCurrentSessionController.render();
         mMenuController.render();
-
-        mAudioRecorder.animate(time);
     }
 
     async function sessionStart(session) {
@@ -316,21 +320,33 @@ export function SceneInterfaceController(parentContainer, mWebsocketController, 
                 photosphere.id, {
                 scale: Math.max(photosphere.scale - 0.1, 0.5),
             })]));
-        } else if (buttonId == RecordToolButtons.REWIND) {
-            mAudioRecorder.rewindAudioFile();
+        } else if (buttonId == RecordToolButtons.DISPLAY) {
+            // not actually a button do nothing
+        } else if (buttonId == RecordToolButtons.RECORD) {
+            // if we are playing do nothing
+            if (mAudioRecorder.isPlaying()) return;
+            if (mAudioRecorder.isRecording()) {
+                mAudioRecorder.stopRecording();
+                mMenuController.getAudioDisplay().setText('Paused' + mChunkString);
+            } else {
+                mAudioRecorder.startRecording();
+                mMenuController.getAudioDisplay().setText('Recording' + mChunkString);
+            }
         } else if (buttonId == RecordToolButtons.PLAYPAUSE) {
+            if (mAudioRecorder.isRecording()) return;
             if (mAudioRecorder.isPlaying()) {
                 mAudioRecorder.stopAudioFile();
+                mMenuController.getAudioDisplay().setText('Paused' + mChunkString);
             } else {
                 mAudioRecorder.playAudioFile();
+                mMenuController.getAudioDisplay().setText('Playing' + mChunkString);
             }
-        } else if (buttonId == RecordToolButtons.FORWARD) {
-            mAudioRecorder.forwardAudioFile();
         } else if (buttonId == RecordToolButtons.ACCEPT) {
             if (mCurrentMomentId && mAudioRecorder.hasContent()) {
                 let point = target.getIntersection().point;
                 let audioBlob = mAudioRecorder.getAudioBlob();
                 mAudioRecorder.clearRecorder();
+                mMenuController.getAudioDisplay().setText('Ready to Record');
                 let assetId = IdUtil.getUniqueId(Data.Asset);
                 let filename = assetId + mAudioRecorder.getExtension();
                 let recordingName = 'Recorded ' + new Date().toLocaleString(undefined, {
@@ -348,6 +364,8 @@ export function SceneInterfaceController(parentContainer, mWebsocketController, 
             }
         } else if (buttonId == RecordToolButtons.DELETE) {
             mAudioRecorder.clearRecorder();
+            mChunkString = '';
+            mMenuController.getAudioDisplay().setText('Ready to Record');
         } else if (buttonId == AttributeButtons.SPHERE_TOGGLE) {
             let moment = mModel.moments.find(m => m.id == mCurrentMomentId);
             if (!moment) { console.error("invalid moment id: " + mCurrentMomentId); return; }
@@ -417,14 +435,12 @@ export function SceneInterfaceController(parentContainer, mWebsocketController, 
     }
 
     function getToolHandler(tool) {
-        if (tool == ToolButtons.MOVE) {
+        if (tool == ToolButtons.MOVE || tool == ToolButtons.RECORD) {
             return MoveToolHandler;
         } else if (tool == ToolButtons.BRUSH) {
             return BrushToolHandler;
         } else if (tool == ToolButtons.SURFACE) {
             return SurfaceToolHandler;
-        } else if (tool == ToolButtons.RECORD) {
-            return RecorderToolHandler;
         } else {
             console.error('Tool not handled.')
         }
