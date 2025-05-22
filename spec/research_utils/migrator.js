@@ -3,15 +3,16 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { logInfo } from '../../js/utils/log_util';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 let model = JSON.parse(fs.readFileSync(__dirname + '/story.json', 'utf8'));
 fs.writeFileSync(__dirname + '/old_story_' + Date.now() + '.json', JSON.stringify(model), 'utf8');
 
 if (!model.version || model.version < 0.1) {
-    (console).log('Migrating model from 0 to 0.1')
+    logInfo('Migrating model from 0 to 0.1')
     for (let key of Object.keys(model)) {
-        (console).log(key, model[key].length);
+        logInfo(key, model[key].length);
     }
 
     for (let assetPose of model.assetPoses) {
