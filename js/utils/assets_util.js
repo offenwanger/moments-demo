@@ -170,6 +170,11 @@ export function AssetUtil(workspace) {
     }
 
     async function generateThumbnail(assetId, asset, type) {
+        if (workspace.isRemote) {
+            // This is only handled by local system
+            return;
+        }
+
         let thumbnail;
         if (type == AssetTypes.MODEL || type == Data.Moment) {
             thumbnail = ThumbnailCreator.generateSceneThumbnail(asset);
