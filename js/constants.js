@@ -122,6 +122,7 @@ export const AttributeButtons = {
 }
 
 export const TELEPORT_COMMAND = 'updateCurrentMoment'
+export const CREATE_MODEL = 'createNewGLTFAtSpecificLocation'
 
 export const MENU_WIDTH = 1.5;
 

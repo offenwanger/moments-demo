@@ -17,6 +17,9 @@ export class InteractionTargetInterface {
     // Gets the transaction for modifications made via interaction
     getTransaction = (toolState) => { return null; }
 
+    // scissors tool specific
+    getTracedObject = (toolState) => { return null; }
+
     // update visual state
     highlight = (toolState) => { };
     select = (toolState) => { };

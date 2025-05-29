@@ -14,6 +14,8 @@ camera.position.z = 2;
 camera.position.x = 1;
 camera.position.y = 1;
 
+const light = new THREE.AmbientLight(0xffffff);
+
 function generateSceneThumbnail(scene) {
     const canvas = document.createElement("canvas");
     canvas.width = THUMBNAIL_SIZE;
@@ -34,7 +36,9 @@ function generateSceneThumbnail(scene) {
     // Make sure the camera is looking at the center of the bounding box
     camera.lookAt(center);
 
+    scene.add(light);
     renderer.render(scene, camera);
+    scene.remove(light);
 
     ctx.drawImage(renderCanvas, 0, 0);
 

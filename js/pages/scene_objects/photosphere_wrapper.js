@@ -339,7 +339,7 @@ export function PhotosphereWrapper(parent) {
             scaledPoint.multiplyScalar(mPhotosphere.scale);
 
             mPositionArray.set(scaledPoint.toArray(), i * POSITION_NUM_COMPONENTS);
-            mNormalsArray.set(point, i * NORMAL_NUM_COMPONENTS);
+            mNormalsArray.set(point.toArray(), i * NORMAL_NUM_COMPONENTS);
             mUVArray.set([u, v], i * UV_NUM_COMPONENTS);
             mColorArray.set([0, 0, 1, 0], i * COLOR_NUM_COMPONENTS);
         }
@@ -417,6 +417,7 @@ export function PhotosphereWrapper(parent) {
         mInteractionTarget.getIntersection = () => intersect;
         mInteractionTarget.getId = () => targetedId;
         mInteractionTarget.highlight = function (toolState) {
+            mDrawingSurfaceAreas = [];
             mDrawAllSurfaceAreas = false;
             if (toolState.tool == ToolButtons.BRUSH) {
                 if (toolState.brushSettings.mode == BrushToolButtons.CLEAR) {
@@ -449,8 +450,8 @@ export function PhotosphereWrapper(parent) {
             } else if (toolState.tool == ToolButtons.SURFACE &&
                 (toolState.surfaceSettings.mode == SurfaceToolButtons.PULL ||
                     toolState.surfaceSettings.mode == SurfaceToolButtons.DELETE)) {
-                let surfaceIndex = mSurfaces.findIndex(s => s.id == targetedId);
-                if (surfaceIndex == -1) { console.error('Invalid surface: ' + targetedId); return; }
+                let areas = mSurfaceAreas.filter(s => s.photosphereSurfaceId == targetedId);
+                mDrawingSurfaceAreas.push(...areas)
                 drawSurfaceArea();
                 draw();
             } else if (toolState.tool == ToolButtons.SURFACE &&
@@ -485,7 +486,7 @@ export function PhotosphereWrapper(parent) {
                 mInputStrokes[mInputStrokes.length - 1].push(...intersect.uv);
                 mInputStrokes[mInputStrokes.length - 1] = simplify(mInputStrokes[mInputStrokes.length - 1])
             }
-            mInputPath.push({ point3d: new THREE.Vector3().copy(intersect.point).normalize(), uv: intersect.uv });
+            mInputPath.push({ point3d: new THREE.Vector3().copy(intersect.point), uv: intersect.uv });
 
             if (toolState.tool == ToolButtons.BRUSH) {
                 if (toolState.brushSettings.mode == BrushToolButtons.CLEAR) {
@@ -531,6 +532,11 @@ export function PhotosphereWrapper(parent) {
                 } else {
                     console.error('Invalid tool state: ' + toolState.surfaceSettings.mode);
                 }
+                drawSurfaceArea();
+                draw();
+            } else if (toolState.tool == ToolButtons.SCISSORS) {
+                let areas = inputPathToAreas(mInputPath, mInputStrokes);
+                mDrawingSurfaceAreas = areas;
                 drawSurfaceArea();
                 draw();
             }
@@ -738,8 +744,89 @@ export function PhotosphereWrapper(parent) {
     }
 
     function createInteractionTarget() {
+
         let target = new InteractionTargetInterface();
         target.getObject3D = () => { return mSphere; }
+
+        target.getTracedObject = (toolState) => {
+            if (toolState.tool != ToolButtons.SCISSORS) { return new THREE.Mesh(); }
+            if (mInputPath.length < 3) { return new THREE.Mesh(); }
+
+            let areas = inputPathToAreas(mInputPath, mInputStrokes);
+
+            const geomery = new THREE.BufferGeometry();
+
+            let shapes = areas.map(area => {
+                let shape = []
+                for (let i = 0; i < area.points.length; i += 2) {
+                    shape.push({ x: area.points[i], y: area.points[i + 1] });
+                }
+                return shape;
+            });
+            let inputIndices = [];
+            for (let i = 0; i < (mUVArray.length / 2); i++) {
+                let point = { x: mUVArray[(i * 2)], y: mUVArray[(i * 2) + 1] }
+                if (shapes.some(shape => Util.pointInPolygon(point, shape))) {
+                    inputIndices.push(i);
+                }
+            }
+
+            let numVertices = mInputPath.length + inputIndices.length;
+
+            const positionArray = new Float32Array(numVertices * POSITION_NUM_COMPONENTS);
+            const normalsArray = new Float32Array(numVertices * NORMAL_NUM_COMPONENTS);
+            const uVArray = new Float32Array(numVertices * UV_NUM_COMPONENTS);
+
+            // add the edge
+            positionArray.set(mInputPath.map(p => p.point3d.toArray()).flat());
+            normalsArray.set(mInputPath.map(p => {
+                let v = new THREE.Vector3(...p.point3d.toArray());
+                v.normalize()
+                v.multiplyScalar(-1)
+                return v.toArray();
+            }).flat());
+            uVArray.set(mInputPath.map(p => p.uv.toArray()).flat());
+
+            // add the surrounded points
+            positionArray.set(inputIndices.map(i => [...mPositionArray.slice(
+                i * POSITION_NUM_COMPONENTS,
+                (i + 1) * POSITION_NUM_COMPONENTS)]).flat(), mInputPath.length * POSITION_NUM_COMPONENTS);
+            normalsArray.set(inputIndices.map(i => [...mNormalsArray.slice(
+                i * NORMAL_NUM_COMPONENTS,
+                (i + 1) * NORMAL_NUM_COMPONENTS)]).flat(), mInputPath.length * NORMAL_NUM_COMPONENTS);
+            uVArray.set(inputIndices.map(i => [...mUVArray.slice(
+                i * UV_NUM_COMPONENTS,
+                (i + 1) * UV_NUM_COMPONENTS)]).flat(), mInputPath.length * UV_NUM_COMPONENTS);
+
+            let delauny = new Delaunator(uVArray);
+            let indicesArray = Array.from(delauny.triangles);
+            for (let i = 0; i < indicesArray.length; i += 3) {
+                let x = indicesArray[i]
+                indicesArray[i] = indicesArray[i + 2]
+                indicesArray[i + 2] = x;
+            }
+
+            let positionAttribute = new THREE.BufferAttribute(positionArray, POSITION_NUM_COMPONENTS);
+            let uVAttribute = new THREE.BufferAttribute(uVArray, UV_NUM_COMPONENTS);
+            let normalsAttribute = new THREE.BufferAttribute(normalsArray, NORMAL_NUM_COMPONENTS)
+
+            geomery.setAttribute('position', positionAttribute);
+            geomery.setAttribute('uv', uVAttribute);
+            geomery.setAttribute('normal', normalsAttribute);
+            geomery.setIndex(indicesArray);
+
+            // BAD: Fix me. shouldn't need to do this. 
+            mDrawingSurfaceAreas = []
+            drawSurfaceArea();
+            draw();
+            // TODO: scale the UVS and trim the material
+            const material = mMaterial.clone();
+            material.side = THREE.DoubleSide;
+
+            const mesh = new THREE.Mesh(geomery, material);
+            return mesh;
+        }
+
         target.getTransaction = (toolState) => {
             let actions = [];
             if (toolState.tool == ToolButtons.BRUSH) {

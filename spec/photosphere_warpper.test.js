@@ -356,4 +356,32 @@ describe('Test Photosphere Wrapper', function () {
             expect(surfaces.length).toBe(1);
         });
     });
+
+    describe('surface tests', function () {
+        fit('should scissors a section', async function () {
+            await createAndOpenStoryMoment();
+
+            expect(testmodel().poseableAssets.length).toBe(0);
+
+            let canvas = document.querySelector('#main-canvas');
+            await canvasClickMenuButton(ToolButtons.SCISSORS);
+            await movePageHead(0, 0, -1);
+            await lookHead(0, 0, 0);
+
+            await pointermove(canvas.width / 2 - 10, canvas.height / 2);
+            await canvaspointerdown(canvas.width / 2 - 10, canvas.height / 2)
+
+            await pointermove(canvas.width / 2 - 10, canvas.height / 2 - 100);
+            await pointermove(canvas.width / 2 - 200, canvas.height / 2 - 100);
+            await pointermove(canvas.width / 2 - 200, canvas.height / 2 + 100);
+            await pointermove(canvas.width / 2 - 10, canvas.height / 2 + 100);
+
+            await pointermove(canvas.width / 2 - 10, canvas.height / 2 - 30);
+            await pointerup(canvas.width / 2 - 30, canvas.height / 2 - 30);
+
+            expect(testmodel().poseableAssets.length).toBe(1);
+
+            expect(false).toBe(1);
+        });
+    });
 });

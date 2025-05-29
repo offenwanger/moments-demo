@@ -1,5 +1,6 @@
 import * as THREE from "three";
-import { AssetTypes, AttributeButtons, BrushToolButtons, BrushToolSettings, InteractionType, ItemButtons, MenuNavButtons, RecordToolButtons, SurfaceToolButtons, TELEPORT_COMMAND, ToolButtons } from "../../constants.js";
+import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
+import { AssetTypes, AttributeButtons, BrushToolButtons, BrushToolSettings, CREATE_MODEL, InteractionType, ItemButtons, MenuNavButtons, RecordToolButtons, SurfaceToolButtons, TELEPORT_COMMAND, ToolButtons } from "../../constants.js";
 import { Data } from "../../data.js";
 import { ColorUtil } from "../../utils/color_util.js";
 import { DataUtil } from "../../utils/data_util.js";
@@ -13,6 +14,7 @@ import { SceneController } from "./scene_controller.js";
 import { ToolState } from "./system_state.js";
 import { BrushToolHandler } from "./tool_handlers/brush_tool_handler.js";
 import { MoveToolHandler } from "./tool_handlers/move_tool_handler.js";
+import { ScissorsToolHandler } from "./tool_handlers/scissors_tool_handler.js";
 import { SurfaceToolHandler } from "./tool_handlers/surface_tool_handler.js";
 import { XRSessionController } from './xr_controllers/xr_session_controller.js';
 
@@ -221,6 +223,28 @@ export function SceneInterfaceController(parentContainer, mWebsocketController, 
             // no reaction, do nothing.
         } else if (reaction instanceof Transaction) {
             await mModelUpdateCallback(reaction);
+        } else if (reaction.type == CREATE_MODEL) {
+            let { assetId, assetName, filename, mesh } = reaction;
+
+            let scene = new THREE.Scene();
+            scene.add(mesh);
+
+            const exporter = new GLTFExporter();
+            let fileBlob = await new Promise((resolve, reject) => {
+                exporter.parse(
+                    scene,
+                    function (result) {
+                        resolve(new Blob([result], { type: 'application/octet-stream' }))
+                    },
+                    function (e) {
+                        reject(e);
+                    },
+                    { binary: true }
+                );
+            });
+
+            await mAssetCreateCallback(assetId, assetName, filename, AssetTypes.MODEL, fileBlob);
+            await mModelUpdateCallback(reaction.transaction);
         } else if (reaction.type == TELEPORT_COMMAND) {
             await mTeleportCallback(reaction.id);
         } else {
@@ -441,6 +465,8 @@ export function SceneInterfaceController(parentContainer, mWebsocketController, 
             return BrushToolHandler;
         } else if (tool == ToolButtons.SURFACE) {
             return SurfaceToolHandler;
+        } else if (tool == ToolButtons.SCISSORS) {
+            return ScissorsToolHandler;
         } else {
             console.error('Tool not handled.')
         }
