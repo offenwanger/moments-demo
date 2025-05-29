@@ -6,10 +6,6 @@ let fileCount = 0;
 export function mockCanvas() {
     let canvas = { isMockCanvas: true };
 
-    canvas.toFile = function () {
-        console.error('IMpliment me!')
-    }
-
     canvas.height = 1
     canvas.width = 1
     canvas.screenx = 0
@@ -81,6 +77,8 @@ export function mockContext(type, canvas) {
     ctx.drawImage = function (...args) { commands.push({ cmd: 'drawImage', args }) }
     ctx.moveTo = function (...args) { commands.push({ cmd: 'moveTo', args }) }
     ctx.lineTo = function (...args) { commands.push({ cmd: 'lineTo', args }) }
+    ctx.translate = function (...args) { commands.push({ cmd: 'translate', args }) }
+    ctx.scale = function (...args) { commands.push({ cmd: 'scale', args }) }
     return ctx;
 }
 

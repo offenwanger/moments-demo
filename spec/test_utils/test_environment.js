@@ -37,6 +37,7 @@ export async function setup() {
 
     mockFileSystem.setup();
 
+    global.self = global;
     global.indexedDB = new mockIndexedDB();
     global.AudioContext = mockAudioContext;
     global.MediaRecorder = mockMediaRecorder;
@@ -61,6 +62,21 @@ export async function setup() {
             let element;
             if (e == 'canvas') element = createCanvas();
             else element = new HTMLElement(e);
+
+            if (e == 'img') {
+                element = new Proxy(element, {
+                    get: function (obj, name) {
+                        return obj[name];
+                    },
+                    set: function (obj, name, value) {
+                        obj[name] = value;
+                        if (name == 'src') {
+                            if (obj.eventListeners['load']) obj.eventListeners['load']();
+                        }
+                        return true;
+                    },
+                });
+            }
 
             if (e == 'input') {
                 element.click = function () {

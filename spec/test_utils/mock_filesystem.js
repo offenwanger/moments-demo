@@ -3,6 +3,7 @@ import mime from 'mime';
 import { dirname } from 'path';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 import { fileURLToPath } from 'url';
+import { logInfo } from '../../js/utils/log_util.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const OUT_FOLDER = __dirname + '/testoutput/'
@@ -24,9 +25,40 @@ export function mockFileReader() {
         this.callbacks[e] = func;
     }
     this.readAsDataURL = async function (file) {
-        // wait for load functions to get set. Dumb requirement for GLTF exporter to work. 
+        // wait for load functions to get set. Dumb requirement for GLTFExporter to work. 
         await new Promise(resolve => setTimeout(() => resolve(), 0))
         this.result = await file.text();
+        if (this.callbacks.load) {
+            this.callbacks.load(this.result)
+        }
+        if (this.callbacks.loadend) {
+            this.callbacks.loadend(this.result)
+        }
+        if (this.onload) {
+            this.onload(this.result)
+        }
+        if (this.onloadend) {
+            this.onloadend(this.result)
+        }
+    }
+    this.readAsArrayBuffer = async (blob) => {
+        // GLTF exporter sets the load function after it calls read.
+        // Putting in an await here causes that to get set. 
+        await new Promise(resolve => setTimeout(() => resolve(), 0))
+
+        // the this.result is important since GLTK expects it to be there. 
+        this.result;
+        let enc = new TextEncoder(); // always utf-8
+        if (blob.isMockCanvas) {
+            // mock canvas cannot be converted to dataURI, so return a fake one. 
+            this.result = enc.encode('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAjAAAAHgCAYAAAC7J1fdAAAAAXNSR0IArs4c6QAAHAJJREFUeF7t3UuS');
+        } else if (blob instanceof Blob) {
+            // empty image.
+            this.result = await blob.arrayBuffer();
+        } else {
+            logInfo(blob)
+            console.error('not implemented.')
+        };
         if (this.callbacks.load) {
             this.callbacks.load(this.result)
         }
@@ -76,14 +108,19 @@ export function mockFile(filename, type = null, text = null) {
 
     // writing file
     this.write = (stream) => {
+        if (filename.endsWith('glb') && stream instanceof ArrayBuffer) {
+            // GLTFExporter gives us an array buffer, convert to dataURL to match 
+            // the rest of the imported files. 
+            const base64String = btoa(String.fromCharCode(...new Uint8Array(stream)));
+            stream = 'data:application/octet-stream;base64,' + base64String;
+        }
+
         if (stream instanceof ArrayBuffer) {
             let str = '';
             let bytes = new Uint8Array(stream);
             let len = bytes.byteLength;
             for (let i = 0; i < len; i++) { str += String.fromCharCode(bytes[i]); }
             global.fileSystem[filename] = str;
-        } else if (stream.isMockCanvas) {
-            global.fileSystem[filename] = stream.toFile();
         } else if (typeof stream == 'string') {
             global.fileSystem[filename] = stream;
         } else {

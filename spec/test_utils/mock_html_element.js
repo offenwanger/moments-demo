@@ -11,6 +11,9 @@ export class HTMLElement {
         this.addEventListener = function (event, listener) {
             this.eventListeners[event] = listener;
         };
+        this.removeEventListener = function (event, listener) {
+            this.eventListeners[event] = null;
+        };
         this.setAttribute = function (attr, val) {
             this.attrs[attr] = val;
             if (attr == 'width') this.width = val;
