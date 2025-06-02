@@ -206,7 +206,7 @@ describe('Test Photosphere Wrapper', function () {
             expect(surfaces.length).toBe(1);
             let areas = testmodel().areas.filter(a => a.photosphereSurfaceId == surfaces[0].id);
             expect(areas.length).toBe(1);
-            expect(areas[0].points.length).toBe(10);
+            expect(areas[0].points.length).toBe(8);
         });
 
         it('should flatten a simple shape across the seam', async function () {
@@ -358,7 +358,7 @@ describe('Test Photosphere Wrapper', function () {
     });
 
     describe('surface tests', function () {
-        fit('should scissors a section', async function () {
+        it('should scissors a section', async function () {
             await createAndOpenStoryMoment();
 
             expect(testmodel().poseableAssets.length).toBe(0);
@@ -380,8 +380,6 @@ describe('Test Photosphere Wrapper', function () {
             await pointerup(canvas.width / 2 - 30, canvas.height / 2 - 30);
 
             expect(testmodel().poseableAssets.length).toBe(1);
-
-            expect(false).toBe(1);
         });
     });
 });

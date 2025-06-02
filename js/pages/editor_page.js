@@ -138,12 +138,18 @@ export function EditorPage(parentContainer, mWebsocketController) {
         let transaction = new Transaction();
         let model = mModelController.getModel()
         transaction.actions = model.assets.filter(a => {
-            if (model.findAllLinked(a.id).length > 0) {
+            let linked = model.findAllLinked(a.id);
+            // ignore asset poses linked to model assets.
+            linked = linked.filter(l => !(l instanceof Data.AssetPose));
+            if (linked.length > 0) {
                 return false;
             } else return true;
         }).map(a => {
-            return new Action(ActionType.DELETE, a.id);
-        });
+            // delete all asset poses that are linked to model assets to
+            let linked = model.findAllLinked(a.id);
+            return [new Action(ActionType.DELETE, a.id),
+            ...linked.map(l => new Action(ActionType.DELETE, l.id))];
+        }).flat();
 
         if (transaction.actions.length > 0) {
             pushUndo(mModelController.getModel(), transaction)
@@ -163,7 +169,8 @@ export function EditorPage(parentContainer, mWebsocketController) {
         await updateModel();
     })
     mSidebarController.setDeleteCallback(async (id) => {
-        let transaction = new Transaction([new Action(ActionType.DELETE, id)])
+        let actions = DataUtil.getRecursiveDelete(id, mModelController.getModel());
+        let transaction = new Transaction(actions)
         pushUndo(mModelController.getModel(), transaction)
         await mModelController.applyTransaction(transaction);
         await updateModel();

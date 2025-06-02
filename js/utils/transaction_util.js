@@ -7,8 +7,9 @@ export const ActionType = {
 export function Transaction(actions = []) {
     // Invert requies the model before it was changed.
     function invert(model) {
+        let rActions = [...this.actions].reverse();
         let invertedActions = [];
-        for (let action of this.actions) {
+        for (let action of rActions) {
             if (action.type == ActionType.CREATE) {
                 invertedActions.push(new Action(ActionType.DELETE, action.id))
             } else if (action.type == ActionType.UPDATE) {

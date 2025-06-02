@@ -1,8 +1,9 @@
 import { CREATE_MODEL, InteractionType } from "../../../constants.js";
 import { Data } from '../../../data.js';
 import { IdUtil } from '../../../utils/id_util.js';
-import { Transaction } from '../../../utils/transaction_util.js';
+import { Action, ActionType, Transaction } from '../../../utils/transaction_util.js';
 import { Util } from "../../../utils/utility.js";
+import * as THREE from 'three'
 
 // defines simplify2
 import '../../../../lib/simplify2.js';
@@ -52,7 +53,6 @@ function pointerUp(raycaster, orientation, isPrimary, interactionState, toolStat
     helperPointController.hidePoint();
 
     if (type == InteractionType.BRUSHING) {
-        let transaction = new Transaction();
 
         let assetId = IdUtil.getUniqueId(Data.Asset);
         let filename = assetId + '.glb';
@@ -66,22 +66,50 @@ function pointerUp(raycaster, orientation, isPrimary, interactionState, toolStat
 
         let mesh = data.target.getTracedObject(toolState);
         if (!mesh) return null;
+        mesh.name = 'cutout';
 
-        // get the 3D and UV coords for two surfaces, the front and the flat back, and the current sphere texture
-        // if no point is behind the flat part, flatten the sphere there
-        // else, ditch the back of the model and make the front a two sided texture
-        // Color the place it was cut out in black
-        // create a new texture using the 2D bounding box
-        // create a new scene object using the points
-        // ensure the model has a name, needed for the AssetPose
+        let bb = new THREE.Box3().setFromObject(mesh);
+        let center = new THREE.Vector3().addVectors(bb.min, bb.max).multiplyScalar(0.5);
 
-        // translate the model to the center
-        // create the model asset, create the asset pose, reverse the translate
+        let position = mesh.geometry.getAttribute('position');
+        let positionArray = position.array;
+        let v = new THREE.Vector3()
+        for (let i = 0; i < positionArray.length; i += 3) {
+            v.set(positionArray[i], positionArray[i + 1], positionArray[i + 2]);
+            v.sub(center)
+            positionArray.set([v.x, v.y, v.z], i);
+        }
+        position.needsUpdate = true;
+        mesh.updateMatrix();
 
-        // create the transaction
-        // new asset, 
-        // new model3D
-        // new asset pose
+        let photosphere = data.target ? model.photospheres.find(p => p.id == data.target.getId()) : null;
+
+        let actions = [];
+
+        let posableAssetId = IdUtil.getUniqueId(Data.PoseableAsset);
+        actions.push(new Action(ActionType.CREATE,
+            posableAssetId, {
+            momentId: photosphere.momentId,
+            assetId: assetId,
+            name: assetName
+        }));
+
+        let offset = 0.01;
+        actions.push(new Action(ActionType.CREATE,
+            IdUtil.getUniqueId(Data.AssetPose), {
+            parentId: posableAssetId,
+            name: mesh.name,
+            isRoot: true,
+            x: center.x + (center.x > 0 ? -offset : offset),
+            y: center.y + (center.y > 0 ? -offset : offset),
+            z: center.z + (center.z > 0 ? -offset : offset),
+            orientation: [0, 0, 0, 1],
+            scale: 1,
+        }));
+
+        let transaction = new Transaction(actions);
+
+        // TODO: Do something with the surface...
         // possible new black stroke
         // possible new flatten area
 

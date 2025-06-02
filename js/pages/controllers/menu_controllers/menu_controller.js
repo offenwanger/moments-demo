@@ -40,7 +40,7 @@ export function MenuController() {
         new MeshButton(ToolButtons.MOVE, 'Move', BUTTON_SIZE),
         new MeshButton(ToolButtons.BRUSH, 'Brush', BUTTON_SIZE),
         new MeshButton(ToolButtons.SURFACE, 'Surface', BUTTON_SIZE),
-        new MeshButton(ToolButtons.SCISSORS, 'Scissors', BUTTON_SIZE, 0xff0000),
+        new MeshButton(ToolButtons.SCISSORS, 'Scissors', BUTTON_SIZE),
         new MeshButton(ToolButtons.RECORD, 'Record', BUTTON_SIZE),
     ]);
     mMenus[ToolButtons.BRUSH] = createMenu(ToolButtons.BRUSH,

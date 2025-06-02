@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 import { Data } from "../../data.js";
 import { ButtonInput } from "../components/button_input.js";
 import { TextInput } from "../components/text_input.js";
@@ -50,6 +51,28 @@ export function AssetPosePanel(container) {
             await mUpdateAttributeCallback(mAssetPoseId, { z: newNum });
         });
 
+    let mRotationXInput = new TextInput(mPanelContainer, 'number')
+        .setLabel("ψ")
+        .setOnChange(async () => {
+            await mUpdateAttributeCallback(mAssetPoseId, { orientation: getOrientationArray() });
+        });
+    let mRotationYInput = new TextInput(mPanelContainer, 'number')
+        .setLabel("θ")
+        .setOnChange(async () => {
+            await mUpdateAttributeCallback(mAssetPoseId, { orientation: getOrientationArray() });
+        });
+    let mRotationZInput = new TextInput(mPanelContainer, 'number')
+        .setLabel("φ")
+        .setOnChange(async () => {
+            await mUpdateAttributeCallback(mAssetPoseId, { orientation: getOrientationArray() });
+        });
+
+    let mScaleInput = new TextInput(mPanelContainer, 'number')
+        .setLabel("Scale")
+        .setOnChange(async (newNum) => {
+            await mUpdateAttributeCallback(mAssetPoseId, { scale: newNum });
+        });
+
     function show(model, assetPoseId) {
         mModel = model;
         mAssetPoseId = assetPoseId;
@@ -60,6 +83,14 @@ export function AssetPosePanel(container) {
         mPositionXInput.setText(Math.round(mAssetPose.x * 1000) / 1000);
         mPositionYInput.setText(Math.round(mAssetPose.y * 1000) / 1000);
         mPositionZInput.setText(Math.round(mAssetPose.z * 1000) / 1000);
+        mScaleInput.setText(Math.round(mAssetPose.scale * 1000) / 1000);
+
+        let quat = new THREE.Quaternion(...mAssetPose.orientation);
+        let euler = new THREE.Euler().setFromQuaternion(quat);
+
+        mRotationXInput.setText(Math.round(180 / Math.PI * euler.x * 1000) / 1000);
+        mRotationYInput.setText(Math.round(180 / Math.PI * euler.y * 1000) / 1000);
+        mRotationZInput.setText(Math.round(180 / Math.PI * euler.z * 1000) / 1000);
 
         let teleport = model.teleports.find(t => t.attachedId == assetPoseId);
         if (teleport) {
@@ -86,6 +117,19 @@ export function AssetPosePanel(container) {
 
     function hide() {
         mPanelContainer.style['display'] = 'none';
+    }
+
+    function getOrientationArray() {
+        let x = mRotationXInput.getText();
+        let y = mRotationYInput.getText();
+        let z = mRotationZInput.getText();
+        if (isNaN(x) || isNaN(y) || isNaN(z)) {
+            console.error('Invalid angles: ' + x + ',' + y + ',' + z);
+            return [0, 0, 0, 1];
+        }
+        let euler = new THREE.Euler(x * Math.PI / 180, y * Math.PI / 180, z * Math.PI / 180)
+        let quat = new THREE.Quaternion().setFromEuler(euler);
+        return quat.toArray();
     }
 
 

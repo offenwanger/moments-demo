@@ -96,6 +96,31 @@ function getAudioCreationActions(model, parentId, assetId, position) {
     ];
 }
 
+function getRecursiveDelete(id, model, actions = []) {
+    actions.push(new Action(ActionType.DELETE, id))
+    let itemClass = IdUtil.getClass(id);
+    let linked = [];
+    if (itemClass == Data.Moment) {
+        linked = model.findAllLinked(id).filter(l =>
+            l.momentId == id ||
+            (l instanceof Data.Teleport && l.destinationId == id))
+    } else if (itemClass == Data.Asset) {
+        linked = model.findAllLinked(id).filter(l =>
+            (l.assetId == id && !(l instanceof Data.Photosphere)) ||
+            (l instanceof Data.AssetPose && l.parentId == id))
+    } else if (itemClass == Data.PoseableAsset) {
+        linked = model.findAllLinked(id).filter(l => (l instanceof Data.AssetPose && l.parentId == id))
+    } else if (itemClass == Data.Photosphere) {
+        linked = model.findAllLinked(id).filter(l => l.photosphereId == id);
+    } else if (itemClass == Data.PhotosphereSurface) {
+        linked = model.findAllLinked(id).filter(l => l.photosphereSurfaceId == id);
+    }
+    linked.forEach(l => {
+        getRecursiveDelete(l.id, model, actions);
+    })
+    return actions;
+}
+
 function getNextName(name, nameList) {
     let maxNumber = Math.max(0, ...nameList
         .filter(n => n.includes(name))
@@ -109,5 +134,6 @@ export const DataUtil = {
     getAssetCreationActions,
     getPictureCreationActions,
     getAudioCreationActions,
+    getRecursiveDelete,
     getNextName,
 }
