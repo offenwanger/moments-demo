@@ -30,7 +30,7 @@ export function TeleportWrapper(parent) {
     mTeleportSprite.position.set(0.1, 0.1, 0);
     mSphere.add(mTeleportSprite)
 
-    async function update(teleport, model, assetUtil) {
+    function updateModel(teleport, model, assetUtil) {
         mParent.add(mSphere);
         mSphere.position.set(teleport.x, teleport.y, teleport.z);
         mSphere.userData.id = teleport.id;
@@ -90,7 +90,7 @@ export function TeleportWrapper(parent) {
     }
 
     this.getTargets = getTargets;
-    this.update = update;
+    this.updateModel = updateModel
     this.getId = getId;
     this.remove = remove;
 }

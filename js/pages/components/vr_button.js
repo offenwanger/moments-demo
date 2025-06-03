@@ -1,7 +1,7 @@
 // Addapted from THREE.js VRButton
 
 export function VRButton(container) {
-    let mSessionStartedCallback = async (session) => { };
+    let mSessionStartedCallback = (session) => { };
 
     const button = document.createElement('button');
     container.appendChild(button);
@@ -24,18 +24,20 @@ export function VRButton(container) {
         button.style.outline = 'none';
         button.style.width = '100%'
 
-        navigator.xr.isSessionSupported('immersive-vr').then(function (supported) {
-            if (supported) {
-                showEnterVR()
-            } else {
+        navigator.xr.isSessionSupported('immersive-vr')
+            .then(supported => {
+                if (supported) {
+                    showEnterVR()
+                } else {
+                    disableButton();
+                    button.textContent = 'VR NOT SUPPORTED';
+                }
+            })
+            .catch((e) => {
                 disableButton();
-                button.textContent = 'VR NOT SUPPORTED';
-            }
-        }).catch((e) => {
-            disableButton();
-            console.warn('Exception when trying to call xr.isSessionSupported', e);
-            button.textContent = 'VR NOT ALLOWED';
-        });
+                console.warn('Exception when trying to call xr.isSessionSupported', e);
+                button.textContent = 'VR NOT ALLOWED';
+            });
     } else {
         if (window.isSecureContext === false) {
             disableButton();
@@ -52,10 +54,10 @@ export function VRButton(container) {
         button.textContent = 'ENTER VR';
         button.addEventListener('mouseleave', function () { button.style.opacity = '0.5'; });
         button.addEventListener('mouseenter', function () { button.style.opacity = '1.0'; });
-        button.addEventListener('click', async function () {
+        button.addEventListener('click', function () {
             if (currentSession === null) {
-                let session = await navigator.xr.requestSession('immersive-vr', sessionOptions);
-                await onSessionStart(session);
+                navigator.xr.requestSession('immersive-vr', sessionOptions)
+                    .then(session => onSessionStart(session));
             } else {
                 currentSession.end();
                 offerSession();
@@ -63,9 +65,9 @@ export function VRButton(container) {
         });
     }
 
-    async function onSessionStart(session) {
+    function onSessionStart(session) {
         session.addEventListener('end', onSessionEnded);
-        await mSessionStartedCallback(session);
+        mSessionStartedCallback(session);
         button.textContent = 'EXIT VR';
         currentSession = session;
     }
@@ -80,7 +82,7 @@ export function VRButton(container) {
         // This is for a nice little button in the Oculus Browser. 
         if (navigator.xr.offerSession !== undefined) {
             navigator.xr.offerSession('immersive-vr', sessionOptions)
-                .then(onSessionStart)
+                .then(session => onSessionStart(session))
                 .catch((err) => { console.warn(err); });
         }
     }

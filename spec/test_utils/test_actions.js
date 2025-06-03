@@ -10,144 +10,145 @@ export function testmodel() {
     return Data.StoryModel.fromObject(JSON.parse(global.fileSystem[storyFile]))
 }
 
-export async function canvaspointerdown(x, y) {
-    await document.querySelector("#main-canvas").eventListeners.pointerdown({
+export function canvaspointerdown(x, y) {
+    document.querySelector("#main-canvas").eventListeners.pointerdown({
         clientX: x,
         clientY: y
     });
 }
 
-export async function pointermove(x, y) {
+export function pointermove(x, y) {
     if (!window.callbacks.pointermove) console.error("No callbacks registered for pointermove");
     for (let cb of window.callbacks.pointermove)
-        await cb({ clientX: x, clientY: y });
+        cb({ clientX: x, clientY: y });
 
-    await global.test_rendererAccess.animationLoop();
+    global.test_rendererAccess.animationLoop();
 }
 
-export async function pointerup(x, y) {
+export function pointerup(x, y) {
     if (!window.callbacks.pointerup) console.error("No callbacks registered for pointerup");
     for (let cb of window.callbacks.pointerup)
-        await cb({ clientX: x, clientY: y });
+        cb({ clientX: x, clientY: y });
 
-    await global.test_rendererAccess.animationLoop();
+    global.test_rendererAccess.animationLoop();
 }
 
-export async function ctrlZ() {
+export function ctrlZ() {
     if (!window.callbacks.keydown) console.error("No callbacks registered for keydown");
     for (let cb of window.callbacks.keydown)
-        await cb({ ctrlKey: true, key: 'z' });
+        cb({ ctrlKey: true, key: 'z' });
 
-    await global.test_rendererAccess.animationLoop();
+    global.test_rendererAccess.animationLoop();
 }
 
-export async function ctrlY() {
+export function ctrlY() {
     if (!window.callbacks.pointerup) console.error("No callbacks registered for keydown");
     for (let cb of window.callbacks.keydown)
-        await cb({ ctrlKey: true, key: 'y' });
+        cb({ ctrlKey: true, key: 'y' });
 
-    await global.test_rendererAccess.animationLoop();
+    global.test_rendererAccess.animationLoop();
 }
 
-export async function chooseFolder() {
+export function chooseFolder() {
     window.directories.push(new mockFileSystemDirectoryHandle('test'));
-    await document.querySelector('#choose-folder-button').eventListeners.click();
-    await window.mainFunc();
+    document.querySelector('#choose-folder-button').eventListeners.click();
+    window.mainFunc();
 }
 
-export async function createAndOpenStoryMoment() {
-    await chooseFolder();
-    await document.querySelector('#new-story-button').eventListeners.click();
-    await document.querySelector('#edit-' + testmodel().id).eventListeners.click();
-    await window.mainFunc();
+export function createAndOpenStoryMoment() {
+    chooseFolder();
+    document.querySelector('#new-story-button').eventListeners.click();
+    document.querySelector('#edit-' + testmodel().id).eventListeners.click();
+    window.mainFunc();
     expect(testmodel().moments.length).toBe(1);
-    await clickButtonInput('#moment-button-' + testmodel().moments[0].id);
+    clickButtonInput('#moment-button-' + testmodel().moments[0].id);
 
-    await global.test_rendererAccess.animationLoop();
+    global.test_rendererAccess.animationLoop();
 }
 
-export async function createAudioInCanvasEnvironment() {
-    await canvasClickMenuButton(ToolButtons.RECORD);
-    await canvasClickMenuButton(RecordToolButtons.RECORD);
-    await global.test_rendererAccess.animationLoop();
-    await global.test_rendererAccess.animationLoop();
-    await canvasClickMenuButton(RecordToolButtons.RECORD);
-    await canvasClickMenuButton(RecordToolButtons.ACCEPT);
-    await canvasClickMenuButton(ToolButtons.MOVE);
+export function createAudioInCanvasEnvironment() {
+    canvasClickMenuButton(ToolButtons.RECORD);
+    canvasClickMenuButton(RecordToolButtons.RECORD);
+    global.test_rendererAccess.animationLoop();
+    global.test_rendererAccess.animationLoop();
+    canvasClickMenuButton(RecordToolButtons.RECORD);
+    canvasClickMenuButton(RecordToolButtons.ACCEPT);
+    canvasClickMenuButton(ToolButtons.MOVE);
 
-    await global.test_rendererAccess.animationLoop();
+    global.test_rendererAccess.animationLoop();
 }
 
-export async function setupEnvironmentWith3DAsset(assetName) {
-    await createAndOpenStoryMoment();
+export function setupEnvironmentWith3DAsset(assetName) {
+    createAndOpenStoryMoment();
 
-    await loadRealFile(assetName);
+    loadRealFile(assetName);
     // add the file to the 'choosen file' queue.
-    window.files.push(new mockFile(assetName, "model/gltf-binary", global.fileSystem[assetName]));
-    await clickButtonInput('#asset-manager-button');
-    await clickButtonInput('#asset-add-button');
-    await clickButtonInput('#dialog-close-button');
+    window.files.push(new mockFile(global.fileSystem[assetName], assetName, { type: "model/gltf-binary" }));
+    clickButtonInput('#asset-manager-button');
+    clickButtonInput('#asset-add-button');
+    clickButtonInput('#dialog-close-button');
 
-    let assetId = testmodel().assets.find(a => a.type == AssetTypes.MODEL).id;
+    let asset = testmodel().assets.find(a => a.type == AssetTypes.MODEL);
+    let assetId = asset.id;
 
-    await canvasClickMenuButton(MenuNavButtons.ADD);
-    await canvasClickMenuButton(MenuNavButtons.ADD_MODEL);
-    await canvasClickMenuButton(assetId);
-    await canvasClickMenuButton(MenuNavButtons.BACK_BUTTON);
-    await canvasClickMenuButton(MenuNavButtons.BACK_BUTTON);
+    canvasClickMenuButton(MenuNavButtons.ADD);
+    canvasClickMenuButton(MenuNavButtons.ADD_MODEL);
+    canvasClickMenuButton(assetId);
+    canvasClickMenuButton(MenuNavButtons.BACK_BUTTON);
+    canvasClickMenuButton(MenuNavButtons.BACK_BUTTON);
 
     expect(document.querySelector('#assets-container').children.length).toBeGreaterThan(0);
     document.querySelector('#dialog-close-button').eventListeners.click();
 
     expect(testmodel().poseableAssets.length).toBe(1);
-    await clickButtonInput('#poseable-asset-button-' + testmodel().poseableAssets[0].id);
+    clickButtonInput('#poseable-asset-button-' + testmodel().poseableAssets[0].id);
 
-    await global.test_rendererAccess.animationLoop();
+    global.test_rendererAccess.animationLoop();
 }
 
-export async function setupEnvironmentWithPicture() {
-    await createAndOpenStoryMoment();
+export function setupEnvironmentWithPicture() {
+    createAndOpenStoryMoment();
 
     // add the file to the 'choosen file' queue.
-    window.files.push(new mockFile('fakePicture', 'image/gif', 'data:image/gif;base64,R0lGODlhAQABAAAAACwAAAAAAQABAAAC'));
-    await clickButtonInput('#asset-manager-button');
-    await clickButtonInput('#asset-add-button');
-    await clickButtonInput('#dialog-close-button');
+    window.files.push(new mockFile('data:image/gif;base64,R0lGODlhAQABAAAAACwAAAAAAQABAAAC', 'fakePicture', { type: 'image/gif' }));
+    clickButtonInput('#asset-manager-button');
+    clickButtonInput('#asset-add-button');
+    clickButtonInput('#dialog-close-button');
 
     let assetId = testmodel().assets.find(a => a.type == AssetTypes.IMAGE).id;
 
-    await canvasClickMenuButton(MenuNavButtons.ADD);
-    await canvasClickMenuButton(MenuNavButtons.ADD_PICTURE);
-    await canvasClickMenuButton(assetId);
-    await canvasClickMenuButton(MenuNavButtons.BACK_BUTTON);
-    await canvasClickMenuButton(MenuNavButtons.BACK_BUTTON);
+    canvasClickMenuButton(MenuNavButtons.ADD);
+    canvasClickMenuButton(MenuNavButtons.ADD_PICTURE);
+    canvasClickMenuButton(assetId);
+    canvasClickMenuButton(MenuNavButtons.BACK_BUTTON);
+    canvasClickMenuButton(MenuNavButtons.BACK_BUTTON);
 
     expect(document.querySelector('#assets-container').children.length).toBeGreaterThan(0);
     document.querySelector('#dialog-close-button').eventListeners.click();
 
     expect(testmodel().pictures.length).toBe(1);
-    await clickButtonInput('#picture-button-' + testmodel().pictures[0].id);
+    clickButtonInput('#picture-button-' + testmodel().pictures[0].id);
 
-    await global.test_rendererAccess.animationLoop();
+    global.test_rendererAccess.animationLoop();
 }
 
-export async function uploadImageAsset() {
-    await loadRealFile('fish.png')
-    window.files.push(new mockFile('fish.png', "image/x-png", global.fileSystem['fish.png']));
-    await clickButtonInput('#asset-manager-button');
-    await clickButtonInput('#asset-add-button');
-    await clickButtonInput('#dialog-close-button');
+export function uploadImageAsset() {
+    loadRealFile('fish.png')
+    window.files.push(new mockFile(global.fileSystem['fish.png'], 'fish.png', { type: "image/x-png" }));
+    clickButtonInput('#asset-manager-button');
+    clickButtonInput('#asset-add-button');
+    clickButtonInput('#dialog-close-button');
 
     expect(document.querySelector('#assets-container').children.length).toBeGreaterThan(0);
     expect(testmodel().assets.filter(a => a.type == AssetTypes.IMAGE).length).toBeGreaterThan(0);
     document.querySelector('#dialog-close-button').eventListeners.click();
 }
 
-export async function canvasClickMenuButton(buttonId) {
+export function canvasClickMenuButton(buttonId) {
     forceIntercept(buttonId);
-    await pointermove(0, 0);
-    await canvaspointerdown(0, 0);
-    await pointerup(0, 0);
+    pointermove(0, 0);
+    canvaspointerdown(0, 0);
+    pointerup(0, 0);
     forceIntercept(null);
 }
 
@@ -164,29 +165,29 @@ export function getInputValue(id) {
     }
 }
 
-export async function enterInputValue(id, value) {
+export function enterInputValue(id, value) {
     let inputContainer = document.querySelector(id);
     expect(Object.keys(inputContainer.children).length).toBe(2);
     let input = inputContainer.children[1];
     if (input.attrs['type'] == 'text' || input.attrs['type'] == 'number') {
         input.value = value;
-        await input.eventListeners.blur();
+        input.eventListeners.blur();
     } else if (input.attrs['type'] == 'checkbox') {
         input.checked = value;
-        await input.eventListeners.change();
+        input.eventListeners.change();
     } else {
         console.error("Not a valid type", input.attrs['type'])
     }
 }
 
-export async function clickButtonInput(id) {
+export function clickButtonInput(id) {
     let inputContainer = document.querySelector(id);
     expect(Object.keys(inputContainer.eventListeners)).toEqual(['click', 'pointerup', 'pointerdown', 'pointerenter', 'pointerout']);
-    await inputContainer.eventListeners.pointerenter();
-    await inputContainer.eventListeners.pointerdown();
-    await inputContainer.eventListeners.pointerup();
-    await inputContainer.eventListeners.click();
-    await inputContainer.eventListeners.pointerout();
+    inputContainer.eventListeners.pointerenter();
+    inputContainer.eventListeners.pointerdown();
+    inputContainer.eventListeners.pointerup();
+    inputContainer.eventListeners.click();
+    inputContainer.eventListeners.pointerout();
 }
 
 export function createStoryModel() {
@@ -239,114 +240,114 @@ export function createStoryModel() {
     return model;
 }
 
-export async function startXR() {
-    await document.querySelector('#enter-vr-button').eventListeners.click();
+export function startXR() {
+    document.querySelector('#enter-vr-button').eventListeners.click();
     let c0 = global.navigator.xr.getController(0)
     c0.eventListeners.connected({ data: { handedness: c0.handedness } });
     let c1 = global.navigator.xr.getController(1)
     c1.eventListeners.connected({ data: { handedness: c1.handedness } });
-    await global.test_rendererAccess.animationLoop();
+    global.test_rendererAccess.animationLoop();
 }
 
-export async function stopXR() {
+export function stopXR() {
     global.navigator.xr.getController(0).eventListeners.disconnected({ data: { handedness: 'left' } });
     global.navigator.xr.getController(1).eventListeners.disconnected({ data: { handedness: 'right' } });
     global.navigator.xr.eventListeners.sessionend();
 }
 
-export async function lookHead(x, y, z) {
-    await global.test_rendererAccess.animationLoop();
+export function lookHead(x, y, z) {
+    global.test_rendererAccess.animationLoop();
     let camera = global.test_rendererAccess.lastRender.camera;
     camera.lookAt(x, y, z);
     camera.updateWorldMatrix(true)
-    await global.test_rendererAccess.animationLoop();
+    global.test_rendererAccess.animationLoop();
 }
 
-export async function movePageHead(x, y, z) {
+export function movePageHead(x, y, z) {
     let camera = global.test_rendererAccess.lastRender.camera;
     camera.position.set(x, y, z);
     camera.updateWorldMatrix()
-    await global.test_rendererAccess.animationLoop();
+    global.test_rendererAccess.animationLoop();
 }
 
-export async function moveXRHead(x, y, z) {
+export function moveXRHead(x, y, z) {
     let camera = global.test_rendererAccess.lastRender.camera;
     let cPos = camera.parent.worldToLocal(new THREE.Vector3(x, y, z));
     camera.position.copy(cPos);
     camera.updateWorldMatrix(true);
-    await global.test_rendererAccess.animationLoop();
+    global.test_rendererAccess.animationLoop();
 }
 
-export async function lookController(primary, x, y, z) {
-    let controller = await getController(primary);
+export function lookController(primary, x, y, z) {
+    let controller = getController(primary);
     let lookPos = new THREE.Vector3(x, y, z);
     let pos = controller.getWorldPosition(new THREE.Vector3());
     // for some reason controllers need to face backwards. I don't know why. 
     lookPos.sub(pos).negate().add(pos);
     controller.lookAt(lookPos.x, lookPos.y, lookPos.z);
-    await moveXRController(primary, pos.x, pos.y, pos.z);
+    moveXRController(primary, pos.x, pos.y, pos.z);
 }
 
-export async function moveXRController(primary, x, y, z) {
-    let controller = await getController(primary);
+export function moveXRController(primary, x, y, z) {
+    let controller = getController(primary);
     let cPos = controller.parent.worldToLocal(new THREE.Vector3(x, y, z));
     controller.position.copy(cPos);
     controller.updateWorldMatrix(true);
-    await global.test_rendererAccess.animationLoop();
+    global.test_rendererAccess.animationLoop();
 }
 
-export async function pressXRTrigger(primary) {
-    let controller = await getController(primary);
+export function pressXRTrigger(primary) {
+    let controller = getController(primary);
     controller.gamepad.buttons[0].pressed = true;
-    await global.navigator.xr.getSession().eventListeners.selectstart();
-    await global.test_rendererAccess.animationLoop();
+    global.navigator.xr.getSession().eventListeners.selectstart();
+    global.test_rendererAccess.animationLoop();
 }
 
-export async function releaseXRTrigger(primary) {
-    let controller = await getController(primary);
+export function releaseXRTrigger(primary) {
+    let controller = getController(primary);
     controller.gamepad.buttons[0].pressed = false;
-    await global.navigator.xr.getSession().eventListeners.selectend();
-    await global.test_rendererAccess.animationLoop();
+    global.navigator.xr.getSession().eventListeners.selectend();
+    global.test_rendererAccess.animationLoop();
 }
 
-export async function pushXRToggle(primary, axes) {
-    let controller = await getController(primary);
+export function pushXRToggle(primary, axes) {
+    let controller = getController(primary);
     controller.gamepad.axes = axes;
-    await global.test_rendererAccess.animationLoop();
+    global.test_rendererAccess.animationLoop();
 }
 
-export async function releaseXRToggle(primary) {
-    let controller = await getController(primary);
+export function releaseXRToggle(primary) {
+    let controller = getController(primary);
     controller.gamepad.axes = [0, 0, 0, 0];
-    await global.test_rendererAccess.animationLoop();
+    global.test_rendererAccess.animationLoop();
 }
 
-export async function toggleMoveForward() {
+export function toggleMoveForward() {
     let axes = [0, 0, 0, 0];
     axes[3] = 1;
-    await pushXRToggle(true, axes);
-    await releaseXRToggle(true);
+    pushXRToggle(true, axes);
+    releaseXRToggle(true);
 }
 
-export async function toggleMoveBack() {
+export function toggleMoveBack() {
     let axes = [0, 0, 0, 0];
     axes[3] = -1;
-    await pushXRToggle(true, axes);
-    await releaseXRToggle(true);
+    pushXRToggle(true, axes);
+    releaseXRToggle(true);
 }
 
-export async function toggleTurnLeft() {
+export function toggleTurnLeft() {
     let axes = [0, 0, 0, 0];
     axes[2] = -1;
-    await pushXRToggle(true, axes);
-    await releaseXRToggle(true);
+    pushXRToggle(true, axes);
+    releaseXRToggle(true);
 }
 
-export async function toggleTurnRight() {
+export function toggleTurnRight() {
     let axes = [0, 0, 0, 0];
     axes[2] = 1;
-    await pushXRToggle(true, axes);
-    await releaseXRToggle(true);
+    pushXRToggle(true, axes);
+    releaseXRToggle(true);
 }
 
 export function getTHREEObjectByName(name) {
@@ -355,7 +356,7 @@ export function getTHREEObjectByName(name) {
     return scene.getObjectByName(name);
 }
 
-async function getController(primary) {
+function getController(primary) {
     let controller = global.navigator.xr.getSession().inputSources
         .find(s => s.handedness == (primary ? 'right' : 'left'));
     controller.updateWorldMatrix(true)

@@ -14,7 +14,7 @@ export function MomentWrapper(parent, audioListener) {
     let mAudioWrappers = [];
     let mTeleportWrappers = [];
 
-    async function update(moment, model, assetUtil) {
+    function updateModel(moment, model, assetUtil) {
         if (!moment) {
             parent.remove(mStoryGroup);
         } else {
@@ -22,18 +22,18 @@ export function MomentWrapper(parent, audioListener) {
 
             let photosphere = model.photospheres.find(p => p.momentId == moment.id);
             if (!photosphere) { console.error('Malformed! Photosphere missing!'); }
-            await mPhotosphereWrapper.update(photosphere, model, assetUtil);
+            mPhotosphereWrapper.updateModel(photosphere, model, assetUtil);
 
-            await updateWrapperArray(mPoseableAssetWrappers, model.poseableAssets.filter(p => p.momentId == moment.id),
+            updateWrapperArray(mPoseableAssetWrappers, model.poseableAssets.filter(p => p.momentId == moment.id),
                 model, assetUtil, () => new PoseableAssetWrapper(mStoryGroup, audioListener));
 
-            await updateWrapperArray(mPictureWrappers, model.pictures.filter(p => p.momentId == moment.id),
+            updateWrapperArray(mPictureWrappers, model.pictures.filter(p => p.momentId == moment.id),
                 model, assetUtil, () => new PictureWrapper(mStoryGroup, audioListener));
 
-            await updateWrapperArray(mAudioWrappers, model.audios.filter(a => a.momentId == moment.id && !a.attachedId),
+            updateWrapperArray(mAudioWrappers, model.audios.filter(a => a.momentId == moment.id && !a.attachedId),
                 model, assetUtil, () => new AudioWrapper(mStoryGroup, audioListener));
 
-            await updateWrapperArray(mTeleportWrappers, model.teleports.filter(t => t.momentId == moment.id && !t.attachedId),
+            updateWrapperArray(mTeleportWrappers, model.teleports.filter(t => t.momentId == moment.id && !t.attachedId),
                 model, assetUtil, () => new TeleportWrapper(mStoryGroup));
         }
     }
@@ -49,12 +49,12 @@ export function MomentWrapper(parent, audioListener) {
     }
 
 
-    async function updateWrapperArray(wrappers, dataItems, model, assetUtil, createFunction) {
+    function updateWrapperArray(wrappers, dataItems, model, assetUtil, createFunction) {
         for (let i = 0; i < dataItems.length; i++) {
             if (!wrappers[i]) {
                 wrappers.push(createFunction(dataItems[i]));
             }
-            await wrappers[i].update(dataItems[i], model, assetUtil);
+            wrappers[i].updateModel(dataItems[i], model, assetUtil);
         }
 
         let deleteWrappers = wrappers.splice(dataItems.length)
@@ -63,6 +63,6 @@ export function MomentWrapper(parent, audioListener) {
         }
     }
 
-    this.update = update;
+    this.updateModel = updateModel
     this.getTargets = getTargets;
 }

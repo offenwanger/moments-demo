@@ -3,9 +3,9 @@ import { ButtonInput } from "../components/button_input.js";
 import { TextInput } from "../components/text_input.js";
 
 export function TeleportPanel(container) {
-    let mUpdateAttributeCallback = async (id, attrs) => { };
-    let mDeleteCallback = async (id) => { };
-    let mNavigationCallback = async (id) => { };
+    let mUpdateAttributeCallback = (id, attrs) => { };
+    let mDeleteCallback = (id) => { };
+    let mNavigationCallback = (id) => { };
 
     let mModel = new Data.StoryModel();
     let mTeleport = new Data.Teleport();
@@ -18,42 +18,30 @@ export function TeleportPanel(container) {
     let mBackButton = new ButtonInput(mPanelContainer)
         .setId('teleport-back-button')
         .setLabel("<- Back")
-        .setOnClick(async () => {
-            await mNavigationCallback(mTeleport.momentId);
-        });
+        .setOnClick(() => mNavigationCallback(mTeleport.momentId));
 
     let mNameInput = new TextInput(mPanelContainer)
         .setId('teleport-name-input')
         .setLabel("Name")
-        .setOnChange(async (newText) => {
-            await mUpdateAttributeCallback(mTeleportId, { name: newText });
-        });
+        .setOnChange((newText) => mUpdateAttributeCallback(mTeleportId, { name: newText }));
 
     let mPositionHeader = document.createElement('div');
     mPositionHeader.innerHTML = 'Position'
     mPanelContainer.appendChild(mPositionHeader)
     let mPositionXInput = new TextInput(mPanelContainer, 'number')
         .setLabel("x")
-        .setOnChange(async (newNum) => {
-            await mUpdateAttributeCallback(mTeleportId, { x: newNum });
-        });
+        .setOnChange((newNum) => mUpdateAttributeCallback(mTeleportId, { x: newNum }));
     let mPositionYInput = new TextInput(mPanelContainer, 'number')
         .setLabel("y")
-        .setOnChange(async (newNum) => {
-            await mUpdateAttributeCallback(mTeleportId, { y: newNum });
-        });
+        .setOnChange((newNum) => mUpdateAttributeCallback(mTeleportId, { y: newNum }));
     let mPositionZInput = new TextInput(mPanelContainer, 'number')
         .setLabel("z")
-        .setOnChange(async (newNum) => {
-            await mUpdateAttributeCallback(mTeleportId, { z: newNum });
-        });
+        .setOnChange((newNum) => mUpdateAttributeCallback(mTeleportId, { z: newNum }));
 
     let mDeleteButton = new ButtonInput(mPanelContainer)
         .setId('teleport-delete-button')
         .setLabel('Delete')
-        .setOnClick(async () => {
-            await mDeleteCallback(mTeleportId);
-        })
+        .setOnClick(() => mDeleteCallback(mTeleportId));
 
     function show(model, teleportId) {
         mModel = model;

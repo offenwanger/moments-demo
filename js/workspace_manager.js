@@ -6,77 +6,94 @@ export function WorkspaceManager(folderHandle) {
     let mWorkspaceData = null;
     let mFolderHandle = folderHandle;
 
-    let initialized = (async () => {
-        if (await mFolderHandle.queryPermission({ mode: 'readwrite' }) !== 'granted') {
-            throw Error("Invalid workspace folder, permission not granted");
-        }
-
-        try {
-            mWorkspaceData = await FileUtil.getJSONFromFile(mFolderHandle, WORKSPACE_DATA_FILE);
-        } catch (error) {
-            if (error.message.includes("A requested file or directory could not be found at the time an operation was processed")) {
+    let initialized = mFolderHandle.queryPermission({ mode: 'readwrite' })
+        .then(permission => {
+            if (permission !== 'granted') {
+                throw Error("Invalid workspace folder, permission not granted");
+            }
+            return FileUtil.getJSONFromFile(mFolderHandle, WORKSPACE_DATA_FILE);
+        })
+        .then(data => {
+            mWorkspaceData = data;
+        })
+        .catch(e => {
+            if (e.message.includes("A requested file or directory could not be found at the time an operation was processed")) {
                 // it's just new, no need to panic.
             } else {
-                console.error(error.stack);
                 // panic.
+                console.error('Failed to initialize workspace.');
+                throw new Error(e);
             }
-        }
-
-        if (!mWorkspaceData) {
-            mWorkspaceData = {
-                storyIds: []
-            };
-        }
-    })();
-
-    async function getStoryList() {
-        await initialized;
-
-        let stories = [];
-        for (const storyId of mWorkspaceData.storyIds) {
-            try {
-                let storyObj = await FileUtil.getJSONFromFile(await mFolderHandle.getDirectoryHandle(storyId), STORY_JSON_FILE)
-                if (storyObj && storyObj.id && storyObj.name) {
-                    stories.push({ id: storyObj.id, name: storyObj.name });
-                } else { console.error("Couldn't get name for story", storyId); }
-            } catch (error) {
-                console.error(error);
+        })
+        .then(() => {
+            if (!mWorkspaceData) {
+                mWorkspaceData = {
+                    storyIds: []
+                };
             }
-        }
-        return stories;
+        })
+
+
+    function getStoryList() {
+        return initialized
+            .then(() => {
+                return Promise.all(mWorkspaceData.storyIds.map(storyId =>
+                    mFolderHandle.getDirectoryHandle(storyId)
+                        .then(handle => FileUtil.getJSONFromFile(handle, STORY_JSON_FILE))
+                        .then(storyObj => {
+                            if (storyObj && storyObj.id && storyObj.name) {
+                                return ({ id: storyObj.id, name: storyObj.name });
+                            } else {
+                                console.error("Couldn't get name for story", storyId);
+                                return ({ id: storyObj.id, name: 'Load Failed.' })
+                            }
+                        })
+                ))
+            });
+
     }
 
-    async function newStory(id) {
-        await initialized;
-
-        if (!id || typeof id != "string") { console.error("invalid id!", id); return; }
-        mWorkspaceData.storyIds.push(id);
-        await mFolderHandle.getDirectoryHandle(id, { create: true })
-        await updateWorkspaceData();
+    function newStory(id) {
+        return initialized
+            .then(() => {
+                if (!id || typeof id != "string") { console.error("invalid id!", id); return; }
+                mWorkspaceData.storyIds.push(id);
+            })
+            .then(() => mFolderHandle.getDirectoryHandle(id, { create: true }))
+            .then(() => updateWorkspaceData());
     }
 
-    async function deleteStory(id) {
-        await initialized;
-
-        if (!id || typeof id != "string") { console.error("invalid id!", id); return; }
-        mWorkspaceData.storyIds = mWorkspaceData.storyIds.filter(storyId => storyId != id);
-        await mFolderHandle.removeEntry(id, { recursive: true })
-        await updateWorkspaceData();
+    function deleteStory(id) {
+        return initialized
+            .then(() => {
+                if (!id || typeof id != "string") { console.error("invalid id!", id); return; }
+                mWorkspaceData.storyIds = mWorkspaceData.storyIds.filter(storyId => storyId != id);
+            })
+            .then(() => mFolderHandle.removeEntry(id, { recursive: true }))
+            .then(() => updateWorkspaceData());
     }
 
-    async function updateStory(model) {
-        await initialized;
-        await FileUtil.writeFile(await mFolderHandle.getDirectoryHandle(model.id), STORY_JSON_FILE, JSON.stringify(model))
+    function updateStory(model) {
+        return initialized
+            .then(() => mFolderHandle.getDirectoryHandle(model.id))
+            .then(handle => FileUtil.writeFile(handle, STORY_JSON_FILE, JSON.stringify(model)));
     }
 
-    async function getStory(storyId) {
-        let storyObj = await FileUtil.getJSONFromFile(await mFolderHandle.getDirectoryHandle(storyId), STORY_JSON_FILE);
-        if (!storyObj) { console.error("Failed to load story object for id " + storyId); return null; }
-        let model = Data.StoryModel.fromObject(storyObj);
-        return model;
+    function getStory(storyId) {
+        return initialized
+            .then(() => mFolderHandle.getDirectoryHandle(storyId))
+            .then(handle => FileUtil.getJSONFromFile(handle, STORY_JSON_FILE))
+            .then(storyObj => {
+                if (!storyObj) {
+                    console.error("Failed to load story object for id " + storyId);
+                    return null;
+                }
+                let model = Data.StoryModel.fromObject(storyObj);
+                return model;
+            })
     }
 
-    async function storeFile(file, updateName = true) {
+    function storeFile(file, updateName = true) {
         let name = file.name;
         if (updateName) {
             let nameBreakdown = file.name.split(".");
@@ -85,52 +102,67 @@ export function WorkspaceManager(folderHandle) {
             nameBreakdown[0] += "-" + Date.now();
             name = nameBreakdown.join('.');
         }
-        let arrayBuffer = await file.arrayBuffer();
-        let folder = await mFolderHandle.getDirectoryHandle(FILE_FOLDER, { create: true });
-        await FileUtil.writeFile(folder, name, arrayBuffer);
-        return name;
+
+        let folder;
+
+        return initialized
+            .then(() => mFolderHandle.getDirectoryHandle(FILE_FOLDER, { create: true }))
+            .then(f => folder = f)
+            .then(() => file.arrayBuffer())
+            .then(arrayBuffer => FileUtil.writeFile(folder, name, arrayBuffer))
+            .then(() => name)
     }
 
-    async function getFileAsDataURI(filename) {
-        let folder = await mFolderHandle.getDirectoryHandle(FILE_FOLDER, { create: true });
-        let uri = await FileUtil.getDataUriFromFile(folder, filename);
-        return uri;
+    function getFileAsDataURI(filename) {
+        return initialized
+            .then(() => mFolderHandle.getDirectoryHandle(FILE_FOLDER, { create: true }))
+            .then(folder => FileUtil.getDataUriFromFile(folder, filename));
     }
 
-    async function updateWorkspaceData() {
-        await initialized;
-
-        let workspaceFileHandle = await mFolderHandle.getFileHandle(WORKSPACE_DATA_FILE, { create: true });
-        let workspaceFile = await workspaceFileHandle.createWritable();
-        await workspaceFile.write(JSON.stringify(mWorkspaceData));
-        await workspaceFile.close();
+    function updateWorkspaceData() {
+        let workspaceFile;
+        return initialized
+            .then(() => mFolderHandle.getFileHandle(WORKSPACE_DATA_FILE, { create: true }))
+            .then(workspaceFileHandle => workspaceFileHandle.createWritable())
+            .then(wsf => workspaceFile = wsf)
+            .then(() => workspaceFile.write(JSON.stringify(mWorkspaceData)))
+            .then(() => workspaceFile.close())
     }
 
-    async function packageStory(storyId) {
-        try {
-            let storyObj = await FileUtil.getJSONFromFile(await mFolderHandle.getDirectoryHandle(storyId), STORY_JSON_FILE)
-            let model = Data.StoryModel.fromObject(storyObj);
-            let folder = await mFolderHandle.getDirectoryHandle(FILE_FOLDER, { create: true })
-            FileUtil.pacakgeToZip(model, folder);
-        } catch (error) {
-            console.error(error);
-        }
+    function packageStory(storyId) {
+        let folder;
+        return initialized
+            .then(() => mFolderHandle.getDirectoryHandle(FILE_FOLDER, { create: true }))
+            .then(f => folder = f)
+            .then(() => mFolderHandle.getDirectoryHandle(storyId))
+            .then(storyFolder => FileUtil.getJSONFromFile(storyFolder, STORY_JSON_FILE))
+            .then(storyObj => {
+                let model = Data.StoryModel.fromObject(storyObj);
+                return FileUtil.pacakgeToZip(model, folder)
+            })
+            .catch(e => {
+                console.error('Failed to zip: ' + storyId);
+                console.error(e);
+            });
     }
 
-    async function loadStory(file) {
-        try {
-            let model = await FileUtil.getModelFromZip(file);
-            model = model.clone();
-            let folder = await mFolderHandle.getDirectoryHandle(FILE_FOLDER, { create: true })
-            await FileUtil.unpackageAssetsFromZip(file, folder);
-            await newStory(model.id);
-            await updateStory(model);
-        } catch (error) {
-            console.error(error)
-            console.error("Failed to load story!");
-        }
+    function loadStory(file) {
+        let folder;
+        let model;
+        return initialized
+            .then(() => mFolderHandle.getDirectoryHandle(FILE_FOLDER, { create: true }))
+            .then(f => folder = f)
+            .then(() => FileUtil.getModelFromZip(file))
+            .then(m => model = m.clone())
+            .then(() => newStory(model.id))
+            .then(() => updateStory(model))
+            .then(() => FileUtil.unpackageAssetsFromZip(file, folder))
+            .catch(e => {
+                console.error('Failed to load story.');
+                console.error(e);
+            });
     }
-    
+
     this.getStoryList = getStoryList;
     this.newStory = newStory;
     this.deleteStory = deleteStory;
@@ -143,21 +175,22 @@ export function WorkspaceManager(folderHandle) {
 }
 
 export function RemoteWorkSpace(storyId) {
-    async function getFileAsDataURI(filename) {
-        try {
-            let result = await fetch('uploads/' + storyId + "/" + filename);
-            if (result?.ok) {
-                return await result.text();
-            } else {
-                console.error(result);
-                console.error(`Failed to fetch file, HTTP Response Code: ${result?.status}`)
+    function getFileAsDataURI(filename) {
+        fetch('uploads/' + storyId + "/" + filename)
+            .then(result => {
+                if (result?.ok) {
+                    return result.text();
+                } else {
+                    console.error(result);
+                    console.error(`Failed to fetch file, HTTP Response Code: ${result?.status}`)
+                    return null;
+                }
+            })
+            .catch(e => {
+                console.error('Failed to fetch file');
+                console.error(e);
                 return null;
-            }
-        } catch (error) {
-            console.error(error);
-            console.error('Failed to fetch file');
-            return null;
-        }
+            });
     }
 
     this.getFileAsDataURI = getFileAsDataURI;

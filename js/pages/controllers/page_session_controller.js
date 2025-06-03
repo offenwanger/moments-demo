@@ -6,10 +6,10 @@ import { WindowEventManager } from '../../window_event_manager.js';
 export function PageSessionController(parentContainer) {
     let mWindowEventManager = new WindowEventManager();
 
-    let mUserMovedCallback = async () => { }
-    let mPointerDownCallback = async (raycaster, orietation, isPrimary) => { }
-    let mPointerMoveCallback = async (raycaster, orietation, isPrimary) => { }
-    let mPointerUpCallback = async (raycaster, orietation, isPrimary) => { }
+    let mUserMovedCallback = () => { }
+    let mPointerDownCallback = (raycaster, orietation, isPrimary) => { }
+    let mPointerMoveCallback = (raycaster, orietation, isPrimary) => { }
+    let mPointerUpCallback = (raycaster, orietation, isPrimary) => { }
 
     const mRaycaster = new THREE.Raycaster();
     mRaycaster.near = 0.2;
@@ -19,7 +19,7 @@ export function PageSessionController(parentContainer) {
     let mMainCanvas = document.createElement('canvas');
     mMainCanvas.setAttribute('id', 'main-canvas')
     mMainCanvas.style['display'] = 'block';
-    mMainCanvas.addEventListener('pointerdown', async (e) => await onPointerDown({ x: e.clientX, y: e.clientY }))
+    mMainCanvas.addEventListener('pointerdown', (e) => onPointerDown({ x: e.clientX, y: e.clientY }))
     mMainCanvas.addEventListener('wheel', (e) => onWheel({ x: e.clientX, y: e.clientY, amount: e.wheelDelta }))
     parentContainer.appendChild(mMainCanvas)
 
@@ -94,31 +94,31 @@ export function PageSessionController(parentContainer) {
         mOrbitControls.update();
     }
 
-    async function onPointerDown(screenCoords) {
+    function onPointerDown(screenCoords) {
         let pointer = screenToNomralizedCoords(screenCoords);
         mRaycaster.setFromCamera(pointer, mPageCamera);
         let orientation = new THREE.Quaternion().setFromRotationMatrix(
             new THREE.Matrix4().lookAt(mRaycaster.ray.direction,
                 new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 1, 0)));
-        await mPointerDownCallback(mRaycaster, orientation)
+        mPointerDownCallback(mRaycaster, orientation)
     }
 
-    mWindowEventManager.onPointerMove(async (screenCoords) => {
+    mWindowEventManager.onPointerMove((screenCoords) => {
         let pointer = screenToNomralizedCoords(screenCoords);
         mRaycaster.setFromCamera(pointer, mPageCamera);
         let orientation = new THREE.Quaternion().setFromRotationMatrix(
             new THREE.Matrix4().lookAt(mRaycaster.ray.direction,
                 new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 1, 0)));
-        await mPointerMoveCallback(mRaycaster, orientation)
+        mPointerMoveCallback(mRaycaster, orientation)
     });
 
-    mWindowEventManager.onPointerUp(async (screenCoords) => {
+    mWindowEventManager.onPointerUp((screenCoords) => {
         let pointer = screenToNomralizedCoords(screenCoords);
         mRaycaster.setFromCamera(pointer, mPageCamera);
         let orientation = new THREE.Quaternion().setFromRotationMatrix(
             new THREE.Matrix4().lookAt(mRaycaster.ray.direction,
                 new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 1, 0)));
-        await mPointerUpCallback(mRaycaster, orientation);
+        mPointerUpCallback(mRaycaster, orientation);
     });
 
     function screenToNomralizedCoords(screenCoords) {

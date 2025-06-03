@@ -11,9 +11,9 @@ import { StoryPanel } from '../editor_panels/story_panel.js';
 import { TeleportPanel } from '../editor_panels/teleport_panel.js';
 
 export function SidebarController(container) {
-    let mNavigateCallback = async (id) => { }
-    let mStartShareCallback = async () => { }
-    let mShowAssetManagerCallback = async () => { }
+    let mNavigateCallback = (id) => { }
+    let mStartShareCallback = () => { }
+    let mShowAssetManagerCallback = () => { }
 
     let mShownItem = null;
     let mModel = null;
@@ -23,16 +23,16 @@ export function SidebarController(container) {
     let mShareButton = new ButtonInput(container)
         .setId('share-button')
         .setLabel('Share')
-        .setOnClick(async () => {
+        .setOnClick(() => {
             mShareButton.setLabel('Uploading...')
-            await mStartShareCallback();
+            mStartShareCallback();
             mShareButton.setLabel('Sharing!')
         });
     const mAssetManagerButton = new ButtonInput(container)
         .setId('asset-manager-button')
         .setLabel('Assets')
-        .setOnClick(async () => {
-            await mShowAssetManagerCallback();
+        .setOnClick(() => {
+            mShowAssetManagerCallback();
         });
     const mAssetPanel = new AssetPanel(container);
     const mAudioPanel = new AudioPanel(container);
@@ -43,16 +43,16 @@ export function SidebarController(container) {
     const mAssetPosePanel = new AssetPosePanel(container);
     const mStoryPanel = new StoryPanel(container);
 
-    mStoryPanel.setNavigationCallback(async (id) => { await navigate(id); await mNavigateCallback(id); });
-    mPoseableAssetPanel.setNavigationCallback(async (id) => { await navigate(id); await mNavigateCallback(id); });
-    mAssetPosePanel.setNavigationCallback(async (id) => { await navigate(id); await mNavigateCallback(id); });
-    mAudioPanel.setNavigationCallback(async (id) => { await navigate(id); await mNavigateCallback(id); });
-    mTeleportPanel.setNavigationCallback(async (id) => { await navigate(id); await mNavigateCallback(id); });
-    mMomentPanel.setNavigationCallback(async (id) => { await navigate(id); await mNavigateCallback(id); });
-    mPicturePanel.setNavigationCallback(async (id) => { await navigate(id); await mNavigateCallback(id); });
-    mAssetPanel.setNavigationCallback(async (id) => { await navigate(id); await mNavigateCallback(id); });
+    mStoryPanel.setNavigationCallback((id) => { navigate(id); mNavigateCallback(id); });
+    mPoseableAssetPanel.setNavigationCallback((id) => { navigate(id); mNavigateCallback(id); });
+    mAssetPosePanel.setNavigationCallback((id) => { navigate(id); mNavigateCallback(id); });
+    mAudioPanel.setNavigationCallback((id) => { navigate(id); mNavigateCallback(id); });
+    mTeleportPanel.setNavigationCallback((id) => { navigate(id); mNavigateCallback(id); });
+    mMomentPanel.setNavigationCallback((id) => { navigate(id); mNavigateCallback(id); });
+    mPicturePanel.setNavigationCallback((id) => { navigate(id); mNavigateCallback(id); });
+    mAssetPanel.setNavigationCallback((id) => { navigate(id); mNavigateCallback(id); });
 
-    async function updateModel(model) {
+    function updateModel(model) {
         mModel = model;
         let item = mShownItem ? mModel.find(mShownItem) : null;
         if (!item) {
@@ -64,10 +64,10 @@ export function SidebarController(container) {
             }
         }
 
-        await navigate(mShownItem);
+        navigate(mShownItem);
     }
 
-    async function navigate(id) {
+    function navigate(id) {
         let item = mModel.find(id)
         if (!item) { console.error('Invalid id', id); return; }
 
@@ -138,8 +138,6 @@ export function SidebarController(container) {
     this.onAddMoment = mStoryPanel.onAddMoment;
     this.setUpdateAttributeCallback = setUpdateAttributeCallback;
     this.setDeleteCallback = setDeleteCallback;
-    this.setEditPictureCallback = (func) => mPicturePanel.setEditPictureCallback(func);
-    this.setCloseEditPictureCallback = (func) => mPicturePanel.setCloseEditPictureCallback(func);
     this.onNavigate = (func) => mNavigateCallback = func;
     this.onSessionStart = (func) => mVRButton.onSessionStart(func);
     this.onStartShare = (func) => mStartShareCallback = func;

@@ -1,5 +1,6 @@
 
 import * as THREE from 'three';
+import { mockResolvePromise } from './mock_promise.js';
 
 export function mockXR() {
     let session = new mockSession();
@@ -25,8 +26,8 @@ export function mockXR() {
             if (index === 1) return controllerGrip1;
         },
         getSession: () => session,
-        isSessionSupported: async () => true,
-        requestSession: async () => { return session },
+        isSessionSupported: () => new mockResolvePromise(true),
+        requestSession: () => mockResolvePromise(session),
         setSession: () => { session = session }
     }
 }

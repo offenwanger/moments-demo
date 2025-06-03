@@ -2,9 +2,10 @@ import { Data } from "../data.js";
 import { DataUtil } from "../utils/data_util.js";
 
 export function ListPage(parentContainer) {
-    let mEditCallback = async () => { };
+    let mEditCallback = () => { };
 
     let mWorkspace;
+    let mStories = null;
 
     let h3 = document.createElement('h3');
     h3.textContent = "Stories";
@@ -18,14 +19,18 @@ export function ListPage(parentContainer) {
     mNewStoryButton.setAttribute('id', 'new-story-button')
     mNewStoryButton.style['margin-left'] = "40px";
     mNewStoryButton.textContent = "New Story";
-    mNewStoryButton.addEventListener('click', async () => {
+    mNewStoryButton.addEventListener('click', () => {
         if (!mWorkspace) { console.error('Workspace needed.'); return; }
         let newStory = new Data.StoryModel();
-        let stories = await mWorkspace.getStoryList();
-        newStory.name = DataUtil.getNextName('Story', stories.map(s => s.name))
-        await mWorkspace.newStory(newStory.id)
-        await mWorkspace.updateStory(newStory);
-        await show(mWorkspace);
+        if (Array.isArray(mStories)) {
+            newStory.name = DataUtil.getNextName('Story', mStories.map(s => s.name))
+            mWorkspace.newStory(newStory.id)
+                .then(() => mWorkspace.updateStory(newStory))
+                // refresh
+                .then(() => show(mWorkspace));
+        } else {
+            console.error('Stories not loaded');
+        }
     });
     parentContainer.appendChild(mNewStoryButton)
 
@@ -33,60 +38,60 @@ export function ListPage(parentContainer) {
     mImportStoryButton.setAttribute('id', 'import-story-button')
     mImportStoryButton.style['margin-left'] = "40px";
     mImportStoryButton.textContent = "Import Story"
-    mImportStoryButton.addEventListener('click', async () => {
-        try {
-            let fileHandles = await window.showOpenFilePicker();
-            let file = await fileHandles[0].getFile();
-            await mWorkspace.loadStory(file);
-            await show(mWorkspace);
-        } catch (error) {
-            console.error(error);
-        }
+    mImportStoryButton.addEventListener('click', () => {
+        window.showOpenFilePicker()
+            .then(fileHandles => fileHandles[0].getFile())
+            .then(file => mWorkspace.loadStory(file))
+            .then(() => show(mWorkspace))
+            .catch(e => console.error(e));
     });
     parentContainer.appendChild(mImportStoryButton)
 
-    async function show(workspace) {
+    function show(workspace) {
         mWorkspace = workspace;
+        mWorkspace.getStoryList()
+            .then(stories => {
+                mStories = stories;
+                mList.replaceChildren();
+                stories.forEach(story => {
+                    let li = document.createElement('li');
+                    li.setAttribute('id', story.id)
+                    mList.appendChild(li);
 
-        let stories = await mWorkspace.getStoryList();
-        mList.replaceChildren();
-        stories.forEach(story => {
-            let li = document.createElement('li');
-            li.setAttribute('id', story.id)
-            mList.appendChild(li);
+                    li.appendChild(Object.assign(document.createElement('span'), { innerHTML: story.name }));
 
-            li.appendChild(Object.assign(document.createElement('span'), { innerHTML: story.name }));
+                    let button = document.createElement('button')
+                    button.setAttribute('id', 'edit-' + story.id)
+                    button.style['margin-left'] = '10px'
+                    button.textContent = '✏️';
+                    button.addEventListener('click', () => mEditCallback(story.id));
+                    li.appendChild(button)
 
-            let button = document.createElement('button')
-            button.setAttribute('id', 'edit-' + story.id)
-            button.style['margin-left'] = '10px'
-            button.textContent = '✏️';
-            button.addEventListener('click', async () => await mEditCallback(story.id));
-            li.appendChild(button)
+                    button = document.createElement('button')
+                    button.textContent = '🔽'
+                    button.setAttribute('id', 'download-' + story.id)
+                    button.style['margin-left'] = '10px';
+                    button.addEventListener('click', () => mWorkspace.packageStory(story.id));
+                    li.appendChild(button)
 
-            button = document.createElement('button')
-            button.textContent = '🔽'
-            button.setAttribute('id', 'download-' + story.id)
-            button.style['margin-left'] = '10px';
-            button.addEventListener('click', async () => await mWorkspace.packageStory(story.id));
-            li.appendChild(button)
-
-            button = document.createElement('button')
-            button.textContent = '❌'
-            button.setAttribute('id', 'delete-' + story.id);
-            button.style['margin-left'] = '10px';
-            button.addEventListener('click', async () => {
-                if (confirm('Deleting "' + story.name + '", this cannot be undone, are you sure?') == true) {
-                    try {
-                        await mWorkspace.deleteStory(story.id);
-                    } catch (error) {
-                        console.error(error);
-                    }
-                    await show(mWorkspace);
-                }
+                    button = document.createElement('button')
+                    button.textContent = '❌'
+                    button.setAttribute('id', 'delete-' + story.id);
+                    button.style['margin-left'] = '10px';
+                    button.addEventListener('click', () => {
+                        if (confirm('Deleting "' + story.name + '", this cannot be undone, are you sure?') == true) {
+                            try {
+                                mList.removeChild(li);
+                                mWorkspace.deleteStory(story.id);
+                            } catch (error) {
+                                console.error(error);
+                            }
+                            show(mWorkspace);
+                        }
+                    });
+                    li.appendChild(button)
+                });
             });
-            li.appendChild(button)
-        });
     }
 
     this.show = show;

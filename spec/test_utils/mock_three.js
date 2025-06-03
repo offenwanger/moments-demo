@@ -3,6 +3,7 @@ import * as td from 'testdouble';
 import * as THREE from 'three';
 import { createCanvas } from './mock_canvas.js';
 import { mockXRControllerModelFactory } from './mock_xr.js';
+import { mockResolvePromise } from './mock_promise.js';
 
 let mForceId = null;
 export function forceIntercept(id) { mForceId = id; };
@@ -25,7 +26,7 @@ export async function mockThreeSetup() {
             this.setClearColor = () => { }
         },
         ImageLoader: function () {
-            this.loadAsync = () => { return createCanvas() }
+            this.loadAsync = () => new mockResolvePromise(createCanvas())
         },
         Raycaster: function () {
             let interceptedCaster = new THREE.Raycaster();

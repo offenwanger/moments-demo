@@ -1,5 +1,5 @@
 export function TextInput(container, type = 'text') {
-    let mChangeCallback = async (newText) => { };
+    let mChangeCallback = (newText) => { };
 
     let mInputContainer = document.createElement('div');
     container.appendChild(mInputContainer);
@@ -9,10 +9,10 @@ export function TextInput(container, type = 'text') {
 
     let mInputBox = document.createElement('input');
     mInputBox.setAttribute('type', type)
-    mInputBox.addEventListener('blur', async () => {
+    mInputBox.addEventListener('blur', () => {
         let val = mInputBox.value;
         if (type == 'number') val = parseFloat(val);
-        await mChangeCallback(val);
+        mChangeCallback(val);
     });
     mInputContainer.appendChild(mInputBox)
 

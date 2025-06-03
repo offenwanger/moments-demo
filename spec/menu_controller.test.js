@@ -15,24 +15,24 @@ describe('Test menu buttons', function () {
     })
 
     describe('init tests', function () {
-        it('should open a story', async function () {
-            await createAndOpenStoryMoment();
+        it('should open a story',  function () {
+             createAndOpenStoryMoment();
         });
     });
 
     describe('add tests', function () {
-        it('should add a story picture', async function () {
-            await createAndOpenStoryMoment();
-            await uploadImageAsset();
+        it('should add a story picture',  function () {
+             createAndOpenStoryMoment();
+             uploadImageAsset();
             let assetId = testmodel().assets.find(a => a.type == AssetTypes.IMAGE).id;
 
-            await canvasClickMenuButton(MenuNavButtons.ADD);
-            await canvasClickMenuButton(MenuNavButtons.ADD_PICTURE);
-            await canvasClickMenuButton(assetId);
+             canvasClickMenuButton(MenuNavButtons.ADD);
+             canvasClickMenuButton(MenuNavButtons.ADD_PICTURE);
+             canvasClickMenuButton(assetId);
 
             expect(testmodel().pictures.length).toBe(1);
-            await canvasClickMenuButton(assetId);
-            await canvasClickMenuButton(assetId);
+             canvasClickMenuButton(assetId);
+             canvasClickMenuButton(assetId);
             expect(testmodel().pictures.length).toBe(3);
         });
     });

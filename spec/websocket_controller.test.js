@@ -14,9 +14,9 @@ describe('Test ListPage', function () {
     })
 
     describe('share tests', function () {
-        it('should start share without error', async function () {
-            await createAndOpenStoryMoment();
-            await clickButtonInput('#share-button');
+        it('should start share without error', function () {
+            createAndOpenStoryMoment();
+            clickButtonInput('#share-button');
             expect(document.querySelector('#share-button').textContent).toBe("Sharing!")
         });
     });

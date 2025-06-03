@@ -15,16 +15,22 @@ import { mockAudioContext } from './mock_audio_context.js';
 import { mockMediaRecorder } from './mock_media_recorder.js';
 import { mockServerSetup } from './mock_server.js';
 import { mockXR } from './mock_xr.js';
+import { mockRejectPromise, mockResolvePromise } from './mock_promise.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 eval(fs.readFileSync(__dirname + '../../../lib/delaunator.min.js', 'utf-8'))
 
 // Trap error and trigger a failure. 
 let consoleError = console.error;
-console.error = function (message) {
-    if (("" + message).startsWith("TypeError: Cannot read properties of null")) return;
-    consoleError(...arguments);
-    expect("").toEqual(message)
+console.error = function (input) {
+    if (typeof input == 'string') {
+        consoleError(...arguments);
+    } else if (input instanceof Error) {
+        consoleError(input);
+    } else {
+        consoleError('Unknown error: ' + input);
+    }
+    expect('No Error').toEqual('Error Happened')
 }
 
 export async function setup() {
@@ -116,8 +122,8 @@ export async function setup() {
             if (!window.callbacks[event]) window.callbacks[event] = []
             window.callbacks[event].push(callback);
         },
-        showDirectoryPicker: () => global.window.directories.pop(),
-        showOpenFilePicker: () => [global.window.files.pop()],
+        showDirectoryPicker: () => mockResolvePromise(global.window.directories.pop()),
+        showOpenFilePicker: () => mockResolvePromise([global.window.files.pop()]),
         location: {
             href: "http://test.com",
             search: "",
@@ -158,16 +164,94 @@ export async function setup() {
         return img;
     }
     global.FileReader = mockFileSystem.mockFileReader;
+    global.File = mockFileSystem.mockFile;
     global.io = function () { return { on: () => { }, emit: () => { }, } };
     global.domtoimage = { toPng: () => createCanvas() }
     global.Audio = function () { return {} }
+
+    global.RealPromise = Promise;
+    global.RealPromiseAll = Promise.all;
+    global.RealPromiseResolve = Promise.resolve;
+    global.Promise = new Proxy(Promise, {
+        construct(target, args) {
+            // Force promises to call syncronously.
+            let result = null;
+            let error = null;
+            if (typeof args[0] === 'function') {
+                args[0]((r) => { result = r }, (e) => { error = e });
+            } else {
+                result = args[0];
+            }
+
+            if (error) {
+                return mockRejectPromise(error);
+            } else {
+                return mockResolvePromise(result);
+            }
+        }
+    });
+    global.Promise.all = (arr) => {
+        let results = arr.map(p => {
+            if (p.then) {
+                let result;
+                p.then(r => result = r);
+                return result;
+            } else return p;
+        })
+        return mockResolvePromise(results);
+    };
+    global.Promise.resolve = () => mockResolvePromise();
+
+    // this is for hacking into the GLTF loader to make it syncronous.
+    global.RealResponse = global.Response;
+    global.Response = function (input) {
+        this.arrayBuffer = function () {
+            if (input instanceof ReadableStream) {
+                let buffer = input.getBuffer();
+                const arrayBuffer = new ArrayBuffer(buffer.length);
+                const view = new Uint8Array(arrayBuffer);
+                for (let i = 0; i < buffer.length; ++i) {
+                    view[i] = buffer[i];
+                }
+                return mockResolvePromise(arrayBuffer);
+            } else {
+                console.error('Not handled');
+            }
+        }
+
+    };
+    global.RealReadableStream = global.ReadableStream;
+    global.ReadableStream = function (input) {
+        // read in
+        let buffer = null;
+        input.start({
+            close: () => { },
+            enqueue: (value) => { buffer = value; }
+        });
+
+        this.getReader = () => {
+            let count = 0;
+            return {
+                read: function () {
+                    if (count == 0) {
+                        count++;
+                        return mockResolvePromise({ done: false, value: buffer });
+                    } else {
+                        return mockResolvePromise({ done: true });
+                    }
+
+                }
+            }
+        }
+        this.getBuffer = () => buffer;
+    };
 
     await mockThreeSetup();
     await mockServerSetup();
 
     let { main } = await import('../../js/main.js')
     window.mainFunc = main;
-    await main();
+    main()
 
     let app = await import('../../app.js');
 }
@@ -177,6 +261,11 @@ export async function cleanup() {
     delete global.document;
     delete global.navigator;
     delete global.window;
+    global.Promise = global.RealPromise;
+    global.Promise.all = global.RealPromiseAll;
+    global.Promise.resolve = global.RealPromiseResolve;
+    global.Response = global.RealResponse
+    global.ReadableStream = global.RealReadableStream
     mockFileSystem.cleanup();
     td.reset();
 }

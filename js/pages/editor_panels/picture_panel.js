@@ -4,16 +4,13 @@ import { ButtonInput } from "../components/button_input.js";
 import { TextInput } from "../components/text_input.js";
 
 export function PicturePanel(container) {
-    let mUpdateAttributeCallback = async (id, attrs) => { };
-    let mDeleteCallback = async (id) => { };
-    let mNavigationCallback = async (id) => { };
-    let mEditPictureCallback = async (id) => { };
-    let mCloseEditPictureCallback = async (id) => { };
+    let mUpdateAttributeCallback = (id, attrs) => { };
+    let mDeleteCallback = (id) => { };
+    let mNavigationCallback = (id) => { };
 
     let mModel = new Data.StoryModel();
     let mPicture = new Data.Picture();
     let mPictureId = null;
-    let mShowingEditor = false;
 
     let mPanelContainer = document.createElement('div');
     container.appendChild(mPanelContainer); hide();
@@ -21,28 +18,12 @@ export function PicturePanel(container) {
     let mBackButton = new ButtonInput(mPanelContainer)
         .setId('picture-back-button')
         .setLabel("<- Back")
-        .setOnClick(async () => {
-            if (mShowingEditor) await hideEditor();
-            await mNavigationCallback(mPicture.momentId);
-        });
+        .setOnClick(() => mNavigationCallback(mPicture.momentId));
 
     let mNameInput = new TextInput(mPanelContainer)
         .setId('picture-name-input')
         .setLabel("Name")
-        .setOnChange(async (newText) => {
-            await mUpdateAttributeCallback(mPictureId, { name: newText });
-        });
-
-    let mEditButton = new ButtonInput(mPanelContainer)
-        .setId('picture-edit-button')
-        .setLabel('Edit')
-        .setOnClick(async () => {
-            if (mShowingEditor) {
-                await hideEditor();
-            } else {
-                await showEditor();
-            }
-        })
+        .setOnChange((newText) => mUpdateAttributeCallback(mPictureId, { name: newText }));
 
     let mAttachedTeleport = new ButtonInput(mPanelContainer)
         .setId('picture-teleport-button');
@@ -56,60 +37,32 @@ export function PicturePanel(container) {
     mPanelContainer.appendChild(mPositionHeader);
     let mPositionXInput = new TextInput(mPanelContainer, 'number')
         .setLabel("x")
-        .setOnChange(async (newNum) => {
-            await mUpdateAttributeCallback(mPictureId, { x: newNum });
-        });
+        .setOnChange((newNum) => mUpdateAttributeCallback(mPictureId, { x: newNum }));
     let mPositionYInput = new TextInput(mPanelContainer, 'number')
         .setLabel("y")
-        .setOnChange(async (newNum) => {
-            await mUpdateAttributeCallback(mPictureId, { y: newNum });
-        });
+        .setOnChange((newNum) => mUpdateAttributeCallback(mPictureId, { y: newNum }));
     let mPositionZInput = new TextInput(mPanelContainer, 'number')
         .setLabel("z")
-        .setOnChange(async (newNum) => {
-            await mUpdateAttributeCallback(mPictureId, { z: newNum });
-        });
+        .setOnChange((newNum) => mUpdateAttributeCallback(mPictureId, { z: newNum }));
 
     let mRotationXInput = new TextInput(mPanelContainer, 'number')
         .setLabel("ψ")
-        .setOnChange(async () => {
-            await mUpdateAttributeCallback(mPictureId, { orientation: getOrientationArray() });
-        });
+        .setOnChange(() => mUpdateAttributeCallback(mPictureId, { orientation: getOrientationArray() }));
     let mRotationYInput = new TextInput(mPanelContainer, 'number')
         .setLabel("θ")
-        .setOnChange(async () => {
-            await mUpdateAttributeCallback(mPictureId, { orientation: getOrientationArray() });
-        });
+        .setOnChange(() => mUpdateAttributeCallback(mPictureId, { orientation: getOrientationArray() }));
     let mRotationZInput = new TextInput(mPanelContainer, 'number')
         .setLabel("φ")
-        .setOnChange(async () => {
-            await mUpdateAttributeCallback(mPictureId, { orientation: getOrientationArray() });
-        });
+        .setOnChange(() => mUpdateAttributeCallback(mPictureId, { orientation: getOrientationArray() }));
 
     let mScaleInput = new TextInput(mPanelContainer, 'number')
         .setLabel("Scale")
-        .setOnChange(async (newNum) => {
-            await mUpdateAttributeCallback(mPictureId, { scale: newNum });
-        });
+        .setOnChange((newNum) => mUpdateAttributeCallback(mPictureId, { scale: newNum }));
 
     let mDeleteButton = new ButtonInput(mPanelContainer)
         .setId('picture-delete-button')
         .setLabel('Delete')
-        .setOnClick(async () => {
-            await mDeleteCallback(mPictureId);
-        })
-
-    async function showEditor() {
-        mShowingEditor = true;
-        mEditButton.setLabel('Close');
-        await mEditPictureCallback(mPictureId);
-    }
-
-    async function hideEditor() {
-        mShowingEditor = false;
-        mEditButton.setLabel('Edit');
-        await mCloseEditPictureCallback();
-    }
+        .setOnClick(() => mDeleteCallback(mPictureId))
 
     function show(model, pictureId) {
         mModel = model;
@@ -134,8 +87,8 @@ export function PicturePanel(container) {
         if (teleport) {
             mAttachedTeleport
                 .setLabel(teleport.name)
-                .setOnClick(async () => await mNavigationCallback(teleport.id))
-                .show();
+                .sOnClick(() => mNavigationCallback(teleport.id))
+                .sh();
         } else {
             mAttachedTeleport.hide();
         }
@@ -144,8 +97,8 @@ export function PicturePanel(container) {
         if (audio) {
             mAttachedAudio
                 .setLabel(audio.name)
-                .setOnClick(async () => await mNavigationCallback(audio.id))
-                .show();
+                .sOnClick(() => mNavigationCallback(audio.id))
+                .sh();
         } else {
             mAttachedAudio.hide();
         }
@@ -176,7 +129,5 @@ export function PicturePanel(container) {
     this.hide = hide;
     this.setUpdateAttributeCallback = (func) => mUpdateAttributeCallback = func;
     this.setDeleteCallback = (func) => mDeleteCallback = func;
-    this.setEditPictureCallback = (func) => mEditPictureCallback = func;
-    this.setCloseEditPictureCallback = (func) => mCloseEditPictureCallback = func;
     this.setNavigationCallback = (func) => mNavigationCallback = func;
 }

@@ -1,11 +1,12 @@
 import { FileUtil } from "../../utils/file_util.js";
+import { logInfo } from "../../utils/log_util.js";
 import { Util } from "../../utils/utility.js";
 import { ButtonInput } from "../components/button_input.js";
 import { LabeledImage } from "../components/labeled_image.js";
 
 export function AssetList(container) {
-    let mAssetsUploadCallback = async (files) => { }
-    let mAssetsClearCallback = async () => { }
+    let mAssetsUploadCallback = (files) => { }
+    let mAssetsClearCallback = () => { }
 
     let mAssets = [];
     let mAssetList = []
@@ -21,9 +22,13 @@ export function AssetList(container) {
     let mNewAssetButton = new ButtonInput(mContent)
         .setId("asset-add-button")
         .setLabel("Upload Assets [+]")
-        .setOnClick(async () => {
-            let files = await FileUtil.showFilePicker("audio/*,image/*,.glb,.glTF", true);
-            await mAssetsUploadCallback(files);
+        .setOnClick(() => {
+            FileUtil.showFilePicker("audio/*,image/*,.glb,.glTF", true)
+                .then(files => {
+                    logInfo('Recieved ' + files.length + ' files.');
+                    return mAssetsUploadCallback(files)
+                })
+                .catch(e => { console.error(e); })
         });
 
     let mAssetsContainer = document.createElement('div');
@@ -35,16 +40,12 @@ export function AssetList(container) {
     let mClearAssetsButton = new ButtonInput(mContent)
         .setId("dialog-clear-button")
         .setLabel("Clear Unused Assets")
-        .setOnClick(async () => {
-            await mAssetsClearCallback();
-        });
+        .setOnClick(() => mAssetsClearCallback());
 
     let mCloseButton = new ButtonInput(mContent)
         .setId("dialog-close-button")
         .setLabel("Close")
-        .setOnClick(async () => {
-            mDialog.close()
-        });
+        .setOnClick(() => mDialog.close());
 
     window.addEventListener('pointerdown', (event) => {
         if (mDialog.open && !mDialog.contains(event.target)) {
@@ -54,22 +55,26 @@ export function AssetList(container) {
 
     function updateModel(model) {
         mAssets = model.assets;
-        refreshList();
+        return refreshList();
     }
 
-    async function show() {
+    function show() {
         mDialog.show();
     }
 
-    async function refreshList() {
+    function refreshList() {
         Util.setComponentListLength(mAssetList, mAssets.length, () => new LabeledImage(mAssetsContainer));
-        for (let i = 0; i < mAssets.length; i++) {
+
+        let chain = Promise.resolve();
+        mAssets.forEach((asset, i) => {
             mAssetList[i].setId("asset-" + mAssets[i].id).setLabel(mAssets[i].name);
             if (mAssetUtil) {
-                let thumbnail = await mAssetUtil.loadThumbnail(mAssets[i].id);
-                if (thumbnail) mAssetList[i].setImage(thumbnail.src, true);
+                chain = chain
+                    .then(() => mAssetUtil.loadThumbnail(asset.id))
+                    .then(thumbnail => mAssetList[i].setImage(thumbnail.src, true));
             }
-        }
+        })
+        return chain;
     }
 
     this.updateModel = updateModel;

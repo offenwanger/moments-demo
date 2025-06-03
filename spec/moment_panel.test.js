@@ -14,26 +14,26 @@ describe('Test MomentPanel', function () {
     })
 
     describe('init tests', function () {
-        it('should open a moment', async function () {
-            await createAndOpenStoryMoment();
+        it('should open a moment',  function () {
+             createAndOpenStoryMoment();
         });
     });
 
     describe('delete tests', function () {
-        it('should delete the moment', async function () {
-            await createAndOpenStoryMoment();
+        it('should delete the moment',  function () {
+             createAndOpenStoryMoment();
             expect(testmodel().moments.length == 1);
-            await clickButtonInput('#moment-delete-button');
+             clickButtonInput('#moment-delete-button');
             expect(testmodel().moments.length == 0);
         });
 
-        it('should undo the delete', async function () {
-            await createAndOpenStoryMoment();
+        it('should undo the delete',  function () {
+             createAndOpenStoryMoment();
             expect(testmodel().moments.length == 1);
-            await clickButtonInput('#moment-delete-button');
+             clickButtonInput('#moment-delete-button');
             expect(testmodel().moments.length == 0);
 
-            await ctrlZ()
+             ctrlZ()
             expect(testmodel().moments.length == 1);
         });
     });

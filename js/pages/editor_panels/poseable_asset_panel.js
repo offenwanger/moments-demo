@@ -3,9 +3,9 @@ import { ButtonInput } from "../components/button_input.js";
 import { TextInput } from "../components/text_input.js";
 
 export function PoseableAssetPanel(container) {
-    let mUpdateAttributeCallback = async (id, attr, value) => { };
-    let mDeleteCallback = async (id) => { };
-    let mNavigationCallback = async (id) => { };
+    let mUpdateAttributeCallback = (id, attr, value) => { };
+    let mDeleteCallback = (id) => { };
+    let mNavigationCallback = (id) => { };
 
     let mModel = null;
     let mPoseableAssetId = null;
@@ -18,16 +18,12 @@ export function PoseableAssetPanel(container) {
     let mBackButton = new ButtonInput(mPanelContainer)
         .setId('poseableAsset-back-button')
         .setLabel("<- Back")
-        .setOnClick(async () => {
-            await mNavigationCallback(mPoseableAsset.momentId);
-        })
+        .setOnClick(() => mNavigationCallback(mPoseableAsset.momentId));
 
     let mNameInput = new TextInput(mPanelContainer)
         .setId('poseableAsset-name-input')
         .setLabel("Name")
-        .setOnChange(async (newText) => {
-            await mUpdateAttributeCallback(mPoseableAssetId, { name: newText });
-        });
+        .setOnChange((newText) => mUpdateAttributeCallback(mPoseableAssetId, { name: newText }));
 
     let mAssetPosesContainer = document.createElement('div');
     mAssetPosesContainer.setAttribute('id', 'poseable-asset-asset-poses');
@@ -37,9 +33,7 @@ export function PoseableAssetPanel(container) {
     let mDeleteButton = new ButtonInput(mPanelContainer)
         .setId('poseableAsset-delete-button')
         .setLabel('Delete')
-        .setOnClick(async () => {
-            await mDeleteCallback(mPoseableAssetId);
-        })
+        .setOnClick(() => mDeleteCallback(mPoseableAssetId));
 
     function show(model, poseableAssetId) {
         mModel = model;
@@ -53,7 +47,7 @@ export function PoseableAssetPanel(container) {
         for (let i = 0; i < assetPoses.length; i++) {
             mAssetPosesList[i].setId("assetpose-button-" + assetPoses[i].id)
                 .setLabel(assetPoses[i].name)
-                .setOnClick(async () => await mNavigationCallback(assetPoses[i].id));
+                .setOnClick(() => mNavigationCallback(assetPoses[i].id));
         }
 
         mPanelContainer.style['display'] = '';

@@ -24,7 +24,7 @@ app.get('/', function (req, res) {
 });
 // Everything in the local folder can be accessed via /filename
 app.use('/', express.static(__dirname + '/'));
-app.post('/upload', async (req, res) => {
+app.post('/upload', (req, res) => {
     try {
         let data = req.body;
         logInfo("Received upload: " + data.filename);
@@ -37,10 +37,10 @@ app.post('/upload', async (req, res) => {
         if (!data.storyId || !data.filename || !data.url) { console.error("Malformed request", data); return; }
 
         let outFoldername = data.storyId;
-        await createFolder(outFoldername);
         let outFile = outFoldername + "/" + data.filename;
-        await writeFile(outFile, data.url);
-        res.status(200).send();
+        createFolder(outFoldername)
+            .then(() => writeFile(outFile, data.url))
+            .then(() => res.status(200).send());
     } catch (error) {
         console.error(error);
         res.status(500).send();
@@ -222,7 +222,7 @@ function getSharedStoryData() {
     });
 }
 
-async function writeFile(filename, contents) {
+function writeFile(filename, contents) {
     try {
         fs.writeFileSync(UPLOAD_FOLDER + filename, contents, err => err ? console.error(err) : null);
     } catch (e) {
@@ -230,7 +230,7 @@ async function writeFile(filename, contents) {
     }
 }
 
-async function readFileAsString(filename) {
+function readFileAsString(filename) {
     try {
         return fs.readFileSync(UPLOAD_FOLDER + filename, 'utf8');
     } catch (e) {
@@ -239,7 +239,7 @@ async function readFileAsString(filename) {
     }
 }
 
-async function deleteFile(filename) {
+function deleteFile(filename) {
     try {
         fs.unlinkSync(UPLOAD_FOLDER + filename, 'utf8');
     } catch (e) {
@@ -247,7 +247,7 @@ async function deleteFile(filename) {
     }
 }
 
-async function createFolder(folderName) {
+function createFolder(folderName) {
     try {
         if (!fs.existsSync(UPLOAD_FOLDER + folderName)) {
             fs.mkdirSync(UPLOAD_FOLDER + folderName);
@@ -257,7 +257,7 @@ async function createFolder(folderName) {
     }
 }
 
-async function deleteFolder(folderName) {
+function deleteFolder(folderName) {
     try {
         fs.rmSync(UPLOAD_FOLDER + folderName, { recursive: true, force: true });
     } catch (e) {

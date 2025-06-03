@@ -6,7 +6,7 @@ export function XRSessionController() {
     let mOnSessionStartCallback = () => { }
     let mOnSessionEndCallback = () => { }
 
-    let mUserMovedCallback = async () => { }
+    let mUserMovedCallback = () => { }
 
     let mSession = null;
     let mSceneContainer = new THREE.Group();
@@ -20,21 +20,22 @@ export function XRSessionController() {
 
     let mXRRenderer = new THREE.WebGLRenderer({ antialias: true, canvas: mXRCanvas });
     mXRRenderer.xr.enabled = true;
-    async function sessionStart(session) {
-        await mXRRenderer.xr.setSession(session);
+    function sessionStart(session) {
 
         mSession = session;
         setupListeners();
         mOnSessionStartCallback();
 
         mXRInputController.setSession(mSession);
+
+        return mXRRenderer.xr.setSession(session);
     }
     mXRRenderer.xr.addEventListener('sessionend', () => {
         mSession = null;
         mOnSessionEndCallback();
     })
     // Dumb bug workaround, makes it more convinient to enter XR
-    mXRCanvas.addEventListener("webglcontextlost", async function (event) {
+    mXRCanvas.addEventListener("webglcontextlost", function (event) {
         logInfo("Terminating the failed session");
         mXRRenderer.xr.getSession().end();
     }, false);
@@ -44,20 +45,20 @@ export function XRSessionController() {
     function setupListeners() {
         if (!mSession) return;
 
-        mSession.addEventListener('selectstart', async () => await mXRInputController.pollInteractionState(mSession));
-        mSession.addEventListener('selectend', async () => await mXRInputController.pollInteractionState(mSession));
-        mSession.addEventListener('squeezestart', async () => await mXRInputController.pollInteractionState(mSession));
-        mSession.addEventListener('squeezeend', async () => await mXRInputController.pollInteractionState(mSession));
+        mSession.addEventListener('selectstart', () => mXRInputController.pollInteractionState(mSession));
+        mSession.addEventListener('selectend', () => mXRInputController.pollInteractionState(mSession));
+        mSession.addEventListener('squeezestart', () => mXRInputController.pollInteractionState(mSession));
+        mSession.addEventListener('squeezeend', () => mXRInputController.pollInteractionState(mSession));
     }
 
     let lastSend = Date.now();
-    async function render(time) {
+    function render(time) {
         if (Date.now() - lastSend > 1000) {
             let pos = mXRInputController.getUserPosition();
             mUserMovedCallback(pos.head, pos.handR, pos.handL);
         }
 
-        await mXRInputController.pollInteractionState();
+        mXRInputController.pollInteractionState();
     }
 
     this.updateState = (interactionState) => { }

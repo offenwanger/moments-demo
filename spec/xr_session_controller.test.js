@@ -13,28 +13,28 @@ describe('Test XR Session', function () {
     })
 
     describe('session tests', function () {
-        it('should start a session', async function () {
-            await setupEnvironmentWith3DAsset('bonesAndMesh.glb');
-            await startXR();
+        it('should start a session', function () {
+            setupEnvironmentWith3DAsset('bonesAndMesh.glb');
+            startXR();
         });
 
-        it('should stop a session', async function () {
-            await setupEnvironmentWith3DAsset('bonesAndMesh.glb');
-            await startXR();
-            await stopXR();
+        it('should stop a session', function () {
+            setupEnvironmentWith3DAsset('bonesAndMesh.glb');
+            startXR();
+            stopXR();
         });
 
-        it('should perform a render pass', async function () {
-            await setupEnvironmentWith3DAsset('bonesAndMesh.glb');
-            await startXR();
+        it('should perform a render pass', function () {
+            setupEnvironmentWith3DAsset('bonesAndMesh.glb');
+            startXR();
             global.test_rendererAccess.animationLoop();
         });
     });
 
     describe('move tests', function () {
-        it('should drag', async function () {
-            await setupEnvironmentWith3DAsset('threeMesh.glb');
-            await startXR();
+        it('should drag', function () {
+            setupEnvironmentWith3DAsset('threeMesh.glb');
+            startXR();
 
             let poseableAsset = testmodel().poseableAssets[0]
 
@@ -43,12 +43,12 @@ describe('Test XR Session', function () {
             expect(cubePos.y).toBeCloseTo(0, 4);
             expect(cubePos.z).toBeCloseTo(-1, 4);
 
-            await lookHead(cubePos.x, cubePos.y, cubePos.z);
-            await moveXRController(true, 0, 0, -1);
-            await lookController(true, cubePos.x, cubePos.y, cubePos.z);
-            await pressXRTrigger(true)
-            await moveXRController(true, 1, 0, -1);
-            await releaseXRTrigger(true);
+            lookHead(cubePos.x, cubePos.y, cubePos.z);
+            moveXRController(true, 0, 0, -1);
+            lookController(true, cubePos.x, cubePos.y, cubePos.z);
+            pressXRTrigger(true)
+            moveXRController(true, 1, 0, -1);
+            releaseXRTrigger(true);
 
             let newcubePos = testmodel().assetPoses.find(p => p.name == "Cube" && p.parentId == poseableAsset.id);
             expect(newcubePos.x).toBeCloseTo(1.6, 3);
@@ -56,9 +56,9 @@ describe('Test XR Session', function () {
             expect(newcubePos.z).toBeCloseTo(-1, 4);
         });
 
-        it('should rotate', async function () {
-            await setupEnvironmentWith3DAsset('oneMesh.glb');
-            await startXR();
+        it('should rotate', function () {
+            setupEnvironmentWith3DAsset('oneMesh.glb');
+            startXR();
 
             let poseableAsset = testmodel().poseableAssets[0]
 
@@ -71,13 +71,13 @@ describe('Test XR Session', function () {
             expect(cubeRot.y).toBeCloseTo(0, 4);
             expect(cubeRot.z).toBeCloseTo(0, 4);
 
-            await lookHead(cubePos.x, cubePos.y, cubePos.z);
-            await moveXRController(true, 0, 0, -1);
-            await lookController(true, 0.6, 0, -1);
-            await pressXRTrigger(true)
-            await moveXRController(true, 0, 1, -1);
-            await lookController(true, 0, 1, -1);
-            await releaseXRTrigger(true);
+            lookHead(cubePos.x, cubePos.y, cubePos.z);
+            moveXRController(true, 0, 0, -1);
+            lookController(true, 0.6, 0, -1);
+            pressXRTrigger(true)
+            moveXRController(true, 0, 1, -1);
+            lookController(true, 0, 1, -1);
+            releaseXRTrigger(true);
 
             let newcubePos = testmodel().assetPoses.find(p => p.name == "Cube" && p.parentId == poseableAsset.id);
             expect(newcubePos.x).toBeCloseTo(0, 3);
@@ -89,9 +89,9 @@ describe('Test XR Session', function () {
             expect(newcubeRot.z).toBeCloseTo(0, 4);
         });
 
-        it('should move correctly when user moves', async function () {
-            await setupEnvironmentWith3DAsset('oneMesh.glb');
-            await startXR();
+        it('should move correctly when user moves', function () {
+            setupEnvironmentWith3DAsset('oneMesh.glb');
+            startXR();
 
             let poseableAsset = testmodel().poseableAssets[0]
             let cubePos = testmodel().assetPoses.find(p => p.name == "Cube" && p.parentId == poseableAsset.id);
@@ -103,24 +103,24 @@ describe('Test XR Session', function () {
             expect(cubeRot.y).toBeCloseTo(0, 4);
             expect(cubeRot.z).toBeCloseTo(0, 4);
 
-            await moveXRHead(0, 1, 0);
-            await lookHead(0, 1, -1);
+            moveXRHead(0, 1, 0);
+            lookHead(0, 1, -1);
 
             expect(getTHREEObjectByName('Cube').userData.state).toBe('idle')
             // grab and move forward
-            await moveXRController(true, 0, 0, -1);
-            await lookController(true, 0.6, 0, -1);
+            moveXRController(true, 0, 0, -1);
+            lookController(true, 0.6, 0, -1);
 
             expect(getTHREEObjectByName('Cube').userData.state).toBe('highlighted')
-            await pressXRTrigger(true)
+            pressXRTrigger(true)
             expect(getTHREEObjectByName('Cube').userData.state).toBe('selected')
 
-            await toggleMoveForward();
-            await toggleMoveForward();
+            toggleMoveForward();
+            toggleMoveForward();
 
-            await releaseXRTrigger(true);
+            releaseXRTrigger(true);
             expect(getTHREEObjectByName('Cube').userData.state).toBe('highlighted')
-            await moveXRController(true, 0, 0, -1);
+            moveXRController(true, 0, 0, -1);
             expect(getTHREEObjectByName('Cube').userData.state).toBe('idle')
 
             cubePos = testmodel().assetPoses.find(p => p.name == "Cube" && p.parentId == poseableAsset.id);
@@ -133,9 +133,9 @@ describe('Test XR Session', function () {
             expect(cubeRot.z).toBeCloseTo(0, 4);
         });
 
-        it('should move correctly when user is turned', async function () {
-            await setupEnvironmentWith3DAsset('oneMesh.glb');
-            await startXR();
+        it('should move correctly when user is turned', function () {
+            setupEnvironmentWith3DAsset('oneMesh.glb');
+            startXR();
 
             let poseableAsset = testmodel().poseableAssets[0]
 
@@ -148,21 +148,21 @@ describe('Test XR Session', function () {
             expect(cubeRot.y).toBeCloseTo(0, 4);
             expect(cubeRot.z).toBeCloseTo(0, 4);
 
-            await toggleTurnLeft();
-            await toggleTurnLeft();
+            toggleTurnLeft();
+            toggleTurnLeft();
 
-            await moveXRHead(0, 1, 0);
-            await lookHead(0, 1, -1);
+            moveXRHead(0, 1, 0);
+            lookHead(0, 1, -1);
 
             // grab and move forward
             expect(getTHREEObjectByName('Cube').userData.state).toBe('idle')
-            await moveXRController(true, 0, 0, -1);
-            await lookController(true, 0.6, 0, -1);
+            moveXRController(true, 0, 0, -1);
+            lookController(true, 0.6, 0, -1);
 
             expect(getTHREEObjectByName('Cube').userData.state).toBe('highlighted')
-            await pressXRTrigger(true);
+            pressXRTrigger(true);
             expect(getTHREEObjectByName('Cube').userData.state).toBe('selected')
-            await releaseXRTrigger(true);
+            releaseXRTrigger(true);
             expect(getTHREEObjectByName('Cube').userData.state).toBe('highlighted')
 
             cubePos = testmodel().assetPoses.find(p => p.name == "Cube" && p.parentId == poseableAsset.id);

@@ -2,24 +2,29 @@
 import { dirname } from 'path';
 import * as td from 'testdouble';
 import { fileURLToPath } from 'url';
+import { mockResolvePromise } from './mock_promise.js';
+import syncFetch from 'sync-fetch'
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const OUT_FOLDER = __dirname + '/testoutput/'
 
 export async function mockServerSetup() {
     global.endpoints = { socketEndpoints: {} };
+    // don't use real fetch but we'll keep track of it anyway.
+    // might need to put it back some day.
     let realFetch = fetch;
-    global.fetch = async (url, data = {}) => {
+    global.fetch = (request, data = {}) => {
         // req needs a body, res is the callback;
         let res = {
             status: () => { return res },
             send: () => { return res },
         }
         data.body ? data.body = JSON.parse(data.body) : '';
-        if (global.endpoints[url]) {
-            await global.endpoints[url](data, res);
+        if (global.endpoints[request]) {
+            global.endpoints[request](data, res);
         } else {
-            return realFetch(url);
+            let result = syncFetch(request.url)
+            return mockResolvePromise(result);
         }
     }
 

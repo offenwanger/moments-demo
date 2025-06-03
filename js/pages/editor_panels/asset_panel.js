@@ -4,9 +4,9 @@ import { ButtonInput } from "../components/button_input.js";
 import { TextInput } from "../components/text_input.js";
 
 export function AssetPanel(container) {
-    let mUpdateAttributeCallback = async (id, attr, value) => { };
-    let mDeleteCallback = async (id) => { };
-    let mNavigationCallback = async (id) => { };
+    let mUpdateAttributeCallback = (id, attr, value) => { };
+    let mDeleteCallback = (id) => { };
+    let mNavigationCallback = (id) => { };
 
     let mScrollHeight = 0;
 
@@ -21,27 +21,12 @@ export function AssetPanel(container) {
     let mBackToStoryButton = new ButtonInput(mPanelContainer)
         .setId('back-button')
         .setLabel('<- Story')
-        .setOnClick(async () => {
-            mNavigationCallback(mModel.id);
-        })
+        .setOnClick(() => mNavigationCallback(mModel.id))
 
     let mNameInput = new TextInput(mPanelContainer)
         .setId('asset-name-input')
         .setLabel("Name")
-        .setOnChange(async (newText) => {
-            await mUpdateAttributeCallback(mAsset, { name: newText });
-        });
-
-    let mFileButton = new ButtonInput(mPanelContainer)
-        .setId('asset-file-button')
-        .setOnClick(async () => {
-            // TODO: show for the right asset type
-            let fileHandle = await FileUtil.showFilePicker();
-            if (fileHandle) {
-                // validate the file
-                // transfer the file to file folder
-            }
-        })
+        .setOnChange((newText) => mUpdateAttributeCallback(mAsset, { name: newText }));
 
     let mUsedByContainer = document.createElement('div')
     mUsedByContainer.setAttribute('id', 'poseableAssets');
@@ -53,9 +38,7 @@ export function AssetPanel(container) {
     let mDeleteButton = new ButtonInput(mPanelContainer)
         .setId('asset-delete-button')
         .setLabel('Delete')
-        .setOnClick(async () => {
-            await mDeleteCallback(mAssetId);
-        })
+        .setOnClick(() => mDeleteCallback(mAssetId))
 
     function show(model, assetId) {
         mModel = model;
@@ -71,7 +54,7 @@ export function AssetPanel(container) {
         for (let i = 0; i < usedByItems.length; i++) {
             mUsedByList[i].setId("asset-used-by-button-" + usedByItems[i].id)
                 .setLabel(usedByItems[i].name)
-                .setOnClick(async () => await mNavigationCallback(usedByItems[i].id));
+                .setOnClick(() => mNavigationCallback(usedByItems[i].id));
         }
 
         mPanelContainer.style['display'] = '';

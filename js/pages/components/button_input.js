@@ -1,5 +1,5 @@
 export function ButtonInput(container) {
-    let mClickCallback = async () => { }
+    let mClickCallback = () => { }
 
     let mButton = document.createElement('div')
     mButton.style["background"] = "#d6d6d6";
@@ -8,7 +8,7 @@ export function ButtonInput(container) {
     mButton.style["user-select"] = "none";
     mButton.style["box-shadow"] = "0 2px 3px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19)";
     mButton.style["margin"] = "5px";
-    mButton.addEventListener('click', async () => { await mClickCallback(); })
+    mButton.addEventListener('click', () => { mClickCallback(); })
     mButton.addEventListener('pointerup', () => { mButton.style["background"] = "#d6d6d6" })
     mButton.addEventListener('pointerdown', () => { mButton.style["background"] = "#c6c6c6" })
     mButton.addEventListener('pointerenter', () => { mButton.style["background"] = "#e6e6e6" })

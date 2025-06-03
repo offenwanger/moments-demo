@@ -1,5 +1,5 @@
 export function ToggleInput(container) {
-    let mChangeCallback = async (bool) => { };
+    let mChangeCallback = (bool) => { };
 
     let mInputContainer = document.createElement('div');
     container.appendChild(mInputContainer);
@@ -9,9 +9,9 @@ export function ToggleInput(container) {
 
     let mInputBox = document.createElement('input');
     mInputBox.setAttribute('type', 'checkbox')
-    mInputBox.addEventListener('change', async () => {
+    mInputBox.addEventListener('change', () => {
         let val = mInputBox.checked;
-        await mChangeCallback(val);
+        mChangeCallback(val);
     });
     mInputContainer.appendChild(mInputBox)
 

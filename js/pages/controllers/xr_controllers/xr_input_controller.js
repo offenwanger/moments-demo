@@ -5,9 +5,9 @@ import { CanvasUtil } from '../../../utils/canvas_util.js';
 import { Util } from "../../../utils/utility.js";
 
 export function XRInputController(sceneContainer) {
-    let mPointerDownCallback = async (raycaster, orietation, isPrimary) => { }
-    let mPointerMoveCallback = async (raycaster, orietation, isPrimary) => { }
-    let mPointerUpCallback = async (raycaster, orietation, isPrimary) => { }
+    let mPointerDownCallback =  (raycaster, orietation, isPrimary) => { }
+    let mPointerMoveCallback =  (raycaster, orietation, isPrimary) => { }
+    let mPointerUpCallback =  (raycaster, orietation, isPrimary) => { }
 
     let mSession = null;
     let mMoved = false;
@@ -129,7 +129,7 @@ export function XRInputController(sceneContainer) {
         }
     }
 
-    async function pollInteractionState() {
+     function pollInteractionState() {
         let axes = getRightGamePad();
         if (!mMoved && Math.abs(axes[3]) > 0.5) {
             let add = new THREE.Vector3();
@@ -161,22 +161,22 @@ export function XRInputController(sceneContainer) {
 
 
         setRay(mRightController, mRaycaster);
-        await mPointerMoveCallback(mRaycaster, getRightControllerOrientation(), true);
+         mPointerMoveCallback(mRaycaster, getRightControllerOrientation(), true);
         if (lastButtonState.primaryRPressed != mButtonState.primaryRPressed) {
             if (mButtonState.primaryRPressed) {
-                await mPointerDownCallback(mRaycaster, getRightControllerOrientation(), true);
+                 mPointerDownCallback(mRaycaster, getRightControllerOrientation(), true);
             } else {
-                await mPointerUpCallback(mRaycaster, getRightControllerOrientation(), true);
+                 mPointerUpCallback(mRaycaster, getRightControllerOrientation(), true);
             }
         }
 
         setRay(mLeftController, mRaycaster);
-        await mPointerMoveCallback(mRaycaster, getLeftControllerOrientation(), false);
+         mPointerMoveCallback(mRaycaster, getLeftControllerOrientation(), false);
         if (lastButtonState.primaryLPressed != mButtonState.primaryLPressed) {
             if (mButtonState.primaryLPressed) {
-                await mPointerDownCallback(mRaycaster, getLeftControllerOrientation(), false);
+                 mPointerDownCallback(mRaycaster, getLeftControllerOrientation(), false);
             } else {
-                await mPointerUpCallback(mRaycaster, getLeftControllerOrientation(), false);
+                 mPointerUpCallback(mRaycaster, getLeftControllerOrientation(), false);
             }
         }
     }
