@@ -1,12 +1,11 @@
-import { Data } from "../../data.js";
 import { Util } from "../../utils/utility.js";
 import { ButtonInput } from "../components/button_input.js";
 import { TextInput } from "../components/text_input.js";
 
 export function StoryPanel(container) {
-    let mAddMomentCallback = async (parentId, itemClass, config) => { };
-    let mUpdateAttributeCallback = async (id, attr, value) => { };
-    let mNavigationCallback = async (id) => { };
+    let mAddMomentCallback = (parentId, itemClass, config) => { };
+    let mUpdateAttributeCallback = (id, attr, value) => { };
+    let mNavigationCallback = (id) => { };
 
     let mStory = null;
     let mScrollHeight = 0;
@@ -16,9 +15,7 @@ export function StoryPanel(container) {
     let mNameInput = new TextInput(mPanelContainer)
         .setId('story-name-input')
         .setLabel("Name")
-        .setOnChange(async (newText) => {
-            await mUpdateAttributeCallback(mStory.id, { name: newText });
-        });
+        .setOnChange((newText) => mUpdateAttributeCallback(mStory.id, { name: newText }));
 
     let mMomentsContainer = document.createElement('div')
     mMomentsContainer.setAttribute('id', 'story-moments');
@@ -26,9 +23,7 @@ export function StoryPanel(container) {
     let mMomentsAddButton = new ButtonInput(mMomentsContainer)
         .setId('story-moment-add-button')
         .setLabel('Moments [+]')
-        .setOnClick(async () => {
-            await mAddMomentCallback();
-        })
+        .setOnClick(() => mAddMomentCallback())
     let mMomentsList = [];
 
     function show(model) {
@@ -38,7 +33,7 @@ export function StoryPanel(container) {
         for (let i = 0; i < mStory.moments.length; i++) {
             mMomentsList[i].setId("moment-button-" + mStory.moments[i].id)
                 .setLabel(mStory.moments[i].name)
-                .setOnClick(async () => await mNavigationCallback(mStory.moments[i].id));
+                .setOnClick(() => mNavigationCallback(mStory.moments[i].id));
         }
 
         mPanelContainer.style['display'] = '';

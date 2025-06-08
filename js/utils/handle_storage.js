@@ -4,7 +4,7 @@ export const HandleStorage = function () {
     const OBJECT_STORE_NAME = 'HandleStore';
     let mDatabase = null;
 
-    async function getDatabase() {
+    function getDatabase() {
         return new Promise((resolve, reject) => {
             if (mDatabase) {
                 resolve(mDatabase);
@@ -26,30 +26,35 @@ export const HandleStorage = function () {
         });
     }
 
-    async function executeTransaction(type, storeCall) {
-        return getDatabase().then(database => new Promise((resolve, reject) => {
-            let transaction = database.transaction([OBJECT_STORE_NAME], type);
-            let store = transaction.objectStore(OBJECT_STORE_NAME);
-            let req = storeCall(store);
-            req.onerror = function () { reject(req.error) };
-            req.onsuccess = function () { resolve(req.result) }
-        }));
+    function executeTransaction(type, storeCall) {
+        return getDatabase()
+            .then(database => new Promise((resolve, reject) => {
+                let transaction = database.transaction([OBJECT_STORE_NAME], type);
+                let store = transaction.objectStore(OBJECT_STORE_NAME);
+                let req = storeCall(store);
+                req.onerror = function () {
+                    reject(req.error)
+                }
+                req.onsuccess = function () {
+                    resolve(req.result)
+                }
+            }));
 
     }
 
-    async function getItem(key) {
+    function getItem(key) {
         return executeTransaction('readonly', store => store.get(key));
     }
 
-    async function setItem(key, value) {
+    function setItem(key, value) {
         return executeTransaction('readwrite', store => store.put(value, key));
     }
 
-    async function removeItem(key) {
+    function removeItem(key) {
         return executeTransaction('readwrite', store => store.delete(key));
     }
 
-    async function clear() {
+    function clear() {
         return executeTransaction('readwrite', store => store.clear());
     }
 

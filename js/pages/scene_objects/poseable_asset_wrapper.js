@@ -34,7 +34,7 @@ export function PoseableAssetWrapper(parent, audioListener) {
         transparent: true
     });
 
-    async function update(poseableAsset, model, assetUtil) {
+    function updateModel(poseableAsset, model, assetUtil) {
         mModel = model;
 
         mPoses = mModel.assetPoses.filter(p => p.parentId == poseableAsset.id);
@@ -46,107 +46,130 @@ export function PoseableAssetWrapper(parent, audioListener) {
         // to add things to them.
         mInteractionTargets = makeInteractionTargets();
 
+        let loadSequence = Promise.resolve();
         if (mPoseableAsset.assetId != oldModel.assetId) {
             if (mGLTF) remove();
             mTeleportSprites = {};
             mAudioSprites = {};
             mSounds = {};
-            try {
-                mGLTF = await assetUtil.loadModelAsset(mPoseableAsset.assetId)
-                mModelGroup.add(mGLTF);
 
-                mTargets = []
-                let targets = GLTKUtil.getInteractionTargetsFromGTLKScene(mGLTF);
-                // create and assign the mesh data
-                targets.forEach(target => {
-                    if (!target.isMesh && target.type != "Bone") { console.error("Unexpected target type!", target); return; }
+            loadSequence = loadSequence
+                .then(() => assetUtil.loadModelAsset(mPoseableAsset.assetId))
+                .then(gltf => {
+                    if (!gltf) { throw Error('Cannot display model: ' + mPoseableAsset.name) }
 
-                    let pose = mPoses.find(p => p.name == target.name);
-                    if (!pose) {
-                        console.error("Cannot find PoseableAsset for item in asset: " + target.name);
-                        return;
-                    }
+                    mGLTF = gltf;
+                    mGLTF.userData.id = poseableAsset.id;
+                    mModelGroup.add(mGLTF);
 
-                    if (target.isMesh) {
-                        target.userData.id = pose.id;
-                        if (!target.material) { target.material = new THREE.MeshBasicMaterial() }
-                        target.userData.originalColor = target.material.color.getHex();
-                        mTargets.push(target)
-                    } else if (target.type == "Bone") {
-                        let targetGroup = attachBoneTarget(target, pose.id);
-                        mTargets.push(targetGroup);
-                    }
-                })
+                    mTargets = []
+                    let targets = GLTKUtil.getInteractionTargetsFromGTLKScene(mGLTF);
+                    // create and assign the mesh data
+                    targets.forEach(target => {
+                        if (!target.isMesh && target.type != "Bone") { console.error("Unexpected target type!", target); return; }
 
-            } catch (error) {
-                console.error(error);
-            }
+                        let pose = mPoses.find(p => p.name == target.name);
+                        if (!pose) {
+                            console.error("Cannot find PoseableAsset for item in asset: " + target.name);
+                            return;
+                        }
+
+                        if (target.isMesh) {
+                            target.userData.id = pose.id;
+                            if (!target.material) { target.material = new THREE.MeshBasicMaterial() }
+                            target.userData.originalColor = target.material.color.getHex();
+                            mTargets.push(target)
+                        } else if (target.type == "Bone") {
+                            let targetGroup = attachBoneTarget(target, pose.id);
+                            mTargets.push(targetGroup);
+                        }
+                    })
+                }).catch(e => {
+                    mGLTF = null;
+                    console.error(e)
+                    console.error('Failed to load: ' + mPoseableAsset.assetId);
+                });
         }
 
-        for (const pose of mPoses) {
-            let object = mGLTF.getObjectByName(pose.name);
-            if (!object) { console.error("Invalid pose!", pose); return; }
+        loadSequence = loadSequence
+            .then(() => {
+                if (!mGLTF) return;
 
-            object.setRotationFromQuaternion(new THREE.Quaternion().fromArray(pose.orientation));
-            object.position.set(pose.x, pose.y, pose.z);
-            object.scale.set(pose.scale, pose.scale, pose.scale);
-            object.updateWorldMatrix()
+                let innerLoadsequence = Promise.resolve();
+                for (const pose of mPoses) {
+                    let object = mGLTF.getObjectByName(pose.name);
+                    if (!object) { console.error("Invalid pose!", pose); return; }
 
-            object.userData.id = pose.id;
-            object.userData.state = 'idle';
+                    object.setRotationFromQuaternion(new THREE.Quaternion().fromArray(pose.orientation));
+                    object.position.set(pose.x, pose.y, pose.z);
+                    object.scale.set(pose.scale, pose.scale, pose.scale);
+                    object.updateWorldMatrix()
 
-            let teleport = model.teleports.find(t => t.attachedId == pose.id);
-            if (teleport) {
-                if (!mTeleportSprites[pose.id]) {
-                    mTeleportSprites[pose.id] = mTeleportSprite.clone();
-                    object.add(mTeleportSprites[pose.id]);
-                    let bbox = new THREE.Box3().setFromObject(object);
-                    let size = new THREE.Vector3();
-                    bbox.getSize(size);
-                    mTeleportSprites[pose.id].position.set(size.x / 2, size.y / 2, size.z / 2);
+                    object.userData.id = pose.id;
+                    object.userData.state = 'idle';
+
+                    let teleport = model.teleports.find(t => t.attachedId == pose.id);
+                    if (teleport) {
+                        if (!mTeleportSprites[pose.id]) {
+                            mTeleportSprites[pose.id] = mTeleportSprite.clone();
+                            object.add(mTeleportSprites[pose.id]);
+                            let bbox = new THREE.Box3().setFromObject(object);
+                            let size = new THREE.Vector3();
+                            bbox.getSize(size);
+                            mTeleportSprites[pose.id].position.set(size.x / 2, size.y / 2, size.z / 2);
+                        }
+
+                        object.userData.isTeleport = true;
+                    } else {
+                        if (mTeleportSprites[pose.id]) {
+                            mTeleportSprites[pose.id].parent.remove(mTeleportSprites[pose.id]);
+                            delete mTeleportSprites[pose.id];
+                        }
+                        object.userData.isTeleport = false;
+                    }
+
+                    let audio = model.audios.find(a => a.attachedId == pose.id);
+                    if (audio) {
+                        if (!mAudioSprites[pose.id]) {
+                            mAudioSprites[pose.id] = mAudioSprite.clone();
+                            object.add(mAudioSprites[pose.id]);
+                            let bbox = new THREE.Box3().setFromObject(object);
+                            let size = new THREE.Vector3();
+                            bbox.getSize(size);
+                            mAudioSprites[pose.id].position.set(size.x / 2, -size.y / 2, size.z / 2);
+                        }
+
+                        object.userData.interactionAudio = !audio.ambient;
+                        object.userData.isAudio = true;
+
+                        if (!mSounds[pose.id]) {
+                            mSounds[pose.id] = new THREE.PositionalAudio(audioListener);
+                            mSounds[pose.id].setLoop(true);
+                            mSounds[pose.id].setVolume(audio.volume);
+                            innerLoadsequence = innerLoadsequence
+                                .then(() => assetUtil.loadAudioAsset(audio.assetId))
+                                .then(buffer => {
+                                    mSounds[pose.id].setBuffer(buffer);
+                                    if (audio.ambient) try {
+                                        mSounds[pose.id].play()
+                                    } catch (e) {
+                                        console.error(e);
+                                    }
+                                })
+                                .catch(e => {
+                                    console.error(e);
+                                    console.error('Failed to load: ' + audio.assetId);
+                                })
+                        }
+                    } else {
+                        if (mAudioSprites[pose.id]) {
+                            mAudioSprites[pose.id].parent.remove(mAudioSprites[pose.id]);
+                            delete mAudioSprites[pose.id];
+                        }
+                        object.userData.isAudio = false;
+                    }
                 }
-
-                object.userData.isTeleport = true;
-            } else {
-                if (mTeleportSprites[pose.id]) {
-                    mTeleportSprites[pose.id].parent.remove(mTeleportSprites[pose.id]);
-                    delete mTeleportSprites[pose.id];
-                }
-                object.userData.isTeleport = false;
-            }
-
-            let audio = model.audios.find(a => a.attachedId == pose.id);
-            if (audio) {
-                if (!mAudioSprites[pose.id]) {
-                    mAudioSprites[pose.id] = mAudioSprite.clone();
-                    object.add(mAudioSprites[pose.id]);
-                    let bbox = new THREE.Box3().setFromObject(object);
-                    let size = new THREE.Vector3();
-                    bbox.getSize(size);
-                    mAudioSprites[pose.id].position.set(size.x / 2, -size.y / 2, size.z / 2);
-                }
-
-                if (!mSounds[pose.id]) {
-                    mSounds[pose.id] = new THREE.PositionalAudio(audioListener);
-                    let buffer = await assetUtil.loadAudioAsset(audio.assetId);
-                    mSounds[pose.id].setBuffer(buffer);
-                    mSounds[pose.id].setLoop(true);
-                    mSounds[pose.id].setVolume(audio.volume);
-                    if (audio.ambient) try { mSounds[pose.id].play() } catch (e) { console.error(e); }
-                }
-
-                object.userData.interactionAudio = !audio.ambient;
-                object.userData.isAudio = true;
-            } else {
-                if (mAudioSprites[pose.id]) {
-                    mAudioSprites[pose.id].parent.remove(mAudioSprites[pose.id]);
-                    delete mAudioSprites[pose.id];
-                }
-                object.userData.isAudio = false;
-            }
-        }
-
-        mGLTF.userData.id = poseableAsset.id;
+            })
     }
 
     function getId() {
@@ -165,6 +188,7 @@ export function PoseableAssetWrapper(parent, audioListener) {
         if (toolState.tool != ToolButtons.MOVE) return [];
 
         const intersects = ray.intersectObjects(mTargets);
+
         let targets = intersects.map(i => {
             if (!i.object) { console.error("Invalid Intersect!"); return null; }
             let poseId = i.object.userData.id;
@@ -377,7 +401,7 @@ export function PoseableAssetWrapper(parent, audioListener) {
         return group;
     }
 
-    this.update = update;
+    this.updateModel = updateModel
     this.getId = getId;
     this.remove = remove;
     this.getTargets = getTargets;

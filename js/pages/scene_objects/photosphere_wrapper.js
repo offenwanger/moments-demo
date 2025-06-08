@@ -24,7 +24,7 @@ export function PhotosphereWrapper(parent) {
     let mParent = parent;
     let mModel = new Data.StoryModel();
     let mPhotosphere = new Data.Photosphere();
-    mPhotosphere.assetId = 'awaiting load';
+    mPhotosphere.assetId = 'not loaded';
     let mStrokes = [];
     let mSurfaces = [];
     let mSurfacePivots = [];
@@ -87,7 +87,7 @@ export function PhotosphereWrapper(parent) {
     const mPlaneHelper = new THREE.Plane();
     const mRayHelper = new THREE.Ray();
 
-    async function update(photosphere, model, assetUtil) {
+    function updateModel(photosphere, model, assetUtil) {
         // reset the interaction parameters
         mInputStrokes = [];
         mInputPath = [];
@@ -166,15 +166,6 @@ export function PhotosphereWrapper(parent) {
             updateMesh();
         }
 
-        if (!oldPhotosphere || mPhotosphere.assetId != oldPhotosphere.assetId) {
-            if (mPhotosphere.assetId) {
-                mImage = await assetUtil.loadImageAsset(mPhotosphere.assetId);
-            } else {
-                mImage = await (new THREE.ImageLoader()).loadAsync(DEFAULT_TEXTURE)
-            }
-            redraw = true;
-        }
-
         let oldStrokes = mStrokes.map(s => s.id).sort().join('');
         mStrokes = model.strokes.filter(s => s.photosphereId == mPhotosphere.id);
         if (mPhotosphere.blur != oldPhotosphere.blur ||
@@ -187,6 +178,22 @@ export function PhotosphereWrapper(parent) {
             drawColor();
             drawSurfaceArea();
             draw();
+        }
+
+        if (!oldPhotosphere || mPhotosphere.assetId != oldPhotosphere.assetId) {
+            let load;
+            if (mPhotosphere.assetId) {
+                load = assetUtil.loadImageAsset(mPhotosphere.assetId);
+            } else {
+                load = new THREE.ImageLoader().loadAsync(DEFAULT_TEXTURE);
+            }
+            load.then(img => {
+                mImage = img;
+                drawBlur();
+                drawColor();
+                drawSurfaceArea();
+                draw();
+            });
         }
     }
 
@@ -937,7 +944,7 @@ export function PhotosphereWrapper(parent) {
     }
 
     this.getTargets = getTargets;
-    this.update = update;
+    this.updateModel = updateModel
     this.getId = getId;
     this.remove = remove;
 }

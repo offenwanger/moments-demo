@@ -15,14 +15,14 @@ describe('Test Picture Wrapper', function () {
     })
 
     describe('init tests', function () {
-        it('should load a Picture', async function () {
-            await setupEnvironmentWithPicture();
+        it('should load a Picture', function () {
+            setupEnvironmentWithPicture();
         });
     });
 
     describe('canvas drag tests', function () {
-        it('should drag picture', async function () {
-            await setupEnvironmentWithPicture();
+        it('should drag picture', function () {
+            setupEnvironmentWithPicture();
             let picture = testmodel().pictures[0];
 
             expect(picture.x).toBeCloseTo(0, 3);
@@ -31,12 +31,12 @@ describe('Test Picture Wrapper', function () {
 
             let canvas = document.querySelector('#main-canvas');
 
-            await movePageHead(0, 0, -1);
-            await lookHead(0, 0, 0);
-            await pointermove(canvas.width / 2, canvas.height / 2);
-            await canvaspointerdown(canvas.width / 2, canvas.height / 2)
-            await pointermove(canvas.width / 2 - 100, canvas.height / 2);
-            await pointerup(canvas.width / 2 - 100, canvas.height / 2);
+            movePageHead(0, 0, -1);
+            lookHead(0, 0, 0);
+            pointermove(canvas.width / 2, canvas.height / 2);
+            canvaspointerdown(canvas.width / 2, canvas.height / 2)
+            pointermove(canvas.width / 2 - 100, canvas.height / 2);
+            pointerup(canvas.width / 2 - 100, canvas.height / 2);
 
             picture = testmodel().pictures[0];
             expect(picture.x).toBeCloseTo(0.18839, 3);

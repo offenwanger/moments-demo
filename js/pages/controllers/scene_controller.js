@@ -38,36 +38,40 @@ export function SceneController(audioListener) {
     }
 
 
-    async function updateModel(model, assetUtil) {
-        if (!mEnvironmentBox) {
-            mEnvironmentBox = await assetUtil.loadDefaultEnvironmentCube();
-            mScene.background = mEnvironmentBox;
-        }
+    function updateModel(model, assetUtil) {
         mModel = model;
         mAssetUtil = assetUtil;
 
+        let moment = null;
         if (mCurrentMomentId) {
-            let moment = mModel.find(mCurrentMomentId);
+            moment = mModel.find(mCurrentMomentId);
             if (!moment) {
                 // moment doesn't or no longer exists
                 mCurrentMomentId = null;
-            } else {
-                await mMomentWrapper.update(moment, model, assetUtil);
             }
-        } else {
-            await mMomentWrapper.update(null, model, assetUtil);
+        }
+        mMomentWrapper.updateModel(moment, model, assetUtil);
+
+        if (!mEnvironmentBox) {
+            assetUtil.loadDefaultEnvironmentCube()
+                .then(box => {
+                    mEnvironmentBox = box
+                    mScene.background = mEnvironmentBox;
+                });
         }
     }
 
-    async function setCurrentMoment(momentId = null) {
-        // update the thumbnail
-        if (mCurrentMomentId && mAssetUtil) {
-            await mAssetUtil.generateThumbnail(mCurrentMomentId, mScene, Data.Moment);
-            mAssetUtil.clearCache(mCurrentMomentId);
-        }
-
+    function setCurrentMoment(momentId = null) {
+        let oldMomentId = mCurrentMomentId;
         mCurrentMomentId = momentId;
-        if (mAssetUtil) await updateModel(mModel, mAssetUtil);
+        if (mAssetUtil) updateModel(mModel, mAssetUtil);
+
+        // update the thumbnail
+        if (oldMomentId && mAssetUtil) {
+            mAssetUtil.generateThumbnail(oldMomentId, mScene, Data.Moment)
+                // clear the cache so we reload it next time we want it
+                .then(() => mAssetUtil.clearCache(oldMomentId));
+        }
     }
 
     function getTargets(ray, tool) {

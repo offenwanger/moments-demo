@@ -14,16 +14,16 @@ describe('Test StoryPanel', function () {
     })
 
     describe('init tests', function () {
-        it('should open a story', async function () {
-            await createAndOpenStoryMoment();
+        it('should open a story', function () {
+            createAndOpenStoryMoment();
         });
     });
 
     describe('add tests', function () {
-        it('should add a moment', async function () {
-            await createAndOpenStoryMoment();
+        it('should add a moment', function () {
+            createAndOpenStoryMoment();
             expect(testmodel().moments.length == 1);
-            await clickButtonInput('#story-moment-add-button');
+            clickButtonInput('#story-moment-add-button');
             expect(testmodel().moments.length == 2);
         });
     });

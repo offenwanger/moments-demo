@@ -7,7 +7,7 @@ export function ModelController(story = new Data.StoryModel()) {
     let mModelIndex = story.getIndex();
     let mUpdateListeners = [];
 
-    async function applyTransaction(transaction) {
+    function applyTransaction(transaction) {
         for (let action of transaction.actions) {
             if (!action) { console.error('Invalid action, no data'); continue; }
             if (action.type == ActionType.DELETE) {
@@ -38,7 +38,7 @@ export function ModelController(story = new Data.StoryModel()) {
             }
         }
 
-        for (let callback of mUpdateListeners) await callback(transaction, mModel);
+        for (let callback of mUpdateListeners) callback(transaction, mModel);
     }
 
     function _create(dataClass, id, attrs) {

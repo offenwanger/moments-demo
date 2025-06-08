@@ -2,14 +2,7 @@ export function mockDB() {
     let data = {};
 
     function makeReq(result) {
-        return new Proxy({}, {
-            get: function (obj, name) {
-                if (name == 'result') {
-                    return result;
-                } else {
-                    console.error(name + " unimplimented")
-                }
-            },
+        return new Proxy({ result: result }, {
             set: function (obj, name, value) {
                 if (name == 'onsuccess') {
                     value()
@@ -43,22 +36,14 @@ export function mockIndexedDB() {
     this.open = function () {
         return new Proxy({}, {
             get: function (obj, name) {
-                if (name == 'result') {
-                    return new mockDB();
-                } else {
-                    console.error(name + " unimplimented")
-                }
+                if (name == 'result') return new mockDB();
+                else console.error(name + " unimplimented");
             },
             set: function (obj, name, value) {
-                if (name == 'onsuccess') {
-                    value()
-                } else if (name == 'onupgradeneeded') {
-                    // do nothing
-                } else if (name == 'onerror') {
-
-                } else {
-                    console.error(name + " unimplimented")
-                }
+                if (name == 'onsuccess') { value() }
+                else if (name == 'onupgradeneeded') { }
+                else if (name == 'onerror') { }
+                else { console.error(name + " unimplimented") }
                 return true;
             },
         });

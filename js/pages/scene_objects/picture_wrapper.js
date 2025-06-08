@@ -1,7 +1,7 @@
 import * as THREE from 'three';
+import { ToolButtons } from '../../constants.js';
 import { Data } from "../../data.js";
 import { InteractionTargetInterface } from "./interaction_target_interface.js";
-import { ToolButtons } from '../../constants.js';
 
 export function PictureWrapper(parent, audioListener) {
     let mParent = parent;
@@ -34,24 +34,8 @@ export function PictureWrapper(parent, audioListener) {
     mPlanes.add(mFrontPlane, mBackPlane, mSound);
     mParent.add(mPlanes);
 
-    async function update(picture, model, assetUtil) {
-        if (mCurrentAssetId != picture.assetId) {
-            let image = await assetUtil.loadImageAsset(picture.assetId);
-            if (!image || isNaN(image.height / image.width)) {
-                console.error('Invalid image: ' + picture.assetId);
-                mFrontPlane.material.map = null;
-                mFrontPlane.material.needsUpdate = true
-                mCurrentAssetId = null;
-                mRatio = 1;
-                return;
-            }
-            mRatio = image.height / image.width;
-            mFrontPlane.material.map = new THREE.Texture(image);
-            // do this here because we have to wait until we set the material map.
-            mFrontPlane.material.needsUpdate = true
-            mFrontPlane.material.map.needsUpdate = true
-            mCurrentAssetId = picture.assetId;
-        }
+    function updateModel(picture, model, assetUtil) {
+        mPicture = picture;
 
         mPlanes.position.set(picture.x, picture.y, picture.z);
         mPlanes.setRotationFromQuaternion(new THREE.Quaternion().fromArray(picture.orientation));
@@ -72,24 +56,43 @@ export function PictureWrapper(parent, audioListener) {
         let audio = model.audios.find(a => a.attachedId == picture.id);
         if (audio) {
             mPlanes.add(mAudioSprite);
-
-            let buffer = await assetUtil.loadAudioAsset(audio.assetId);
-            mSound.setBuffer(buffer);
-            mSound.setLoop(true);
-            mSound.setVolume(audio.volume);
-            if (audio.ambient) {
-                try { mSound.play(); } catch (e) { console.error(e); }
-            } else {
-                mInteractionSound = true;
-            }
-
+            assetUtil.loadAudioAsset(audio.assetId)
+                .then(buffer => {
+                    mSound.setBuffer(buffer);
+                    mSound.setLoop(true);
+                    mSound.setVolume(audio.volume);
+                    if (audio.ambient) {
+                        try { mSound.play(); } catch (e) { console.error(e); }
+                    } else {
+                        mInteractionSound = true;
+                    }
+                })
             mInteractionTarget.isAudio = () => true;
         } else {
             mPlanes.remove(mAudioSprite);
             mInteractionTarget.isAudio = () => false;
         }
 
-        mPicture = picture;
+        if (mCurrentAssetId != picture.assetId) {
+            mCurrentAssetId = picture.assetId;
+            assetUtil.loadImageAsset(picture.assetId)
+                .then(image => {
+                    if (!image || isNaN(image.height / image.width)) {
+                        console.error('Invalid image: ' + picture.assetId);
+                        mFrontPlane.material.map = null;
+                        mFrontPlane.material.needsUpdate = true
+                        // null this so we try to load again next time.
+                        mCurrentAssetId = null;
+                        mRatio = 1;
+                        return;
+                    }
+
+                    mRatio = image.height / image.width;
+                    mFrontPlane.material.map = new THREE.Texture(image);
+                    mFrontPlane.material.needsUpdate = true
+                    mFrontPlane.material.map.needsUpdate = true
+                });
+        }
     }
 
     function getId() {
@@ -176,7 +179,7 @@ export function PictureWrapper(parent, audioListener) {
     }
 
     this.getTargets = getTargets;
-    this.update = update;
+    this.updateModel = updateModel
     this.getId = getId;
     this.remove = remove;
 }

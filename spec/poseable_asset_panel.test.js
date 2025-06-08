@@ -12,17 +12,17 @@ describe('Test PoseableAsset Panel', function () {
     })
 
     describe('init tests', function () {
-        it('should open a poseableAsset panel', async function () {
-            await setupEnvironmentWith3DAsset('bonesAndMesh.glb');
+        it('should open a poseableAsset panel', function () {
+            setupEnvironmentWith3DAsset('bonesAndMesh.glb');
         });
     });
 
     describe('edit tests', function () {
-        it('should update asset name', async function () {
-            await setupEnvironmentWith3DAsset('threeMesh.glb');
+        it('should update asset name', function () {
+            setupEnvironmentWith3DAsset('threeMesh.glb');
             expect(getInputValue("#poseableAsset-name-input")).toBe('threeMesh.glb');
             expect(testmodel().poseableAssets[0].name).toBe('threeMesh.glb');
-            await enterInputValue("#poseableAsset-name-input", 'new name')
+            enterInputValue("#poseableAsset-name-input", 'new name')
             expect(getInputValue("#poseableAsset-name-input")).toBe('new name');
             expect(testmodel().poseableAssets[0].name).toBe("new name");
         });

@@ -4,9 +4,9 @@ import { ButtonInput } from "../components/button_input.js";
 import { TextInput } from "../components/text_input.js";
 
 export function MomentPanel(container) {
-    let mUpdateAttributeCallback = async (id, attr, value) => { };
-    let mNavigationCallback = async (id) => { };
-    let mDeleteCallback = async (id) => { };
+    let mUpdateAttributeCallback = (id, attr, value) => { };
+    let mNavigationCallback = (id) => { };
+    let mDeleteCallback = (id) => { };
 
     let mModel = new Data.StoryModel();
     let mMoment = null;
@@ -18,16 +18,12 @@ export function MomentPanel(container) {
     let mBackButton = new ButtonInput(mPanelContainer)
         .setId('moment-back-button')
         .setLabel("<- Story")
-        .setOnClick(async () => {
-            await mNavigationCallback(mModel.id);
-        });
+        .setOnClick(() => mNavigationCallback(mModel.id));
 
     let mNameInput = new TextInput(mPanelContainer)
         .setId('moment-name-input')
         .setLabel("Name")
-        .setOnChange(async (newText) => {
-            await mUpdateAttributeCallback(mMoment.id, { name: newText });
-        });
+        .setOnChange((newText) => mUpdateAttributeCallback(mMoment.id, { name: newText }));
 
 
     let mPhotoSphereAssetButton = new ButtonInput(mPanelContainer)
@@ -56,9 +52,7 @@ export function MomentPanel(container) {
     let mDeleteButton = new ButtonInput(mPanelContainer)
         .setId('moment-delete-button')
         .setLabel('Delete')
-        .setOnClick(async () => {
-            await mDeleteCallback(mMoment.id);
-        })
+        .setOnClick(() => mDeleteCallback(mMoment.id))
 
     function show(model, momentId) {
         mModel = model;
@@ -83,28 +77,28 @@ export function MomentPanel(container) {
         for (let i = 0; i < assets.length; i++) {
             mPoseableAssetsList[i].setId("poseable-asset-button-" + assets[i].id)
                 .setLabel(assets[i].name)
-                .setOnClick(async () => await mNavigationCallback(assets[i].id));
+                .setOnClick(() => mNavigationCallback(assets[i].id));
         }
         let pictures = model.pictures.filter(p => p.momentId == mMoment.id);
         Util.setComponentListLength(mPicturesList, pictures.length, () => new ButtonInput(mPicturesContainer))
         for (let i = 0; i < pictures.length; i++) {
             mPicturesList[i].setId("picture-button-" + pictures[i].id)
                 .setLabel(pictures[i].name)
-                .setOnClick(async () => await mNavigationCallback(pictures[i].id));
+                .setOnClick(() => mNavigationCallback(pictures[i].id));
         }
         let audios = model.audios.filter(a => a.momentId == mMoment.id);
         Util.setComponentListLength(mAudiosList, audios.length, () => new ButtonInput(mAudiosContainer))
         for (let i = 0; i < audios.length; i++) {
             mAudiosList[i].setId("audio-button-" + audios[i].id)
                 .setLabel(audios[i].name)
-                .setOnClick(async () => await mNavigationCallback(audios[i].id));
+                .setOnClick(() => mNavigationCallback(audios[i].id));
         }
         let teleports = model.teleports.filter(t => t.momentId == mMoment.id);
         Util.setComponentListLength(mTeleportsList, teleports.length, () => new ButtonInput(mTeleportsContainer))
         for (let i = 0; i < teleports.length; i++) {
             mTeleportsList[i].setId("teleport-button-" + teleports[i].id)
                 .setLabel(teleports[i].name)
-                .setOnClick(async () => await mNavigationCallback(teleports[i].id));
+                .setOnClick(() => mNavigationCallback(teleports[i].id));
         }
 
         mPanelContainer.style['display'] = '';

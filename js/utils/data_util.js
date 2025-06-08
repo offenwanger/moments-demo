@@ -7,7 +7,7 @@ import { Util } from './utility.js';
 
 // This file contains helper functions for creating things
 // which have to be created with many children. 
-async function getPoseableAssetCreationActions(model, parentId, assetId) {
+function getPoseableAssetCreationActions(model, parentId, assetId) {
     let actions = [];
 
     let asset = model.find(assetId);
@@ -34,7 +34,7 @@ async function getPoseableAssetCreationActions(model, parentId, assetId) {
     return actions;
 }
 
-async function getAssetCreationActions(id, name, filename, type, asset = null) {
+function getAssetCreationActions(id, name, filename, type, asset = null) {
     let actions = [];
     actions.push(new Action(ActionType.CREATE,
         id, {

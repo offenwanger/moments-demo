@@ -1,7 +1,7 @@
 export function WelcomePage(parentContainer, lastFolder = false, mWebsocketController) {
-    let mFolderSelectedCallback = async () => { };
-    let mLastFolderCallback = async () => { };
-    let mOpenRemoteStoryCallback = async () => { };
+    let mFolderSelectedCallback = () => { };
+    let mLastFolderCallback = () => { };
+    let mOpenRemoteStoryCallback = () => { };
 
     let div = document.createElement('div');
     div.style['padding'] = '10px';
@@ -17,13 +17,10 @@ export function WelcomePage(parentContainer, lastFolder = false, mWebsocketContr
     let button = document.createElement('button');
     button.setAttribute('id', 'choose-folder-button');
     button.textContent = 'Choose Folder';
-    button.addEventListener('click', async () => {
-        try {
-            let folder = await window.showDirectoryPicker();
-            await mFolderSelectedCallback(folder)
-        } catch (e) {
-            console.error(e);
-        }
+    button.addEventListener('click', () => {
+        window.showDirectoryPicker()
+            .then(folder => mFolderSelectedCallback(folder))
+            .catch(e => { console.error(e); });
     });
     div.appendChild(button)
 
@@ -31,8 +28,8 @@ export function WelcomePage(parentContainer, lastFolder = false, mWebsocketContr
         let button = document.createElement('button');
         button.setAttribute('id', 'use-last-folder-button');
         button.textContent = 'Use Last Folder';
-        button.addEventListener('click', async () => {
-            await mLastFolderCallback();
+        button.addEventListener('click', () => {
+            mLastFolderCallback();
         });
         div.appendChild(button)
     }
@@ -56,7 +53,7 @@ export function WelcomePage(parentContainer, lastFolder = false, mWebsocketContr
             button.setAttribute('id', 'join-' + story.id)
             button.style['margin-left'] = '10px'
             button.textContent = '👀';
-            button.addEventListener('click', async () => await mOpenRemoteStoryCallback(story.id));
+            button.addEventListener('click', () => mOpenRemoteStoryCallback(story.id));
             li.appendChild(button)
         }
     });

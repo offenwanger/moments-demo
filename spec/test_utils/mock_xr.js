@@ -25,8 +25,8 @@ export function mockXR() {
             if (index === 1) return controllerGrip1;
         },
         getSession: () => session,
-        isSessionSupported: async () => true,
-        requestSession: async () => { return session },
+        isSessionSupported: () => Promise.resolve(true),
+        requestSession: () => Promise.resolve(session),
         setSession: () => { session = session }
     }
 }

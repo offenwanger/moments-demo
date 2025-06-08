@@ -28,10 +28,10 @@ export function WebsocketController() {
     let mConnectedToRemote = false;
 
     let mSharedStoriesUpdatedCallback = () => { }
-    let mStoryConnectCallback = async () => { }
-    let mStoryUpdateCallback = async () => { }
-    let mNewAssetCallback = async () => { }
-    let mCreateMomentCallback = async () => { }
+    let mStoryConnectCallback = () => { }
+    let mStoryUpdateCallback = () => { }
+    let mNewAssetCallback = () => { }
+    let mCreateMomentCallback = () => { }
     let mParticipantUpdateCallback = () => { }
 
     const mWebSocket = io();
@@ -66,21 +66,21 @@ export function WebsocketController() {
         mSharedStoriesUpdatedCallback(stories);
     });
 
-    mWebSocket.on(ServerMessage.CONNECT_TO_STORY, async (story) => {
+    mWebSocket.on(ServerMessage.CONNECT_TO_STORY, (story) => {
         mConnectedToRemote = true;
-        await mStoryConnectCallback(story);
+        mStoryConnectCallback(story);
     });
 
-    mWebSocket.on(ServerMessage.UPDATE_STORY, async (transaction) => {
-        await mStoryUpdateCallback(transaction);
+    mWebSocket.on(ServerMessage.UPDATE_STORY, (transaction) => {
+        mStoryUpdateCallback(transaction);
     });
 
-    mWebSocket.on(ServerMessage.NEW_ASSET, async (data) => {
-        await mNewAssetCallback(data.id, data.name, data.buffer, data.type);
+    mWebSocket.on(ServerMessage.NEW_ASSET, (data) => {
+        mNewAssetCallback(data.id, data.name, data.buffer, data.type);
     });
 
-    mWebSocket.on(ServerMessage.CREATE_MOMENT, async (data) => {
-        await mCreateMomentCallback();
+    mWebSocket.on(ServerMessage.CREATE_MOMENT, (data) => {
+        mCreateMomentCallback();
     });
 
     mWebSocket.on(ServerMessage.UPDATE_PARTICIPANT, (data) => {
@@ -96,22 +96,26 @@ export function WebsocketController() {
         logInfo("Sharing started successfully.")
     })
 
-    async function shareStory(model, workspace) {
-        try {
-            // This is not a good way to do this.
-            // WE should really only upload when a thing is requested.
-            for (let asset of model.assets) {
-                await uploadAsset(model.id, asset.filename, workspace)
-                await uploadAsset(model.id, THUMBNAIL_PREFIX + asset.id + THUMBNAIL_SUFFIX, workspace)
-            }
-            for (let moment of model.moments) {
-                await uploadAsset(model.id, THUMBNAIL_PREFIX + moment.id + THUMBNAIL_SUFFIX, workspace)
-            }
-            logInfo("Files uploaded.")
-            mWebSocket.emit(ServerMessage.START_SHARE, model);
-        } catch (error) {
-            console.error(error);
-        }
+    function shareStory(model, workspace) {
+        // would be better to wait with the upload until something is requested...
+        // also to check if it's already uploaded.
+        let chain = Promise.resolve();
+        model.assets.forEach((asset, i) => {
+            chain = chain
+                .then(() => logInfo("Uploading asset " + (i + 1) + "/" + model.assets.length))
+                .then(() => uploadAsset(model.id, asset.filename, workspace))
+                .then(() => uploadAsset(model.id, THUMBNAIL_PREFIX + asset.id + THUMBNAIL_SUFFIX, workspace))
+                .catch(e => { console.error('Upload failed'); console.error(e); })
+        });
+        model.moments.forEach((moment, i) => {
+            chain = chain
+                .then(() => logInfo("Uploading moment thumbnail " + i + "/" + model.moments.length))
+                .then(() => uploadAsset(model.id, THUMBNAIL_PREFIX + moment.id + THUMBNAIL_SUFFIX, workspace))
+                .catch(e => { console.error('Upload failed'); console.error(e); })
+        });
+        return chain
+            .then(() => logInfo("Files uploaded."))
+            .then(() => mWebSocket.emit(ServerMessage.START_SHARE, model))
     }
 
     function connectToStory(storyId) {
@@ -132,12 +136,11 @@ export function WebsocketController() {
         mWebSocket.emit(ServerMessage.UPDATE_STORY, transaction);
     }
 
-    async function uploadAsset(storyId, filename, workspace) {
-        try {
-            let url = await workspace.getFileAsDataURI(filename);
-            if (url) {
+    function uploadAsset(storyId, filename, workspace) {
+        return workspace.getFileAsDataURI(filename)
+            .then(uri => {
                 logInfo("Uploading " + filename);
-                await fetch('/upload', {
+                return fetch('/upload', {
                     method: "POST",
                     headers: {
                         'Accept': 'application/json',
@@ -146,21 +149,21 @@ export function WebsocketController() {
                     body: JSON.stringify({
                         storyId,
                         filename,
-                        url,
+                        uri,
                     })
                 });
-                logInfo(filename + " uploaded.");
-            }
-        } catch (e) {
-            if (e.message.includes('A requested file or directory could not be found at the time an operation was processed')) {
-                // Probably just a missing thumbnail, ignore.
-            } else console.error(e)
-        }
+            })
+            .then(() => logInfo(filename + " uploaded."))
+            .catch((e) => {
+                if (e.message.includes('A requested file or directory could not be found at the time an operation was processed')) {
+                    // Probably just a missing thumbnail, ignore.
+                } else console.error(e)
+            })
     }
 
-    async function newAsset(id, file, type) {
-        let buffer = await file.arrayBuffer();
-        mWebSocket.emit(ServerMessage.NEW_ASSET, { id, name: file.name, type, buffer })
+    function newAsset(id, file, type) {
+        file.arrayBuffer()
+            .then(buffer => mWebSocket.emit(ServerMessage.NEW_ASSET, { id, name: file.name, type, buffer }))
     }
 
     function updateParticipant(head, handR = null, handL = null, momentId = null) {

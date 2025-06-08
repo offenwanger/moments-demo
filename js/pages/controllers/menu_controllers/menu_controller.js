@@ -1,9 +1,10 @@
 import * as ThreeMeshUI from 'three-mesh-ui';
 import { AssetTypes, AttributeButtons, BrushToolButtons, BrushToolSettings, ItemButtons, MENU_WIDTH, MenuNavButtons, RecordToolButtons, SurfaceToolButtons, ToolButtons } from '../../../constants.js';
+import { ColorUtil } from '../../../utils/color_util.js';
 import { ToolState } from '../system_state.js';
 import { ButtonMenu } from './button_menu.js';
 import { MeshButton } from './mesh_button.js';
-import { ColorUtil } from '../../../utils/color_util.js';
+import { MeshTile } from './mesh_tile.js';
 
 export function MenuController() {
     const BUTTON_SIZE = 0.4;
@@ -34,6 +35,9 @@ export function MenuController() {
     let mMomentSelectMenu = createSelectMenu('MomentSelectMenu', 'These are all your current moments. Pick one to add a teleporter to it, or add a new moment.', 5);
     mMomentSelectMenu.add(new MeshButton(ItemButtons.NEW_MOMENT, '+', BUTTON_SIZE));
 
+    let mInfoTile = new MeshTile('InfoTile', 'Welcome to Moments', BUTTON_SIZE, '#000000')
+    mInfoTile.setColor('#ffffff');
+
     /** Tool menu and tools settings menus **/
     mMenus[MenuNavButtons.TOOL_MENU] = createMenu(MenuNavButtons.TOOL_MENU,
         'Tools. Move lets you move things in the environment. Brush lets you edit the surrounding image. Surface lets you morph the surrounding image. Scissors lets you cut out bits of the surrounding image to use as artifacts. Record lets you record your voice or other audio.', [
@@ -42,6 +46,7 @@ export function MenuController() {
         new MeshButton(ToolButtons.SURFACE, 'Surface', BUTTON_SIZE),
         new MeshButton(ToolButtons.SCISSORS, 'Scissors', BUTTON_SIZE),
         new MeshButton(ToolButtons.RECORD, 'Record', BUTTON_SIZE),
+        mInfoTile,
     ]);
     mMenus[ToolButtons.BRUSH] = createMenu(ToolButtons.BRUSH,
         'Brush tool mode. Focuses makes parts of the surrounding image clear. Draw lets you add colors to the surrounding image. Clear removes the focus and the color.', [
@@ -76,7 +81,7 @@ export function MenuController() {
         new MeshButton(SurfaceToolButtons.PULL, 'Pull', BUTTON_SIZE),
         new MeshButton(SurfaceToolButtons.DELETE, 'Delete', BUTTON_SIZE),
     ]);
-    let mAudioDisplayButton = new MeshButton(RecordToolButtons.DISPLAY, 'Ready to Record', BUTTON_SIZE, '#000000')
+    let mAudioDisplayButton = new MeshTile(RecordToolButtons.DISPLAY, 'Ready to Record', BUTTON_SIZE, '#000000')
     mAudioDisplayButton.setColor('#ffffff')
     mMenus[ToolButtons.RECORD] = createMenu(ToolButtons.RECORD,
         'Record allows you to record audio. Use Start/Stop record to start and stop the recording, and Play/Pause to listen. When you are happy, click Accept to create an audio node. Delete will allow you to start over recording.', [
@@ -216,38 +221,44 @@ export function MenuController() {
         buttons.find(b => b.getId() == BrushToolSettings.SAT_DEC).setColor(ColorUtil.satDecrement(toolState.brushSettings.color));
     }
 
-    async function updateModel(model, assetUtil) {
+    function updateModel(model, assetUtil) {
         // update the asset add menus.
         mImageSelectMenu.empty(true)
         mAudioSelectMenu.empty(true)
         mModelSelectMenu.empty(true)
         mMomentSelectMenu.empty(true)
 
+        let chain = Promise.resolve();
+
         for (let asset of model.assets) {
             let button = new MeshButton(asset.id, asset.name, BUTTON_SIZE, 0xffffff, true);
-            let thumbnail = await assetUtil.loadThumbnail(asset.id)
-
             if (asset.type == AssetTypes.MODEL) {
-                if (thumbnail) { button.setImage(thumbnail.src); }
                 mModelSelectMenu.add(button);
             } else if (asset.type == AssetTypes.IMAGE) {
-                if (thumbnail) { button.setImage(thumbnail.src); }
                 mImageSelectMenu.add(button);
             } else if (asset.type == AssetTypes.AUDIO) {
-                if (thumbnail) { button.setImage(thumbnail.src, false); }
                 mAudioSelectMenu.add(button);
             } else {
                 console.error('Invalid type: ' + asset.type);
-                continue;
             }
+
+            chain = chain
+                .then(() => assetUtil.loadThumbnail(asset.id))
+                .then(thumbnail => {
+                    let hideText = asset.type != AssetTypes.AUDIO;
+                    if (thumbnail) { button.setImage(thumbnail.src, hideText); }
+                })
         }
 
         for (let moment of model.moments) {
             let button = new MeshButton(moment.id, moment.name, BUTTON_SIZE, 0xffffff, true);
             mMomentSelectMenu.add(button);
 
-            let thumbnail = await assetUtil.loadThumbnail(moment.id)
-            if (thumbnail) { button.setImage(thumbnail.src, false); }
+            chain = chain
+                .then(() => assetUtil.loadThumbnail(moment.id))
+                .then(thumbnail => {
+                    if (thumbnail) { button.setImage(thumbnail.src, false); }
+                })
         }
 
         mMenuContainer.update(true, true, true)
@@ -290,6 +301,7 @@ export function MenuController() {
     this.onToolChange = func => mToolChangeCallback = func;
     this.getMode = () => mToolState;
     this.getAudioDisplay = () => mAudioDisplayButton;
+    this.getMainDisplay = () => mInfoTile;
     this.render = render
     this.getTargets = getTargets;
 }

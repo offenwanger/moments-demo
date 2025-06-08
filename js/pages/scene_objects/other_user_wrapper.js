@@ -50,7 +50,7 @@ export function OtherUserWrapper(parent, id) {
         mMaterial
     );
 
-    async function update(head, handR = null, handL = null, solid = false) {
+    function update(head, handR = null, handL = null, solid = false) {
         mHead.position.set(head.x, head.y, head.z);
         mHead.quaternion.set(...head.orientation);
         if (handR) {

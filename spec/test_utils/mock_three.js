@@ -25,7 +25,7 @@ export async function mockThreeSetup() {
             this.setClearColor = () => { }
         },
         ImageLoader: function () {
-            this.loadAsync = () => { return createCanvas() }
+            this.loadAsync = () => Promise.resolve(createCanvas())
         },
         Raycaster: function () {
             let interceptedCaster = new THREE.Raycaster();

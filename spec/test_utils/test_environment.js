@@ -7,10 +7,12 @@ import { createCanvas } from './mock_canvas.js';
 import * as mockFileSystem from './mock_filesystem.js';
 import { HTMLElement, IFrameElement } from './mock_html_element.js';
 import { mockIndexedDB } from './mock_indexedDB.js';
+import * as mockPromises from './mock_promise.js';
 
 import fs from 'fs';
 import { dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { logInfo } from '../../js/utils/log_util.js';
 import { mockAudioContext } from './mock_audio_context.js';
 import { mockMediaRecorder } from './mock_media_recorder.js';
 import { mockServerSetup } from './mock_server.js';
@@ -21,19 +23,21 @@ eval(fs.readFileSync(__dirname + '../../../lib/delaunator.min.js', 'utf-8'))
 
 // Trap error and trigger a failure. 
 let consoleError = console.error;
-console.error = function (message) {
-    if (("" + message).startsWith("TypeError: Cannot read properties of null")) return;
-    consoleError(...arguments);
-    expect("").toEqual(message)
+console.error = function (input) {
+    consoleError(input)
+    logInfo('Error: ' + input)
+    expect('No Error').toEqual('Error Happened: ' + input)
 }
 
-export async function setup() {
+export async function setup(runAsync = false) {
     let log = [];
     await td.replaceEsm('../../js/utils/log_util.js', {
         logInfo: function (...args) {
             log.push(args);
         }
     });
+    // this first since even mock filesystem uses promises.
+    mockPromises.setup(runAsync);
 
     mockFileSystem.setup();
 
@@ -46,7 +50,7 @@ export async function setup() {
     if (!global.navigator) global.navigator = { userAgent: 'TestEnv' }
     global.navigator.xr = new mockXR();
     global.navigator.mediaDevices = {
-        getUserMedia: () => { return 'stream'; }
+        getUserMedia: () => { return Promise.resolve('stream'); }
     };
     global.test_rendererAccess = {};
     global.document = {
@@ -116,8 +120,8 @@ export async function setup() {
             if (!window.callbacks[event]) window.callbacks[event] = []
             window.callbacks[event].push(callback);
         },
-        showDirectoryPicker: () => global.window.directories.pop(),
-        showOpenFilePicker: () => [global.window.files.pop()],
+        showDirectoryPicker: () => Promise.resolve(global.window.directories.pop()),
+        showOpenFilePicker: () => Promise.resolve([global.window.files.pop()]),
         location: {
             href: "http://test.com",
             search: "",
@@ -158,6 +162,7 @@ export async function setup() {
         return img;
     }
     global.FileReader = mockFileSystem.mockFileReader;
+    global.File = mockFileSystem.mockFile;
     global.io = function () { return { on: () => { }, emit: () => { }, } };
     global.domtoimage = { toPng: () => createCanvas() }
     global.Audio = function () { return {} }
@@ -167,7 +172,7 @@ export async function setup() {
 
     let { main } = await import('../../js/main.js')
     window.mainFunc = main;
-    await main();
+    main()
 
     let app = await import('../../app.js');
 }
@@ -177,6 +182,7 @@ export async function cleanup() {
     delete global.document;
     delete global.navigator;
     delete global.window;
+    mockPromises.cleanup();
     mockFileSystem.cleanup();
     td.reset();
 }

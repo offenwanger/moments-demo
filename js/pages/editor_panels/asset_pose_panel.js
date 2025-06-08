@@ -4,8 +4,8 @@ import { ButtonInput } from "../components/button_input.js";
 import { TextInput } from "../components/text_input.js";
 
 export function AssetPosePanel(container) {
-    let mUpdateAttributeCallback = async (id, attrs) => { };
-    let mNavigationCallback = async (id) => { };
+    let mUpdateAttributeCallback = (id, attrs) => { };
+    let mNavigationCallback = (id) => { };
 
     let mModel = new Data.StoryModel();
     let mAssetPose = new Data.AssetPose();
@@ -17,9 +17,7 @@ export function AssetPosePanel(container) {
     let mBackButton = new ButtonInput(mPanelContainer)
         .setId('assetpose-back-button')
         .setLabel("<- Back")
-        .setOnClick(async () => {
-            await mNavigationCallback(mAssetPose.parentId);
-        });
+        .setOnClick(() => mNavigationCallback(mAssetPose.parentId));
 
     let mNameDisplay = document.createElement('div');
     mNameDisplay.setAttribute('id', 'assetpose-name-display');
@@ -37,41 +35,27 @@ export function AssetPosePanel(container) {
     mPanelContainer.appendChild(mPositionHeader);
     let mPositionXInput = new TextInput(mPanelContainer, 'number')
         .setLabel("x")
-        .setOnChange(async (newNum) => {
-            await mUpdateAttributeCallback(mAssetPoseId, { x: newNum });
-        });
+        .setOnChange((newNum) => mUpdateAttributeCallback(mAssetPoseId, { x: newNum }));
     let mPositionYInput = new TextInput(mPanelContainer, 'number')
         .setLabel("y")
-        .setOnChange(async (newNum) => {
-            await mUpdateAttributeCallback(mAssetPoseId, { y: newNum });
-        });
+        .setOnChange((newNum) => mUpdateAttributeCallback(mAssetPoseId, { y: newNum }));
     let mPositionZInput = new TextInput(mPanelContainer, 'number')
         .setLabel("z")
-        .setOnChange(async (newNum) => {
-            await mUpdateAttributeCallback(mAssetPoseId, { z: newNum });
-        });
+        .setOnChange((newNum) => mUpdateAttributeCallback(mAssetPoseId, { z: newNum }));
 
     let mRotationXInput = new TextInput(mPanelContainer, 'number')
         .setLabel("ψ")
-        .setOnChange(async () => {
-            await mUpdateAttributeCallback(mAssetPoseId, { orientation: getOrientationArray() });
-        });
+        .setOnChange(() => mUpdateAttributeCallback(mAssetPoseId, { orientation: getOrientationArray() }));
     let mRotationYInput = new TextInput(mPanelContainer, 'number')
         .setLabel("θ")
-        .setOnChange(async () => {
-            await mUpdateAttributeCallback(mAssetPoseId, { orientation: getOrientationArray() });
-        });
+        .setOnChange(() => mUpdateAttributeCallback(mAssetPoseId, { orientation: getOrientationArray() }));
     let mRotationZInput = new TextInput(mPanelContainer, 'number')
         .setLabel("φ")
-        .setOnChange(async () => {
-            await mUpdateAttributeCallback(mAssetPoseId, { orientation: getOrientationArray() });
-        });
+        .setOnChange(() => mUpdateAttributeCallback(mAssetPoseId, { orientation: getOrientationArray() }));
 
     let mScaleInput = new TextInput(mPanelContainer, 'number')
         .setLabel("Scale")
-        .setOnChange(async (newNum) => {
-            await mUpdateAttributeCallback(mAssetPoseId, { scale: newNum });
-        });
+        .setOnChange((newNum) => mUpdateAttributeCallback(mAssetPoseId, { scale: newNum }));
 
     function show(model, assetPoseId) {
         mModel = model;
@@ -96,7 +80,7 @@ export function AssetPosePanel(container) {
         if (teleport) {
             mAttachedTeleport
                 .setLabel(teleport.name)
-                .setOnClick(async () => await mNavigationCallback(teleport.id))
+                .setOnClick(() => mNavigationCallback(teleport.id))
                 .show();
         } else {
             mAttachedTeleport.hide();
@@ -106,7 +90,7 @@ export function AssetPosePanel(container) {
         if (audio) {
             mAttachedAudio
                 .setLabel(audio.name)
-                .setOnClick(async () => await mNavigationCallback(audio.id))
+                .setOnClick(() => mNavigationCallback(audio.id))
                 .show();
         } else {
             mAttachedAudio.hide();

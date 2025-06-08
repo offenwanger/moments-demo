@@ -12,7 +12,6 @@ import { Util } from '../utils/utility.js';
 import { WindowEventManager } from '../window_event_manager.js';
 import { RemoteWorkSpace } from '../workspace_manager.js';
 import { ModelController } from './controllers/model_controller.js';
-import { PictureEditorController } from './controllers/picture_editor_controller.js';
 import { SceneInterfaceController } from './controllers/scene_interface_controller.js';
 import { SidebarController } from './controllers/sidebar_controller.js';
 import { AssetList } from './editor_panels/asset_list.js';
@@ -74,28 +73,19 @@ export function EditorPage(parentContainer, mWebsocketController) {
     parentContainer.appendChild(mResizeTarget);
 
     let mSceneInterface = new SceneInterfaceController(mViewContainer, mWebsocketController, mAudioRecorder);
-    mSceneInterface.onModelUpdate(async (transaction) => {
+    mSceneInterface.onModelUpdate(transaction => {
         pushUndo(mModelController.getModel(), transaction)
-        await mModelController.applyTransaction(transaction);
-        await updateModel();
+        mModelController.applyTransaction(transaction);
+        updateModel();
     });
 
-    // Shares a container with the sessions
-    let mPictureEditorController = new PictureEditorController(mViewContainer);
-    mPictureEditorController.onSave(async (id, json, dataUrl) => {
-        let transaction = new Transaction([new Action(ActionType.UPDATE, id, { json, image: dataUrl })])
-        pushUndo(mModelController.getModel(), transaction)
-        await mModelController.applyTransaction(transaction);
-        await updateModel();
-    })
-
     let mAssetList = new AssetList(parentContainer);
-    mAssetList.onAssetsUpload(async (files) => {
-        let transaction = new Transaction();
+    mAssetList.onAssetsUpload((files) => {
+        let chain = Promise.resolve();
         for (let file of files) {
+            let type;
             try {
                 let t = file.type.split('/')[0];
-                let type;
                 if (t == 'image') {
                     type = AssetTypes.IMAGE;
                 } else if (t == 'audio') {
@@ -109,32 +99,55 @@ export function EditorPage(parentContainer, mWebsocketController) {
                         continue;
                     }
                 }
-
-                let id = IdUtil.getUniqueId(Data.Asset);
-                if (!mWorkspace) {
-                    await mWebsocketController.newAsset(id, file, type)
-                } else {
-                    let newFilename = await mWorkspace.storeFile(file);
-                    let asset = await mAssetUtil.loadAssetFile(newFilename, type);
-                    let thumbnailFilename = await mAssetUtil.generateThumbnail(id, asset, type);
-                    transaction.actions.push(...(await DataUtil.getAssetCreationActions(
-                        id, file.name, newFilename, type, asset)));
-
-                    if (mWebsocketController.isSharing()) {
-                        await mWebsocketController.uploadAsset(mModelController.getModel().id, newFilename, mWorkspace);
-                        await mWebsocketController.uploadAsset(mModelController.getModel().id, thumbnailFilename, mWorkspace);
-                    }
-                }
             } catch (e) {
                 console.error(e);
             }
-        }
-        if (transaction.actions) {
-            await mModelController.applyTransaction(transaction);
-            await updateModel();
+
+            let id = IdUtil.getUniqueId(Data.Asset);
+            if (!mWorkspace) {
+                chain = chain
+                    .then(() => mWebsocketController.newAsset(id, file, type))
+            } else {
+                let newFilename;
+                let asset;
+                chain = chain
+                    .then(() => mWorkspace.storeFile(file))
+                    .then(nf => newFilename = nf)
+                    .then(() => mAssetUtil.loadAssetFile(newFilename, type))
+                    .then(a => {
+                        asset = a
+                        if (!asset) { throw new Error('Asset loading failed after storage: ' + newFilename) }
+                    })
+                    .then(() => {
+                        let actions = DataUtil.getAssetCreationActions(id, file.name, newFilename, type, asset);
+                        let transaction = new Transaction(actions);
+                        if (transaction.actions) {
+                            mModelController.applyTransaction(transaction);
+                            updateModel();
+                        }
+                    })
+                    .then(() => {
+                        if (mWebsocketController.isSharing()) {
+                            // launch this asyncronously
+                            mWebsocketController.uploadAsset(mModelController.getModel().id, newFilename, mWorkspace);
+                        }
+                    })
+                    .then(() => mAssetUtil.generateThumbnail(id, asset, type))
+                    .then(thumbnailFilename => {
+                        // asynconously upload
+                        if (mWebsocketController.isSharing()) {
+                            // launch this asyncronously
+                            mWebsocketController.uploadAsset(mModelController.getModel().id, thumbnailFilename, mWorkspace);
+                        }
+                    }).catch(e => {
+                        console.error(e);
+                        console.error('Asset upload failed for ' + newFilename);
+                    });
+            }
         }
     })
-    mAssetList.onAssetsClear(async () => {
+
+    mAssetList.onAssetsClear(() => {
         let transaction = new Transaction();
         let model = mModelController.getModel()
         transaction.actions = model.assets.filter(a => {
@@ -153,167 +166,189 @@ export function EditorPage(parentContainer, mWebsocketController) {
 
         if (transaction.actions.length > 0) {
             pushUndo(mModelController.getModel(), transaction)
-            await mModelController.applyTransaction(transaction);
-            await updateModel();
-        }
-    });
-
-    let mSidebarController = new SidebarController(mSidebarContainer);
-    mSidebarController.onAddMoment(async () => {
-        await createMoment();
-    })
-    mSidebarController.setUpdateAttributeCallback(async (id, attrs) => {
-        let transaction = new Transaction([new Action(ActionType.UPDATE, id, attrs)]);
-        pushUndo(mModelController.getModel(), transaction)
-        await mModelController.applyTransaction(transaction);
-        await updateModel();
-    })
-    mSidebarController.setDeleteCallback(async (id) => {
-        let actions = DataUtil.getRecursiveDelete(id, mModelController.getModel());
-        let transaction = new Transaction(actions)
-        pushUndo(mModelController.getModel(), transaction)
-        await mModelController.applyTransaction(transaction);
-        await updateModel();
-    })
-    mSidebarController.setEditPictureCallback(async (id) => {
-        let picture = mModelController.getModel().find(id);
-        if (!picture) { console.error("Invalid id:" + id); return; }
-        await mPictureEditorController.show(id, picture.json);
-    })
-    mSidebarController.setCloseEditPictureCallback(async () => {
-        await mPictureEditorController.hide()
-    })
-    mSidebarController.onNavigate(async id => {
-        if (IdUtil.getClass(id) == Data.Moment) {
-            await setCurrentMoment(id);
-        } else if (IdUtil.getClass(id) == Data.StoryModel) {
-            await setCurrentMoment(null);
-        }
-    })
-    mSidebarController.onSessionStart(async session => {
-        await mSceneInterface.sessionStart(session);
-    })
-    mSidebarController.onStartShare(async () => {
-        if (!mWorkspace) { console.error("Invalid state, should not share unless running local worksapce."); }
-        await mWebsocketController.shareStory(mModelController.getModel(), mWorkspace);
-    })
-    mSidebarController.onShowAssetManager(async () => {
-        await mAssetList.show();
-    })
-
-    mWebsocketController.onStoryUpdate(async transaction => {
-        mModelController.removeUpdateListener(mWebsocketController.updateStory);
-        await mModelController.applyTransaction(transaction);
-        mModelController.addUpdateListener(mWebsocketController.updateStory);
-        updateModel();
-    })
-
-    mWebsocketController.onNewAsset(async (id, name, buffer, type) => {
-        let file = new File([buffer], name);
-        let newFilename = await mWorkspace.storeFile(file);
-        let asset = await mAssetUtil.loadAssetFile(newFilename, type);
-        let thumbnailFilename = await mAssetUtil.generateThumbnail(id, asset, type);
-        await mWebsocketController.uploadAsset(mModelController.getModel().id, newFilename, mWorkspace);
-        await mWebsocketController.uploadAsset(mModelController.getModel().id, thumbnailFilename, mWorkspace);
-        let actions = await DataUtil.getAssetCreationActions(id, file.name, newFilename, type, asset);
-        await mModelController.applyTransaction(new Transaction(actions));
-        updateModel();
-    })
-
-    mSceneInterface.onAssetCreate(async (id, name, filename, type, blob) => {
-        let file = new File([blob], filename);
-        if (!mWorkspace) {
-            await mWebsocketController.newAsset(id, file, type)
-        } else {
-            let newFilename = await mWorkspace.storeFile(file);
-            let asset = await mAssetUtil.loadAssetFile(newFilename, type);
-            let thumbnailFilename = await mAssetUtil.generateThumbnail(id, asset, type);
-            let actions = await DataUtil.getAssetCreationActions(id, name, newFilename, type, asset)
-
-            if (mWebsocketController.isSharing()) {
-                await mWebsocketController.uploadAsset(mModelController.getModel().id, newFilename, mWorkspace);
-                await mWebsocketController.uploadAsset(mModelController.getModel().id, thumbnailFilename, mWorkspace);
-            }
-
-            await mModelController.applyTransaction(new Transaction(actions));
+            mModelController.applyTransaction(transaction);
             updateModel();
         }
     });
 
-    mSceneInterface.onTeleport(async (id) => {
+    let mSidebarController = new SidebarController(mSidebarContainer);
+    mSidebarController.onAddMoment(() => { createMoment(); })
+    mSidebarController.setUpdateAttributeCallback((id, attrs) => {
+        let transaction = new Transaction([new Action(ActionType.UPDATE, id, attrs)]);
+        pushUndo(mModelController.getModel(), transaction)
+        mModelController.applyTransaction(transaction);
+        updateModel();
+    })
+    mSidebarController.setDeleteCallback((id) => {
+        let actions = DataUtil.getRecursiveDelete(id, mModelController.getModel());
+        let transaction = new Transaction(actions)
+        pushUndo(mModelController.getModel(), transaction)
+        mModelController.applyTransaction(transaction);
+        updateModel();
+    })
+    mSidebarController.onNavigate(id => {
+        if (IdUtil.getClass(id) == Data.Moment) {
+            setCurrentMoment(id);
+        } else if (IdUtil.getClass(id) == Data.StoryModel) {
+            setCurrentMoment(null);
+        }
+    })
+    mSidebarController.onSessionStart(session => {
+        mSceneInterface.sessionStart(session);
+    })
+    mSidebarController.onStartShare(() => {
+        if (!mWorkspace) { console.error("Invalid state, should not share unless running local worksapce."); }
+        // upload asynconously
+        mWebsocketController.shareStory(mModelController.getModel(), mWorkspace);
+    })
+    mSidebarController.onShowAssetManager(() => {
+        mAssetList.show();
+    })
+
+    mWebsocketController.onStoryUpdate(transaction => {
+        mModelController.removeUpdateListener(mWebsocketController.updateStory);
+        mModelController.applyTransaction(transaction);
+        mModelController.addUpdateListener(mWebsocketController.updateStory);
+        updateModel();
+    })
+
+    mWebsocketController.onNewAsset((id, name, buffer, type) => {
+        let file = new File([buffer], name);
+        let newFilename;
+        let asset;
+        mWorkspace.storeFile(file)
+            .then(nf => newFilename = nf)
+            .then(() => mAssetUtil.loadAssetFile(newFilename, type))
+            .then(a => asset = a)
+            .then(() => DataUtil.getAssetCreationActions(id, file.name, newFilename, type, asset))
+            .then(actions => {
+                mModelController.applyTransaction(new Transaction(actions));
+                updateModel();
+            })
+            .then(() => mWebsocketController.uploadAsset(mModelController.getModel().id, newFilename, mWorkspace))
+            .then(() => mAssetUtil.generateThumbnail(id, asset, type))
+            .then(thumbnailFilename => mWebsocketController.uploadAsset(mModelController.getModel().id, thumbnailFilename, mWorkspace));
+    })
+
+    mSceneInterface.onAssetCreate((id, name, filename, type, blob) => {
+        let file = new File([blob], filename);
+        if (!mWorkspace) {
+            return mWebsocketController.newAsset(id, file, type)
+        } else {
+            let asset;
+            let newFilename;
+            let chain = mWorkspace.storeFile(file)
+                .then(nf => newFilename = nf)
+                .then(() => mAssetUtil.loadAssetFile(newFilename, type))
+                .then(a => asset = a)
+                .then(() => mAssetUtil.generateThumbnail(id, asset, type))
+                .then(() => DataUtil.getAssetCreationActions(id, name, newFilename, type, asset))
+                .then(actions => mModelController.applyTransaction(new Transaction(actions)))
+
+            if (mWebsocketController.isSharing()) {
+                chain = chain
+                    .then(() => mWebsocketController.uploadAsset(mModelController.getModel().id, newFilename, mWorkspace))
+                    .then(() => mWebsocketController.uploadAsset(mModelController.getModel().id, thumbnailFilename, mWorkspace))
+            }
+
+            chain
+                .catch(e => {
+                    console.error(e);
+                    console.error('Asset creation failed.');
+                });
+
+            return chain;
+        }
+    });
+
+    mSceneInterface.onTeleport((id) => {
         let isTeleport = IdUtil.getClass(id) == Data.Teleport;
         let teleport = mModelController.getModel().teleports.find(t => isTeleport ? t.id == id : t.attachedId == id);
         if (!teleport) { console.error('Invalid id: ' + id); }
         let pos = new THREE.Vector3(teleport.sceneX, teleport.sceneY, teleport.sceneZ)
         let direction = new THREE.Vector3(teleport.sceneDirX, teleport.sceneDirY, teleport.sceneDirZ);
-        await setCurrentMoment(teleport.destinationId, pos, direction);
+        setCurrentMoment(teleport.destinationId, pos, direction);
         updateModel();
     });
 
-    mSceneInterface.onCreateMoment(async () => {
-        await createMoment();
-    });
+    mSceneInterface.onCreateMoment(() => { createMoment(); });
     mSceneInterface.onUndo(undo);
     mSceneInterface.onRedo(redo);
 
 
-    mSceneInterface.onSelect(async (id) => {
+    mSceneInterface.onSelect((id) => {
         mSidebarController.navigate(id);
     });
 
-    mWebsocketController.onCreateMoment(async () => {
-        await createMoment();
-    })
+    mWebsocketController.onCreateMoment(() => { createMoment(); })
 
-    async function show(workspace = null) {
+    function show(workspace = null) {
         mWorkspace = workspace;
-
-        await mAudioRecorder.init();
 
         const storyId = UrlUtil.getParam('story');
         if (!storyId) { console.error("Story not set!"); return; }
 
-        const remote = UrlUtil.getParam("remote") == 'true';
+        let chain = Promise.resolve();
 
+        const remote = UrlUtil.getParam("remote") == 'true';
         if (remote) {
             mSidebarController.hideShare();
-            let story = await new Promise((resolve, reject) => {
-                mWebsocketController.connectToStory(storyId);
-                mWebsocketController.onStoryConnect(async (story) => {
-                    resolve(story);
-                })
-            })
-            let model = Data.StoryModel.fromObject(story);
-
-            mModelController = new ModelController(model);
-
             mAssetUtil = new AssetUtil(new RemoteWorkSpace(storyId));
-        } else {
-            let story = await mWorkspace.getStory(storyId);
-            if (!story) throw Error("Invalid workspace!");
 
-            mModelController = new ModelController(story);
-            mModelController.addUpdateListener((transaction, model) => mWorkspace.updateStory(model));
+            chain = chain
+                .then(() => new Promise((resolve, reject) => {
+                    try {
+                        mWebsocketController.onStoryConnect((story) => resolve(story))
+                        mWebsocketController.connectToStory(storyId);
+                    } catch (e) {
+                        reject(e);
+                    }
+                }))
+                .then(story => Data.StoryModel.fromObject(story))
+                .then(model => mModelController = new ModelController(model))
+                .catch(e => {
+                    console.error(e);
+                    console.error("Remote story init failed");
+                })
+        } else {
             mAssetUtil = new AssetUtil(mWorkspace);
+            chain = chain
+                .then(() => mWorkspace.getStory(storyId))
+                .then(story => {
+                    if (!story) throw Error("Invalid workspace!");
 
-            if (story.moments.length == 0) {
-                await createMoment();
-            }
+                    mModelController = new ModelController(story);
+                    mModelController.addUpdateListener((transaction, model) => mWorkspace.updateStory(model));
+
+                    if (story.moments.length == 0) { createMoment(); }
+                })
+                .catch(e => {
+                    console.error(e);
+                    console.error("Local story init failed");
+                })
         }
 
-        mAssetList.setAssetUtil(mAssetUtil);
-        mModelController.addUpdateListener(mWebsocketController.updateStory);
+        chain = chain
+            .then(() => mAudioRecorder.init())
+            .catch(e => {
+                console.error(e)
+                console.error('Audio init failed.');
+            })
+            .then(() => {
+                mAssetList.setAssetUtil(mAssetUtil);
+                mModelController.addUpdateListener(mWebsocketController.updateStory);
+                resize(mWidth, mHeight);
 
-        resize(mWidth, mHeight);
+                updateModel();
 
-        await updateModel();
-
-        const momentId = UrlUtil.getParam('moment')
-        if (momentId) {
-            await setCurrentMoment(momentId);
-        } else {
-            await setCurrentMoment(null);
-        }
+                const momentId = UrlUtil.getParam('moment')
+                if (momentId) {
+                    setCurrentMoment(momentId);
+                } else {
+                    setCurrentMoment(null);
+                }
+            });
+        return chain;
     }
 
     function pushUndo(model, transaction) {
@@ -326,7 +361,7 @@ export function EditorPage(parentContainer, mWebsocketController) {
         mUndoStack.push(inverse);
     }
 
-    async function undo() {
+    function undo() {
         if (mUndoStack.length == 0) return;
         let transaction = mUndoStack.pop()
         let inverse = transaction.invert(mModelController.getModel());
@@ -335,7 +370,7 @@ export function EditorPage(parentContainer, mWebsocketController) {
         updateModel();
     }
 
-    async function redo() {
+    function redo() {
         if (mRedoStack.length == 0) return;
         let transaction = mRedoStack.pop()
         let inverse = transaction.invert(mModelController.getModel());
@@ -344,35 +379,35 @@ export function EditorPage(parentContainer, mWebsocketController) {
         updateModel();
     }
 
-    async function updateModel() {
+    function updateModel() {
         try {
             let model = mModelController.getModel();
-            await mAssetUtil.updateModel(model);
-            await mAssetList.updateModel(model);
+            mAssetUtil.updateModel(model);
+            mAssetList.updateModel(model);
 
-            await mSidebarController.updateModel(model);
-            await mSceneInterface.updateModel(model, mAssetUtil);
+            mSidebarController.updateModel(model);
+            mSceneInterface.updateModel(model, mAssetUtil);
         } catch (e) {
             console.error(e);
         }
     }
 
-    async function setCurrentMoment(momentId, position = new THREE.Vector3(), direction = new THREE.Vector3(0, 0, -1)) {
+    function setCurrentMoment(momentId, position = new THREE.Vector3(), direction = new THREE.Vector3(0, 0, -1)) {
         if (!momentId) { UrlUtil.updateParams({ 'moment': null }); }
 
         let model = mModelController.getModel();
         let moment = model.find(momentId);
         if (moment) {
             UrlUtil.updateParams({ 'moment': momentId });
-            await mSidebarController.navigate(momentId);
+            mSidebarController.navigate(momentId);
         } else {
             UrlUtil.updateParams({ 'moment': null });
-            await mSidebarController.navigate(model.id);
+            mSidebarController.navigate(model.id);
         }
-        await mSceneInterface.setCurrentMoment(momentId, position, direction);
+        mSceneInterface.setCurrentMoment(momentId, position, direction);
     }
 
-    async function createMoment() {
+    function createMoment() {
         let momentId = IdUtil.getUniqueId(Data.Moment);
         let name = DataUtil.getNextName('Moment', mModelController.getModel().moments.map(m => m.name));
         let transaction = new Transaction([
@@ -382,8 +417,8 @@ export function EditorPage(parentContainer, mWebsocketController) {
                 IdUtil.getUniqueId(Data.Photosphere), { momentId })
         ]);
         pushUndo(mModelController.getModel(), transaction)
-        await mModelController.applyTransaction(transaction);
-        await updateModel();
+        mModelController.applyTransaction(transaction);
+        updateModel();
     }
 
     mWindowEventManager.onResize(resize);
@@ -400,7 +435,6 @@ export function EditorPage(parentContainer, mWebsocketController) {
         mResizeTarget.style['top'] = (viewCanvasHeight - RESIZE_TARGET_SIZE / 2) + "px"
 
         mSceneInterface.resize(viewCanvasWidth, viewCanvasHeight);
-        mPictureEditorController.resize(viewCanvasWidth, viewCanvasHeight);
     }
 
     mWindowEventManager.onPointerUp((screenCoords) => {

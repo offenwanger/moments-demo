@@ -1,3 +1,4 @@
+
 export function mockAudioContext() {
 
     return {
@@ -20,7 +21,13 @@ export function mockAudioContext() {
         },
         decodeAudioData: function (bufferCopy, callback) {
             // returns an audio buffer, we're just going to return the array buffer...
-            callback(new mockAudioBuffer(bufferCopy));
+            let returnable = Promise.resolve();
+            try {
+                callback(new mockAudioBuffer(bufferCopy));
+            } catch (err) {
+                console.error(err);
+            }
+            return returnable;
         },
         createBufferSource: function () {
             return {

@@ -6,6 +6,7 @@ import { InteractionTargetInterface } from "./interaction_target_interface.js";
 export function AudioWrapper(parent, audioListener) {
     let mParent = parent;
     let mAudio = new Data.Audio();
+    let mInitialized = false;
     let mInteractionTarget = createInteractionTarget(); 1
 
     const mSphere = new THREE.Mesh(
@@ -25,6 +26,7 @@ export function AudioWrapper(parent, audioListener) {
         }));
 
     const mSound = new THREE.PositionalAudio(audioListener);
+    mSound.setLoop(true);
     mSphere.add(mSound);
 
     const mAudioMap = new THREE.TextureLoader().load('assets/images/audioIcon.png');
@@ -33,22 +35,29 @@ export function AudioWrapper(parent, audioListener) {
     mAudioSprite.position.set(0.1, 0.1, 0);
     mSphere.add(mAudioSprite)
 
-    async function update(audio, model, assetUtil) {
+    function updateModel(audio, model, assetUtil) {
         mParent.add(mSphere);
         mSphere.position.set(audio.x, audio.y, audio.z);
         mSphere.userData.id = audio.id;
 
-        let buffer = await assetUtil.loadAudioAsset(audio.assetId);
-        mSound.setBuffer(buffer);
-        mSound.setLoop(true);
         mSound.setVolume(audio.volume);
-        if (audio.ambient) {
-            try { mSound.play(); } catch (e) { console.error(e); }
-        } else {
-            try { mSound.stop(); } catch (e) { console.error(e); }
-        }
-
         mAudio = audio;
+
+        mInitialized = false;
+        assetUtil.loadAudioAsset(audio.assetId)
+            .then(buffer => {
+                if (!buffer) {
+                    console.error('Failed to load audio.')
+                    return;
+                }
+                mSound.setBuffer(buffer);
+                mInitialized = true;
+                if (audio.ambient) {
+                    try { mSound.play(); } catch (e) { console.error(e); }
+                } else {
+                    try { mSound.stop(); } catch (e) { console.error(e); }
+                }
+            })
     }
 
     function getId() {
@@ -57,7 +66,9 @@ export function AudioWrapper(parent, audioListener) {
 
     function remove() {
         mParent.remove(mSphere);
-        try { mSound.stop(); } catch (e) { console.error(e); }
+        if (mInitialized) try {
+            mSound.stop();
+        } catch (e) { console.error(e); }
     }
 
     function getTargets(ray, toolState) {
@@ -79,14 +90,18 @@ export function AudioWrapper(parent, audioListener) {
         };
         target.select = function (toolState) {
             mSphere.material.color.setHex(0xffffff)
-            if (!mAudio.ambient) {
-                try { mSound.play(); } catch (e) { console.error(e); }
+            if (mAudio && !mAudio.ambient) {
+                if (mInitialized) try {
+                    mSound.play();
+                } catch (e) { console.error(e); }
             }
         };
         target.idle = (toolState) => {
             mSphere.material.color.setHex(0xaaaa99);
-            if (!mAudio.ambient) {
-                try { mSound.pause(); } catch (e) { console.error(e); }
+            if (mAudio && !mAudio.ambient) {
+                if (mInitialized) try {
+                    mSound.pause();
+                } catch (e) { console.error(e); }
             }
         }
         target.getLocalPosition = () => {
@@ -110,7 +125,7 @@ export function AudioWrapper(parent, audioListener) {
     }
 
     this.getTargets = getTargets;
-    this.update = update;
+    this.updateModel = updateModel
     this.getId = getId;
     this.remove = remove;
 }

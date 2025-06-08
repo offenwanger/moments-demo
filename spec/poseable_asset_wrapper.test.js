@@ -15,14 +15,15 @@ describe('Test Posable Asset Wrapper', function () {
     })
 
     describe('init tests', function () {
-        it('should load a 3D model', async function () {
-            await setupEnvironmentWith3DAsset('bonesAndMesh.glb');
+        it('should load a 3D model', function () {
+            setupEnvironmentWith3DAsset('bonesAndMesh.glb');
+            expect(testmodel().poseableAssets.length).toBeGreaterThan(0);
         });
     });
 
     describe('canvas drag tests', function () {
-        it('should target model mesh', async function () {
-            await setupEnvironmentWith3DAsset('bonesAndMesh.glb');
+        it('should target model mesh', function () {
+            setupEnvironmentWith3DAsset('bonesAndMesh.glb');
             let poseableAsset = testmodel().poseableAssets[0];
             let cubeData = testmodel().assetPoses.find(p =>
                 p.name == "Cube" && p.parentId == poseableAsset.id)
@@ -32,13 +33,13 @@ describe('Test Posable Asset Wrapper', function () {
 
             let canvas = document.querySelector('#main-canvas');
 
-            await movePageHead(0.6, 0, 0)
-            await lookHead(cubeData.x, cubeData.y, cubeData.z)
+            movePageHead(0.6, 0, 0)
+            lookHead(cubeData.x, cubeData.y, cubeData.z)
 
-            await pointermove(canvas.width / 2, canvas.height / 2);
-            await canvaspointerdown(canvas.width / 2, canvas.height / 2)
-            await pointermove(canvas.width / 2 - 100, canvas.height / 2);
-            await pointerup(canvas.width / 2 - 100, canvas.height / 2);
+            pointermove(canvas.width / 2, canvas.height / 2);
+            canvaspointerdown(canvas.width / 2, canvas.height / 2)
+            pointermove(canvas.width / 2 - 100, canvas.height / 2);
+            pointerup(canvas.width / 2 - 100, canvas.height / 2);
 
 
             cubeData = testmodel().assetPoses.find(p =>
@@ -48,8 +49,8 @@ describe('Test Posable Asset Wrapper', function () {
             expect(cubeData.z).toBeCloseTo(-0.9821, 3);
         });
 
-        it('should drag skinnedmesh', async function () {
-            await setupEnvironmentWith3DAsset('bonesAndMesh.glb');
+        it('should drag skinnedmesh', function () {
+            setupEnvironmentWith3DAsset('bonesAndMesh.glb');
             let poseableAsset = testmodel().poseableAssets[0];
 
             expect(testmodel().assetPoses
@@ -61,10 +62,10 @@ describe('Test Posable Asset Wrapper', function () {
 
             let canvas = document.querySelector('#main-canvas');
 
-            await pointermove(canvas.width / 2, canvas.height / 2);
-            await canvaspointerdown(canvas.width / 2, canvas.height / 2)
-            await pointermove(canvas.width / 2 - 100, canvas.height / 2);
-            await pointerup(canvas.width / 2 - 100, canvas.height / 2);
+            pointermove(canvas.width / 2, canvas.height / 2);
+            canvaspointerdown(canvas.width / 2, canvas.height / 2)
+            pointermove(canvas.width / 2 - 100, canvas.height / 2);
+            pointerup(canvas.width / 2 - 100, canvas.height / 2);
 
             expect(testmodel().assetPoses
                 .find(p => p.name == "Bone" && p.parentId == poseableAsset.id).x)

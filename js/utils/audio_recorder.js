@@ -6,7 +6,7 @@ export function AudioRecorder() {
     let mCanvas = document.createElement('canvas');
     const mCtx = mCanvas.getContext("2d");
 
-    let mOnChunkCallback = async () => { }
+    let mOnChunkCallback = () => { }
 
     let mMediaRecorder;
 
@@ -20,20 +20,23 @@ export function AudioRecorder() {
     const mAudio = new Audio();
     mAudio.loop = true
 
-    async function init() {
-        if (navigator.mediaDevices.getUserMedia) {
-            // Audio recording is supported. 
-            try {
-                const constraints = { audio: true };
-                let stream = await navigator.mediaDevices.getUserMedia(constraints);
-                mMediaRecorder = new MediaRecorder(stream);
+    function init() {
+        if (!navigator.mediaDevices.getUserMedia) {
+            console.error("MediaDevices.getUserMedia() not supported on browser.");
+            return Promise.reject();
+        }
 
+        // Audio recording is supported. 
+        const constraints = { audio: true };
+        return navigator.mediaDevices.getUserMedia(constraints)
+            .then(stream => {
+                mMediaRecorder = new MediaRecorder(stream);
                 const source = mAudioCtx.createMediaStreamSource(stream);
                 source.connect(mAnalyser);
 
-                mMediaRecorder.ondataavailable = async function (e) {
+                mMediaRecorder.ondataavailable = function (e) {
                     mChunks.push(e.data);
-                    await mOnChunkCallback(e.data);
+                    mOnChunkCallback(e.data);
                 };
 
                 mMediaRecorder.onstart = function (e) {
@@ -43,14 +46,11 @@ export function AudioRecorder() {
 
                 mMediaRecorder.start(1000)
                 mMediaRecorder.pause();
-            } catch (err) {
-                console.error(err);
+            })
+            .catch(e => {
+                console.error(e);
                 console.error('Failed to start audio recorder.');
-            }
-
-        } else {
-            console.error("MediaDevices.getUserMedia() not supported on browser.");
-        }
+            });
     }
 
     function startRecording() {
@@ -68,7 +68,7 @@ export function AudioRecorder() {
         mMediaRecorder?.start(1000);
         mMediaRecorder?.pause();
         // this doesn't actually clear it because
-        // the async stop drops the last chunk, but 
+        // the asyncronous stop drops the last chunk, but 
         // do it anyway.
         mChunks = [];
     }

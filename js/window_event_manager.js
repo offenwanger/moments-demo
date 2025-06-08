@@ -3,45 +3,45 @@
  */
 
 export function WindowEventManager() {
-    let mPointerUpCallback = async (screenCoords) => { }
-    let mPointerMoveCallback = async (screenCoords) => { }
-    let mUndoCallback = async () => { }
-    let mRedoCallback = async () => { }
-    let mResizeCallback = async (width, height) => { }
+    let mPointerUpCallback = (screenCoords) => { }
+    let mPointerMoveCallback = (screenCoords) => { }
+    let mUndoCallback = () => { }
+    let mRedoCallback = () => { }
+    let mResizeCallback = (width, height) => { }
 
-    window.addEventListener('resize', async () => {
+    window.addEventListener('resize', () => {
         try {
-            await mResizeCallback(window.innerWidth, window.innerHeight);
+            mResizeCallback(window.innerWidth, window.innerHeight);
         } catch (e) { console.error(e); }
     });
 
-    window.addEventListener('pointermove', async (event) => {
+    window.addEventListener('pointermove', (event) => {
         try {
-            await mPointerMoveCallback({ x: event.clientX, y: event.clientY });
+            mPointerMoveCallback({ x: event.clientX, y: event.clientY });
         } catch (e) { console.error(e); }
     });
 
-    window.addEventListener('pointerup', async (event) => {
+    window.addEventListener('pointerup', (event) => {
         try {
-            await mPointerUpCallback({ x: event.clientX, y: event.clientY });
+            mPointerUpCallback({ x: event.clientX, y: event.clientY });
         } catch (e) { console.error(e); }
     });
 
-    window.addEventListener('keydown', async (event) => {
+    window.addEventListener('keydown', (event) => {
         if (event.ctrlKey && event.key === 'z') {
-            await mUndoCallback();
+            mUndoCallback();
         }
     });
 
-    window.addEventListener('keydown', async (event) => {
+    window.addEventListener('keydown', (event) => {
         if (event.ctrlKey && event.key === 'y') {
-            await mRedoCallback();
+            mRedoCallback();
         }
     });
 
-    window.addEventListener('keydown', async (event) => {
+    window.addEventListener('keydown', (event) => {
         if (event.ctrlKey && event.shiftKey && event.key === 'z') {
-            await mRedoCallback();
+            mRedoCallback();
         }
     });
 
