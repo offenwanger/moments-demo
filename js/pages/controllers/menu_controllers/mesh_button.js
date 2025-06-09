@@ -35,6 +35,7 @@ export function MeshButton(id, label, size, color = null, dynamic = false) {
     setColor('#555555')
 
     function setImage(image, hideText = true) {
+        if (!image) return;
         new THREE.TextureLoader().load(image, (texture) => {
             mButton.set({ backgroundTexture: texture, backgroundColor: null });
             if (hideText) { mText.set({ content: '' }); }

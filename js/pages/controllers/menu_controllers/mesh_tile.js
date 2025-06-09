@@ -37,6 +37,7 @@ export function MeshTile(id, label, size, color = null, dynamic = false) {
     setColor('#555555')
 
     function setImage(image, hideText = true) {
+        if (!image) return;
         new THREE.TextureLoader().load(image, (texture) => {
             mTile.set({ backgroundTexture: texture, backgroundColor: null });
             if (hideText) { mText.set({ content: '' }); }

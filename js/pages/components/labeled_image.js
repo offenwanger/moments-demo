@@ -24,5 +24,5 @@ export function LabeledImage(container) {
     this.remove = () => { container.removeChild(mGroup) }
     this.setId = (id) => { mGroup.setAttribute('id', id); return this; }
     this.setLabel = (label) => { mText.textContent = label; return this; }
-    this.setImage = (src) => { mImage.src = src; return this; }
+    this.setImage = (src) => { if (src) mImage.src = src; return this; }
 }

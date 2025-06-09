@@ -68,7 +68,7 @@ function unpackageAssetsFromZip(zipBlob, assetFolder) {
     const zipReader = new zip.ZipReader(zipFileReader);
     return zipReader.getEntries()
         .then(entries => {
-            entries.filter(entry => entry.filename != STORY_JSON_FILE)
+            return entries.filter(entry => entry.filename != STORY_JSON_FILE)
                 .map((entry, i) => {
                     const stream = new TransformStream();
                     const fileDataPromise = new Response(stream.readable).arrayBuffer();
@@ -83,7 +83,7 @@ function unpackageAssetsFromZip(zipBlob, assetFolder) {
                         })
                         .then(() => logInfo('File ' + (i + 1) + '/' + entries.length + ' written'))
                         .catch(e => console.error('Failed to write ' + entry ? entry.filename : 'unnamed files.'));
-                })
+                });
         })
         .then(proms => Promise.all(proms))
         .then(() => zipReader.close());
