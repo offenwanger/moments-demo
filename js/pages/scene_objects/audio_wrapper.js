@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { ToolButtons } from '../../constants.js';
+import { AssetTypes, ToolButtons } from '../../constants.js';
 import { Data } from "../../data.js";
 import { InteractionTargetInterface } from "./interaction_target_interface.js";
 
@@ -44,7 +44,7 @@ export function AudioWrapper(parent, audioListener) {
         mAudio = audio;
 
         mInitialized = false;
-        assetUtil.loadAudioAsset(audio.assetId)
+        assetUtil.loadAsset(audio.assetId, AssetTypes.AUDIO)
             .then(buffer => {
                 if (!buffer) {
                     console.error('Failed to load audio.')

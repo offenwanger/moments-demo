@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import mime from 'mime';
 import { dirname } from 'path';
-import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
+import * as td from 'testdouble';
 import { fileURLToPath } from 'url';
 import { logInfo } from '../../js/utils/log_util.js';
 
@@ -11,28 +11,72 @@ if (!fs.existsSync(OUT_FOLDER)) { fs.mkdirSync(OUT_FOLDER); }
 const IN_FOLDER = __dirname + '/testinput/'
 if (!fs.existsSync(IN_FOLDER)) { fs.mkdirSync(IN_FOLDER); }
 
-export function setup() {
+export async function setup() {
     global.fileSystem = {}
+    await td.replaceEsm('fs', {
+        existsSync: (folder) => {
+            return global.fileSystem[folder] && global.fileSystem[folder].isDir;
+        },
+        mkdirSync: (folder) => {
+            if (global.fileSystem[folder] && !global.fileSystem[folder].isDir) {
+                console.error('dir shares name with file.')
+            } else {
+                global.fileSystem[folder] = { isDir: true }
+            }
+        },
+        readFileSync: (filename) => {
+            if (filename == './token.txt') { return 'faketoken' }
+            if (global.fileSystem[filename]) {
+                return global.fileSystem[filename];
+            } else {
+                console.error('File not in fake system')
+            }
+        },
+        writeFileSync: (filename, contents, format) => {
+            global.fileSystem[filename] = contents;
+        }
+
+    });
 }
 
-export function cleanup() {
+export async function cleanup() {
     delete global.fileSystem;
 }
 
 export class mockFileReader {
     callbacks = {};
     readAsDataURL = function (file) {
-        // wait for load functions to get set. Dumb requirement for GLTFExporter to work. 
-        this.result = file.text();
-
-        if (this.result instanceof Blob) {
-            // should only happen in async tests
-            this.result.arrayBuffer().then(result => {
-                this.result = result;
+        let fileData = file.getFileData();
+        if (Array.isArray(fileData) && fileData.length == 1) fileData = fileData[0]
+        if (file.name.endsWith('glb') && fileData instanceof Blob) {
+            // GLTFExporter gives us an array buffer, convert to dataURL to match 
+            // the rest of the imported files. 
+            fileData.arrayBuffer().then((s) => {
+                const base64String = btoa(String.fromCharCode(...new Uint8Array(s)));
+                this.result = 'data:application/octet-stream;base64,' + base64String;
                 this.triggersFuncs()
             })
-        } else {
+        } else if (fileData instanceof Blob) {
+            // should only happen in async tests
+            fileData.arrayBuffer().then(result => {
+                this.result = result;
+                this.triggersFuncs()
+            });
+        } else if (fileData.isHackedBlob) {
+            if (Array.isArray(fileData.input) && fileData.input.length == 2 && typeof fileData.input[0] == 'string') {
+                // it's our fake audio data uri
+            }
+            this.result = fileData.input.join('');
             this.triggersFuncs()
+        } else if (fileData.isMockCanvas) {
+            // mock canvas cannot be converted to dataURI, so return a fake one. 
+            this.result = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAjAAAAHgCAYAAAC7J1fdAAAAAXNSR0IArs4c6QAAHAJJREFUeF7t3UuS';
+            this.triggersFuncs()
+        } else if (typeof fileData == 'string') {
+            this.result = fileData;
+            this.triggersFuncs()
+        } else {
+            console.error('conversion not implimented.')
         }
     }
     readAsArrayBuffer = function (blob) {
@@ -133,66 +177,49 @@ export function mockFile(data, filename, params = null) {
     this.type = params ? params.type : null;
 
     // writing file
-    this.write = (stream) => {
-        if (Array.isArray(stream) && stream.length == 1) stream = stream[0];
+    this.write = (data) => {
+        if (Array.isArray(data) && data.length == 1) data = data[0];
 
-        if (!stream) {
-            console.error('invalid stream: ', stream);
+        if (!data) {
+            console.error('invalid data: ', data);
         }
 
-        if (filename.endsWith('glb') && stream instanceof Blob) {
+        if (filename.endsWith('glb') && data instanceof Blob) {
             // GLTFExporter gives us an array buffer, convert to dataURL to match 
             // the rest of the imported files. 
-            stream.arrayBuffer().then((s) => {
+            data.arrayBuffer().then((s) => {
                 const base64String = btoa(String.fromCharCode(...new Uint8Array(s)));
-                stream = 'data:application/octet-stream;base64,' + base64String;
-                global.fileSystem[filename] = stream;
+                data = 'data:application/octet-stream;base64,' + base64String;
+                global.fileSystem[filename] = data;
             })
-        } else if (stream instanceof ArrayBuffer) {
+        } else if (data instanceof ArrayBuffer) {
             let str = '';
-            let bytes = new Uint8Array(stream);
+            let bytes = new Uint8Array(data);
             let len = bytes.byteLength;
             for (let i = 0; i < len; i++) { str += String.fromCharCode(bytes[i]); }
             global.fileSystem[filename] = str;
-        } else if (typeof stream == 'string') {
-            global.fileSystem[filename] = stream;
-        } else if (stream.isMockCanvas) {
-            global.fileSystem[filename] = stream;
-        } else if (stream.isHackedBlob) {
+        } else if (typeof data == 'string') {
+            global.fileSystem[filename] = data;
+        } else if (data.isMockCanvas) {
+            global.fileSystem[filename] = data;
+        } else if (data.isHackedBlob) {
             // so far this is only used for audio blobs
-            let dataURL = stream.input.join('');
+            let dataURL = data.input.join('');
             global.fileSystem[filename] = dataURL;
         } else {
-            console.error('unhandled data stream: ', stream)
+            console.error('unhandled data stream: ', data)
         }
     }
     this.close = () => { };
 
     // reading file
-    this.arrayBuffer = () => data;
-    this.text = () => data;
-}
+    this.arrayBuffer = () => Promise.resolve(data);
+    this.text = () => {
+        if (typeof data !== 'string') {
+            console.error('conversion not implemented.')
+        }
+        return data;
+    }
 
-let counter = 0;
-export function exportGLTF(scene) {
-    return new Promise((resolve, reject) => {
-        const exporter = new GLTFExporter();
-        exporter.parse(
-            scene,
-            function (gltf) {
-                const filename = OUT_FOLDER + "testout" + Date.now() + "_" + (counter++) + ".glb";
-                try {
-                    fs.writeFileSync(filename, JSON.stringify(gltf), err => err ? console.error(err) : null);
-                    resolve();
-                } catch (e) {
-                    console.error(e);
-                    reject();
-                }
-            },
-            function (error) {
-                console.error(error);
-                reject();
-            });
-    })
+    this.getFileData = () => data;
 }
-

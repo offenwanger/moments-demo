@@ -1,4 +1,4 @@
-import { STORY_JSON_FILE } from '../constants.js';
+import { AssetTypes, STORY_JSON_FILE } from '../constants.js';
 import { Data } from '../data.js';
 import { logInfo } from './log_util.js';
 
@@ -13,20 +13,17 @@ function getJSONFromFile(dir, filename) {
         .then(jsonTxt => JSON.parse(jsonTxt));
 }
 
-function getDataUriFromFile(dir, filename) {
-    return getFile(dir, filename)
-        .then(file => {
-            const reader = new FileReader();
-            return new Promise((resolve, reject) => {
-                reader.addEventListener('error', function () {
-                    reject(e);
-                })
-                reader.addEventListener('load', function () {
-                    resolve(reader.result);
-                });
-                reader.readAsDataURL(file);
-            });
+function getDataUriFromFile(file) {
+    const reader = new FileReader();
+    return new Promise((resolve, reject) => {
+        reader.addEventListener('error', function () {
+            reject(e);
         })
+        reader.addEventListener('load', function () {
+            resolve(reader.result);
+        });
+        reader.readAsDataURL(file);
+    });
 }
 
 function writeFile(folder, filename, data) {
@@ -154,6 +151,33 @@ function showFilePicker(accept = null, multiple = false) {
     });
 }
 
+function getTypeFromFile(file) {
+    let type;
+    let t = file.type.split('/')[0];
+    if (t == 'image') {
+        type = AssetTypes.IMAGE;
+    } else if (t == 'audio') {
+        type = AssetTypes.AUDIO;
+    } else {
+        let extension = file.name.split('.').pop();
+        if (extension == 'glb' || extension == 'gltf') {
+            type = AssetTypes.MODEL;
+        } else {
+            throw new Error('Unhandled file type: ' + file.type + " " + extension);
+        }
+    }
+    return type;
+}
+
+function cleanFilename(name) {
+    let nameBreakdown = name.split(".");
+    // simplify name otherwise it causes URL issues. 
+    nameBreakdown[0] = nameBreakdown[0].replace(/[^a-zA-Z0-9-_]/g, '');
+    nameBreakdown[0] += "-" + Date.now();
+    return nameBreakdown.join('.');
+}
+
+
 export const FileUtil = {
     getJSONFromFile,
     getDataUriFromFile,
@@ -165,5 +189,7 @@ export const FileUtil = {
     downloadBlob,
     downloadPNG,
     showFilePicker,
+    getTypeFromFile,
+    cleanFilename,
 }
 

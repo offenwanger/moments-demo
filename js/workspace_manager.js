@@ -93,30 +93,20 @@ export function WorkspaceManager(folderHandle) {
             })
     }
 
-    function storeFile(file, updateName = true) {
-        let name = file.name;
-        if (updateName) {
-            let nameBreakdown = file.name.split(".");
-            // simplify name otherwise it causes URL issues. 
-            nameBreakdown[0] = nameBreakdown[0].replace(/[^a-zA-Z0-9-_]/g, '');
-            nameBreakdown[0] += "-" + Date.now();
-            name = nameBreakdown.join('.');
-        }
-
+    function storeFile(file) {
         let folder;
-
         return initialized
             .then(() => mFolderHandle.getDirectoryHandle(FILE_FOLDER, { create: true }))
             .then(f => folder = f)
             .then(() => file.arrayBuffer())
-            .then(arrayBuffer => FileUtil.writeFile(folder, name, arrayBuffer))
-            .then(() => name)
+            .then(arrayBuffer => FileUtil.writeFile(folder, file.name, arrayBuffer))
     }
 
     function getFileAsDataURI(filename) {
         return initialized
             .then(() => mFolderHandle.getDirectoryHandle(FILE_FOLDER, { create: true }))
-            .then(folder => FileUtil.getDataUriFromFile(folder, filename));
+            .then(folder => FileUtil.getFile(folder, filename))
+            .then(file => FileUtil.getDataUriFromFile(file));
     }
 
     function updateWorkspaceData() {
@@ -180,6 +170,9 @@ export function RemoteWorkSpace(storyId) {
             .then(result => {
                 if (result?.ok) {
                     return result.text();
+                } else if (result?.status.toString() == '404') {
+                    // it's just missing. No fuss needed.
+                    return null;
                 } else {
                     console.error(result);
                     console.error(`Failed to fetch file, HTTP Response Code: ${result?.status}`)

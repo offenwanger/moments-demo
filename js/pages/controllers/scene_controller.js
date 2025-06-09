@@ -68,9 +68,8 @@ export function SceneController(audioListener) {
 
         // update the thumbnail
         if (oldMomentId && mAssetUtil) {
-            mAssetUtil.generateThumbnail(oldMomentId, mScene, Data.Moment)
-                // clear the cache so we reload it next time we want it
-                .then(() => mAssetUtil.clearCache(oldMomentId));
+            mAssetUtil.clearCache(oldMomentId)
+            mAssetUtil.generateThumbnail(oldMomentId, mScene, Data.Moment);
         }
     }
 

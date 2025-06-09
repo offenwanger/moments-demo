@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { ToolButtons } from '../../constants.js';
+import { AssetTypes, ToolButtons } from '../../constants.js';
 import { Data } from "../../data.js";
 import { InteractionTargetInterface } from "./interaction_target_interface.js";
 
@@ -56,7 +56,7 @@ export function PictureWrapper(parent, audioListener) {
         let audio = model.audios.find(a => a.attachedId == picture.id);
         if (audio) {
             mPlanes.add(mAudioSprite);
-            assetUtil.loadAudioAsset(audio.assetId)
+            assetUtil.loadAsset(audio.assetId, AssetTypes.AUDIO)
                 .then(buffer => {
                     mSound.setBuffer(buffer);
                     mSound.setLoop(true);
@@ -75,7 +75,7 @@ export function PictureWrapper(parent, audioListener) {
 
         if (mCurrentAssetId != picture.assetId) {
             mCurrentAssetId = picture.assetId;
-            assetUtil.loadImageAsset(picture.assetId)
+            assetUtil.loadAsset(picture.assetId, AssetTypes.IMAGE)
                 .then(image => {
                     if (!image || isNaN(image.height / image.width)) {
                         console.error('Invalid image: ' + picture.assetId);

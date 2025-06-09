@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { BrushToolButtons, SurfaceToolButtons, ToolButtons } from '../../constants.js';
+import { AssetTypes, BrushToolButtons, SurfaceToolButtons, ToolButtons } from '../../constants.js';
 import { Data } from "../../data.js";
 import { Action, ActionType, Transaction } from '../../utils/transaction_util.js';
 import { Util } from '../../utils/utility.js';
@@ -183,7 +183,7 @@ export function PhotosphereWrapper(parent) {
         if (!oldPhotosphere || mPhotosphere.assetId != oldPhotosphere.assetId) {
             let load;
             if (mPhotosphere.assetId) {
-                load = assetUtil.loadImageAsset(mPhotosphere.assetId);
+                load = assetUtil.loadAsset(mPhotosphere.assetId, AssetTypes.IMAGE);
             } else {
                 load = new THREE.ImageLoader().loadAsync(DEFAULT_TEXTURE);
             }

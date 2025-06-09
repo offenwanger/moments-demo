@@ -1,10 +1,10 @@
 
 import * as THREE from 'three';
-import { AssetTypes } from '../constants.js';
 import { Data } from '../data.js';
 import { AssetUtil } from '../utils/assets_util.js';
 import { AudioRecorder } from '../utils/audio_recorder.js';
 import { DataUtil } from '../utils/data_util.js';
+import { FileUtil } from '../utils/file_util.js';
 import { IdUtil } from '../utils/id_util.js';
 import { Action, ActionType, Transaction } from '../utils/transaction_util.js';
 import { UrlUtil } from '../utils/url_util.js';
@@ -83,68 +83,42 @@ export function EditorPage(parentContainer, mWebsocketController) {
     mAssetList.onAssetsUpload((files) => {
         let chain = Promise.resolve();
         for (let file of files) {
+            let id = IdUtil.getUniqueId(Data.Asset);
             let type;
             try {
-                let t = file.type.split('/')[0];
-                if (t == 'image') {
-                    type = AssetTypes.IMAGE;
-                } else if (t == 'audio') {
-                    type = AssetTypes.AUDIO;
-                } else {
-                    let extension = file.name.split('.').pop();
-                    if (extension == 'glb' || extension == 'gltf') {
-                        type = AssetTypes.MODEL;
-                    } else {
-                        console.error('Unhandled file type: ' + file.type + " " + extension);
-                        continue;
-                    }
-                }
+                type = FileUtil.getTypeFromFile(file);;
             } catch (e) {
                 console.error(e);
+                continue;
             }
 
-            let id = IdUtil.getUniqueId(Data.Asset);
+            let oldFilename = file.name;
+            file.name = FileUtil.cleanFilename(file.name);
+
             if (!mWorkspace) {
-                chain = chain
-                    .then(() => mWebsocketController.newAsset(id, file, type))
+                mWebsocketController.newAsset(id, file, type)
             } else {
-                let newFilename;
-                let asset;
-                chain = chain
-                    .then(() => mWorkspace.storeFile(file))
-                    .then(nf => newFilename = nf)
-                    .then(() => mAssetUtil.loadAssetFile(newFilename, type))
-                    .then(a => {
-                        asset = a
-                        if (!asset) { throw new Error('Asset loading failed after storage: ' + newFilename) }
-                    })
-                    .then(() => {
-                        let actions = DataUtil.getAssetCreationActions(id, file.name, newFilename, type, asset);
-                        let transaction = new Transaction(actions);
-                        if (transaction.actions) {
-                            mModelController.applyTransaction(transaction);
-                            updateModel();
-                        }
-                    })
-                    .then(() => {
-                        if (mWebsocketController.isSharing()) {
-                            // launch this asyncronously
-                            mWebsocketController.uploadAsset(mModelController.getModel().id, newFilename, mWorkspace);
-                        }
-                    })
-                    .then(() => mAssetUtil.generateThumbnail(id, asset, type))
-                    .then(thumbnailFilename => {
-                        // asynconously upload
-                        if (mWebsocketController.isSharing()) {
-                            // launch this asyncronously
-                            mWebsocketController.uploadAsset(mModelController.getModel().id, thumbnailFilename, mWorkspace);
-                        }
-                    }).catch(e => {
-                        console.error(e);
-                        console.error('Asset upload failed for ' + newFilename);
-                    });
+                storeAsset(id, file, type)
             }
+
+            chain = chain
+                .then(() => FileUtil.getDataUriFromFile(file))
+                .then(uri => mAssetUtil.cache(id, uri, type))
+                .then(() => mAssetUtil.loadAsset(id, type))
+                .then((asset) => {
+                    if (!asset) { throw new Error('Asset loading failed after caching: ' + file.name) }
+                    let actions = DataUtil.getAssetCreationActions(id, oldFilename, file.name, type, asset);
+                    let transaction = new Transaction(actions);
+                    if (transaction.actions) {
+                        mModelController.applyTransaction(transaction);
+                        updateModel();
+                    }
+                }).catch(e => {
+                    console.error(e);
+                    console.error('Asset upload failed for ' + file.name);
+                });
         }
+
     })
 
     mAssetList.onAssetsClear(() => {
@@ -179,6 +153,7 @@ export function EditorPage(parentContainer, mWebsocketController) {
         mModelController.applyTransaction(transaction);
         updateModel();
     })
+
     mSidebarController.setDeleteCallback((id) => {
         let actions = DataUtil.getRecursiveDelete(id, mModelController.getModel());
         let transaction = new Transaction(actions)
@@ -186,6 +161,7 @@ export function EditorPage(parentContainer, mWebsocketController) {
         mModelController.applyTransaction(transaction);
         updateModel();
     })
+
     mSidebarController.onNavigate(id => {
         if (IdUtil.getClass(id) == Data.Moment) {
             setCurrentMoment(id);
@@ -214,52 +190,60 @@ export function EditorPage(parentContainer, mWebsocketController) {
 
     mWebsocketController.onNewAsset((id, name, buffer, type) => {
         let file = new File([buffer], name);
-        let newFilename;
-        let asset;
-        mWorkspace.storeFile(file)
-            .then(nf => newFilename = nf)
-            .then(() => mAssetUtil.loadAssetFile(newFilename, type))
-            .then(a => asset = a)
-            .then(() => DataUtil.getAssetCreationActions(id, file.name, newFilename, type, asset))
-            .then(actions => {
-                mModelController.applyTransaction(new Transaction(actions));
-                updateModel();
-            })
-            .then(() => mWebsocketController.uploadAsset(mModelController.getModel().id, newFilename, mWorkspace))
-            .then(() => mAssetUtil.generateThumbnail(id, asset, type))
-            .then(thumbnailFilename => mWebsocketController.uploadAsset(mModelController.getModel().id, thumbnailFilename, mWorkspace));
+        // store the asset, make a thumbnail
+        return storeAsset(id, file, type)
     })
 
     mSceneInterface.onAssetCreate((id, name, filename, type, blob) => {
         let file = new File([blob], filename);
+
         if (!mWorkspace) {
-            return mWebsocketController.newAsset(id, file, type)
+            // launch asynconously
+            // send the new file to the host. 
+            mWebsocketController.newAsset(id, file, type);
         } else {
-            let asset;
-            let newFilename;
-            let chain = mWorkspace.storeFile(file)
-                .then(nf => newFilename = nf)
-                .then(() => mAssetUtil.loadAssetFile(newFilename, type))
-                .then(a => asset = a)
-                .then(() => mAssetUtil.generateThumbnail(id, asset, type))
-                .then(() => DataUtil.getAssetCreationActions(id, name, newFilename, type, asset))
-                .then(actions => mModelController.applyTransaction(new Transaction(actions)))
-
-            if (mWebsocketController.isSharing()) {
-                chain = chain
-                    .then(() => mWebsocketController.uploadAsset(mModelController.getModel().id, newFilename, mWorkspace))
-                    .then(() => mWebsocketController.uploadAsset(mModelController.getModel().id, thumbnailFilename, mWorkspace))
-            }
-
-            chain
-                .catch(e => {
-                    console.error(e);
-                    console.error('Asset creation failed.');
-                });
-
-            return chain;
+            // launch asynconously
+            // store the file, handle thumbnails and sending to the server
+            storeAsset(id, file, type)
         }
+
+        let chain = FileUtil.getDataUriFromFile(file)
+            .then(uri => mAssetUtil.cache(id, uri, type))
+            .then(() => mAssetUtil.loadAsset(id, type))
+            .then((asset) => {
+                if (!asset) { throw new Error('Asset loading failed after caching: ' + file.name) }
+                let actions = DataUtil.getAssetCreationActions(id, name, filename, type, asset);
+                return mModelController.applyTransaction(new Transaction(actions));
+            })
+            .catch(e => {
+                console.error(e);
+                console.error('Asset creation failed.');
+            });
+
+        return chain;
     });
+
+    function storeAsset(id, file, type) {
+        let chain = mWorkspace.storeFile(file);
+
+        // do thumbnail asynconously.
+        chain
+            .then(() => mAssetUtil.loadAssetFile(file.name, type))
+            .then((asset) => {
+                if (!asset) { throw new Error('Cannot load asset to make thumbnail.'); }
+                return mAssetUtil.generateThumbnail(id, asset, type)
+            })
+            .then(thumbnailFilename => mWorkspace.isSharing ? mWebsocketController.uploadAsset(mModelController.getModel().id, thumbnailFilename, mWorkspace) : null)
+            .catch(e => {
+                console.error(e);
+                console.error('Failed to create thumbnail.')
+            })
+
+        chain = chain
+            .then(() => mWorkspace.isSharing ? mWebsocketController.uploadAsset(mModelController.getModel().id, file.name, mWorkspace) : null)
+
+        return chain;
+    }
 
     mSceneInterface.onTeleport((id) => {
         let isTeleport = IdUtil.getClass(id) == Data.Teleport;

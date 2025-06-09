@@ -13,7 +13,7 @@ describe('Test ListPage', function () {
 
     describe('init tests', function () {
         it('should create a story', function () {
-            expect(Object.keys(global.fileSystem)).toEqual([])
+            expect(Object.entries(global.fileSystem).filter(([filename, data]) => !data.isDir)).toEqual([])
             chooseFolder();
             document.querySelector('#new-story-button').eventListeners.click();
             expect(Object.keys(global.fileSystem)).toContain('test/workspace.json')
@@ -23,7 +23,7 @@ describe('Test ListPage', function () {
 
     describe('init tests', function () {
         it('should open a story', function () {
-            expect(Object.keys(global.fileSystem)).toEqual([])
+            expect(Object.entries(global.fileSystem).filter(([filename, data]) => !data.isDir)).toEqual([])
             chooseFolder();
             document.querySelector('#new-story-button').eventListeners.click();
             expect(Object.keys(global.fileSystem)).toContain('test/workspace.json')

@@ -12,7 +12,7 @@ export function AssetUtil(workspace) {
 
     let mLoadedAssets = {};
     let mLoadedThumbnails = {};
-    let mLoadedFiles = {};
+    let mLoadedFileURIs = {};
 
     const mImageLoader = new THREE.ImageLoader();
 
@@ -40,147 +40,86 @@ export function AssetUtil(workspace) {
         })
     }
 
-    function loadImageAsset(assetId) {
+    function loadAsset(assetId, type) {
         if (mLoadedAssets[assetId]) {
             return Promise.resolve(mLoadedAssets[assetId]);
-        } else {
-            let asset = mModel.find(assetId);
-            if (!asset) { console.error("Invalid image asset: " + assetId); throw new Error("Invalid model asset: " + assetId); }
-
-            let load = loadImage(asset.filename)
-                .then(image => {
-                    mLoadedAssets[assetId] = image;
-                    if (!mLoadedAssets[assetId]) {
-                        console.error('Failed to load asset: ' + assetId);
-                        return null;
-                    }
-                    return mLoadedAssets[assetId];
-                })
-                .catch(e => { console.error('Failed to fetch image: ' + assetId); console.error(e); return null; })
-
-            // check the thumbnail asyncronously.
-            load
-                .then(image => image ? checkThumbnail(assetId, image, AssetTypes.IMAGE) : null);
-
-            return load;
         }
-    }
 
-    function loadImage(filename) {
-        return mWorkspace.getFileAsDataURI(filename)
-            .then(uri => mImageLoader.loadAsync(uri, null, null));
-    }
-
-    function loadModelAsset(assetId) {
-        if (mLoadedAssets[assetId]) {
-            return Promise.resolve(mLoadedAssets[assetId].clone());
-        } else {
-            let asset = mModel.find(assetId);
-            if (!asset || asset.type != AssetTypes.MODEL) { console.error("Bad asset", assetId, asset); throw new Error("Invalid model asset: " + assetId); }
-
-            let load = loadGLTFModel(asset.filename)
-                .then(model => {
-                    mLoadedAssets[assetId] = model.scene;
-
-                    if (!model) { console.error('Failed to load asset: ' + assetId); return null; }
-
-                    return mLoadedAssets[assetId].clone();
-                }).catch(e => {
-                    console.error('Failed to fetch model: ' + assetId);
-                    console.error(e);
-                    return null;
-                })
-
-            // check the thumbnail asyncronously.
-            load
-                .then(model => model ? checkThumbnail(assetId, model, AssetTypes.MODEL) : null);
-
-            return load;
+        let asset = mModel.find(assetId);
+        if (!asset) {
+            return Promise.reject("Asset id not found in model: " + assetId);
         }
+
+        let chain = loadAssetFile(asset.filename, type, assetId);
+
+        // check the thumbnail async;
+        chain.then(asset => checkThumbnail(assetId, asset, type));
+
+        return chain;
     }
 
-    function loadGLTFModel(filename) {
-        let load = Promise.resolve()
-        if (mLoadedFiles[filename]) {
-            load = load
-                .then(() => mLoadedFiles[filename]);
-        } else {
-            load = load
+    function loadAssetFile(filename, type, assetId = null) {
+        let chain = Promise.resolve();
+
+        if (!mLoadedFileURIs[filename]) {
+            chain = chain
                 .then(() => mWorkspace.getFileAsDataURI(filename))
-                .then(loadedFile => {
-                    mLoadedFiles[filename] = loadedFile
-                })
-                .catch(e => {
-                    console.error(e);
-                    console.error("Failed to load gltf model: " + filename);
-                    return null;
+                .then(loadedURI => {
+                    if (!loadedURI) throw new Error('Failed to load asset file: ' + filename);
+                    mLoadedFileURIs[filename] = loadedURI
                 })
         }
 
+        chain = chain
+            .then(() => uriToAsset(mLoadedFileURIs[filename], type))
+            .then(asset => {
+                if (!asset) throw new Error('Failed to load asset: ' + filename);
+                if (assetId) mLoadedAssets[assetId] = asset
+                if (type == AssetTypes.MODEL) asset = asset.clone();
+                return asset;
+            })
+
+        return chain;
+    }
+
+    function cache(assetId, uri, type) {
+        return uriToAsset(uri, type)
+            .then(asset => {
+                mLoadedAssets[assetId] = asset;
+                return asset;
+            });
+    }
+
+    function uriToAsset(uri, type) {
+        if (type == AssetTypes.MODEL) {
+            return loadGLTFFromURI(uri)
+                .then(model => model.scene);
+        } else if (type == AssetTypes.IMAGE) {
+            return loadImageFromURI(uri);
+        } else if (type == AssetTypes.AUDIO) {
+            return loadAudioFromURI(uri);
+        } else { console.error('invalid asset type: ' + type); return Promise.reject(); }
+    }
+
+    function loadImageFromURI(uri) {
+        return mImageLoader.loadAsync(uri, null, null);
+    }
+
+    function loadGLTFFromURI(uri) {
         const modelLoader = new GLTFLoader();
         const dracoLoader = new DRACOLoader();
         dracoLoader.setDecoderPath('./node_modules/three/examples/jsm/libs/draco/');
         modelLoader.setDRACOLoader(dracoLoader);
-
-        return load
-            .then(() => {
-                return modelLoader.loadAsync(mLoadedFiles[filename])
-            })
-            .catch(e => {
-                console.error(e);
-                console.error('Failed to load gltf file: ' + filename);
-                return null
-            })
+        return modelLoader.loadAsync(uri);
     }
 
-    function loadAudioAsset(assetId) {
-        if (mLoadedAssets[assetId]) {
-            return Promise.resolve(mLoadedAssets[assetId]);
-        } else {
-            let chain = Promise.resolve();
-
-            let asset = mModel.assets.find(a => a.id == assetId);
-            if (!asset) { console.error("Invalid audio asset: " + assetId); return chain; }
-
-            chain = chain
-                .then(() => loadAudio(asset.filename))
-                .then(buffer => {
-                    mLoadedAssets[assetId] = buffer;
-                    return mLoadedAssets[assetId];
-                })
-                .catch(e => {
-                    console.error(e);
-                    console.error('Failed to fetch audio: ' + assetId);
-                    return null;
-                })
-
-            // check the thumbnail asyncronously.
-            chain.then(buffer => buffer ? checkThumbnail(assetId, buffer, AssetTypes.AUDIO) : null);
-
-            return chain;
-        }
-    }
-
-    function loadAudio(filename) {
-        return mWorkspace.getFileAsDataURI(filename)
-            .then(uri => {
-                return new Promise((resolve, reject) => {
-                    mAudioLoader.load(uri, resolve, null, reject);
-                })
-            })
-            .catch(e => {
-                console.error(e);
-                console.error('Failed to load audio file: ' + filename);
-                return null;
-            })
+    function loadAudioFromURI(uri) {
+        return new Promise((resolve, reject) => {
+            mAudioLoader.load(uri, resolve, null, reject);
+        })
     }
 
     function checkThumbnail(assetId, asset, type) {
-        if (workspace.isRemote) {
-            // This is only handled by local system
-            return Promise.resolve();
-        }
-
         // check that the thumbnail exists
         if (!mLoadedThumbnails[assetId]) {
             // maybe it's just not been loaded
@@ -208,37 +147,19 @@ export function AssetUtil(workspace) {
                     return mLoadedThumbnails[itemId];
                 })
                 .catch(e => {
-                    if (e.message && e.message.includes("A requested file or directory could not be found at the time an operation was processed")) {
+                    if (e instanceof Event ||
+                        e.message && e.message.includes("A requested file or directory could not be found at the time an operation was processed")) {
                         // Thumbnail might not exist yet. Normal occurance, ignore.
                     } else {
                         console.error(e);
                         console.error('Failed to load thumbnail: ' + itemId);
                     }
                     return null;
-                })
-        }
-    }
-
-    function loadAssetFile(filename, type) {
-        if (type == AssetTypes.MODEL) {
-            return loadGLTFModel(filename)
-                .then(asset => {
-                    if (asset && asset.scene) return asset.scene
-                    else return asset;
                 });
-        } else if (type == AssetTypes.IMAGE) {
-            return loadImage(filename);
-        } else if (type == AssetTypes.AUDIO) {
-            return loadAudio(filename);
-        } else { console.error('invalid asset type: ' + type); return Promise.reject(); }
+        }
     }
 
     function generateThumbnail(assetId, asset, type) {
-        if (workspace.isRemote) {
-            // This is only handled by local system
-            return;
-        }
-
         let thumbnail;
         if (type == AssetTypes.MODEL || type == Data.Moment) {
             thumbnail = ThumbnailCreator.generateSceneThumbnail(asset);
@@ -248,34 +169,38 @@ export function AssetUtil(workspace) {
             thumbnail = ThumbnailCreator.generateAudioThumbnail(asset);
         } else { console.error('invalid asset type: ' + type); return null; }
 
-        let filename = THUMBNAIL_PREFIX + assetId + THUMBNAIL_SUFFIX;
-        // store the file asyncronously.
-        return new Promise(resolve => thumbnail.toBlob(resolve, 'image/jpeg'))
-            .then(blob => {
-                let file = new File([blob], filename, { type: "image/jpeg" });
-                return workspace.storeFile(file, false);
-            })
-            .then(() => filename)
-            .catch(e => {
-                console.error(e);
-                console.error('Failed to store thumbnail for ' + assetId);
-            });
+        mLoadedThumbnails[assetId] = thumbnail.toDataURL();
+
+        if (!mWorkspace.isRemote) {
+            let filename = THUMBNAIL_PREFIX + assetId + THUMBNAIL_SUFFIX;
+            // store the file asyncronously.
+            return new Promise(resolve => thumbnail.toBlob(resolve, 'image/jpeg'))
+                .then(blob => {
+                    let file = new File([blob], filename, { type: "image/jpeg" });
+                    return mWorkspace.storeFile(file, false);
+                })
+                .then(() => filename)
+                .catch(e => {
+                    console.error(e);
+                    console.error('Failed to store thumbnail for ' + assetId);
+                });
+        } else {
+            return Promise.resolve();
+        }
     }
 
     function clearCache(tag) {
         delete mLoadedThumbnails[tag];
         delete mLoadedAssets[tag];
-        delete mLoadedFiles[tag];
+        delete mLoadedFileURIs[tag];
     }
 
     this.updateModel = updateModel;
     this.loadDefaultEnvironmentCube = loadDefaultEnvironmentCube;
-    this.loadImageAsset = loadImageAsset;
-    this.loadModelAsset = loadModelAsset;
-    this.loadAudioAsset = loadAudioAsset;
-    this.loadGLTFModel = loadGLTFModel;
+    this.loadAsset = loadAsset;
     this.loadThumbnail = loadThumbnail;
     this.loadAssetFile = loadAssetFile;
     this.generateThumbnail = generateThumbnail;
-    this.clearCache = clearCache
+    this.cache = cache;
+    this.clearCache = clearCache;
 }

@@ -26,6 +26,7 @@ export function WebsocketController() {
 
     let mIsSharing = false;
     let mConnectedToRemote = false;
+    let mConnectionTimeout = null;
 
     let mSharedStoriesUpdatedCallback = () => { }
     let mStoryConnectCallback = () => { }
@@ -67,6 +68,7 @@ export function WebsocketController() {
     });
 
     mWebSocket.on(ServerMessage.CONNECT_TO_STORY, (story) => {
+        clearTimeout(mConnectionTimeout);
         mConnectedToRemote = true;
         mStoryConnectCallback(story);
     });
@@ -116,18 +118,24 @@ export function WebsocketController() {
         return chain
             .then(() => logInfo("Files uploaded."))
             .then(() => mWebSocket.emit(ServerMessage.START_SHARE, model))
+            .catch((e) => {
+                console.error(e);
+                console.error('Share failed.')
+            })
     }
 
     function connectToStory(storyId) {
         mWebSocket.emit(ServerMessage.CONNECT_TO_STORY, storyId);
-        setTimeout(() => {
+        mConnectionTimeout = setTimeout(() => {
             if (!mConnectedToRemote) {
                 console.error("Connection to " + storyId + " failed, retrying.");
                 mWebSocket.emit(ServerMessage.CONNECT_TO_STORY, storyId);
+                mConnectionTimeout = setTimeout(() => {
+                    if (!mConnectedToRemote) {
+                        console.error("Connection to " + storyId + " failed.");
+                    }
+                }, 1000)
             };
-            setTimeout(() => {
-                console.error("Connection to " + storyId + " failed.");
-            }, 1000)
         }, 1000)
     }
 
@@ -162,7 +170,7 @@ export function WebsocketController() {
     }
 
     function newAsset(id, file, type) {
-        file.arrayBuffer()
+        return file.arrayBuffer()
             .then(buffer => mWebSocket.emit(ServerMessage.NEW_ASSET, { id, name: file.name, type, buffer }))
     }
 

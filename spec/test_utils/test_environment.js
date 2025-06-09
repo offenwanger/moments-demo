@@ -39,7 +39,7 @@ export async function setup(runAsync = false) {
     // this first since even mock filesystem uses promises.
     mockPromises.setup(runAsync);
 
-    mockFileSystem.setup();
+    await mockFileSystem.setup();
 
     global.self = global;
     global.indexedDB = new mockIndexedDB();
@@ -163,7 +163,6 @@ export async function setup(runAsync = false) {
     }
     global.FileReader = mockFileSystem.mockFileReader;
     global.File = mockFileSystem.mockFile;
-    global.io = function () { return { on: () => { }, emit: () => { }, } };
     global.domtoimage = { toPng: () => createCanvas() }
     global.Audio = function () { return {} }
 

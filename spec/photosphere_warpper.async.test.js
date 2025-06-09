@@ -2,9 +2,9 @@
 import { cleanup, setup } from './test_utils/test_environment.js';
 
 import { ToolButtons } from '../js/constants.js';
-import { mockFileSystemDirectoryHandle } from './test_utils/mock_filesystem.js';
 import { clearPromises } from './test_utils/mock_promise.js';
-import { canvasClickMenuButton, canvaspointerdown, clickButtonInput, lookHead, movePageHead, pointermove, pointerup, testmodel } from './test_utils/test_actions.js';
+import { canvasClickMenuButton, canvaspointerdown, lookHead, movePageHead, pointermove, pointerup, testmodel } from './test_utils/test_actions.js';
+import { createAndOpenStoryMomentAsync } from './test_utils/test_actions_async.js';
 
 
 
@@ -21,24 +21,7 @@ describe('Test Photosphere Wrapper Async', function () {
     describe('surface tests', function () {
         // needs to be async because of the GLTF Exporter
         it('should scissors a section', async function () {
-            window.directories.push(new mockFileSystemDirectoryHandle('test'));
-            document.querySelector('#choose-folder-button').eventListeners.click();
-            await clearPromises();
-            window.mainFunc();
-            await clearPromises();
-            document.querySelector('#new-story-button').eventListeners.click();
-            await clearPromises();
-            document.querySelector('#edit-' + testmodel().id).eventListeners.click();
-            await clearPromises();
-            window.mainFunc();
-            await clearPromises();
-            expect(testmodel().moments.length).toBe(1);
-            clickButtonInput('#moment-button-' + testmodel().moments[0].id);
-            await clearPromises();
-
-            global.test_rendererAccess.animationLoop();
-
-            // createAndOpenStoryMoment();
+            await createAndOpenStoryMomentAsync();
 
             expect(testmodel().poseableAssets.length).toBe(0);
 

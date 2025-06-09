@@ -370,7 +370,6 @@ export function SceneInterfaceController(parentContainer, mWebsocketController, 
             }
         } else if (buttonId == RecordToolButtons.ACCEPT) {
             if (mCurrentMomentId && mAudioRecorder.hasContent()) {
-                let point = target.getIntersection().point;
                 let audioBlob = mAudioRecorder.getAudioBlob();
                 mAudioRecorder.clearRecorder();
                 mMenuController.getAudioDisplay().setText('Ready to Record');
@@ -386,7 +385,7 @@ export function SceneInterfaceController(parentContainer, mWebsocketController, 
 
                 mAssetCreateCallback(assetId, recordingName, filename, AssetTypes.AUDIO, audioBlob);
 
-                let actions = DataUtil.getAudioCreationActions(mModel, mCurrentMomentId, assetId, point);
+                let actions = DataUtil.getAudioCreationActions(mModel, mCurrentMomentId, assetId, new THREE.Vector3());
                 mModelUpdateCallback(new Transaction(actions));
             }
         } else if (buttonId == RecordToolButtons.DELETE) {
@@ -414,7 +413,6 @@ export function SceneInterfaceController(parentContainer, mWebsocketController, 
         } else if (IdUtil.getClass(buttonId) == Data.Asset) {
             let photosphere = mModel.photospheres.find(p => p.momentId == mCurrentMomentId);
             if (!photosphere) { console.error("invalid moment, no photosphere: " + mCurrentMomentId); return; }
-            let point = target.getIntersection().point;
 
             if (menuId == MenuNavButtons.SPHERE_IMAGE) {
                 mModelUpdateCallback(new Transaction([new Action(ActionType.UPDATE,
@@ -429,12 +427,12 @@ export function SceneInterfaceController(parentContainer, mWebsocketController, 
                 let assetId = buttonId;
                 let actions = DataUtil.getPictureCreationActions(
                     mModel, mCurrentMomentId, assetId,
-                    point, new THREE.Quaternion());
+                    new THREE.Vector3(), new THREE.Quaternion());
                 mModelUpdateCallback(new Transaction(actions));
             } else if (menuId == MenuNavButtons.ADD_AUDIO) {
                 let assetId = buttonId;
                 let actions = DataUtil.getAudioCreationActions(
-                    mModel, mCurrentMomentId, assetId, point);
+                    mModel, mCurrentMomentId, assetId, new THREE.Vector3());
                 mModelUpdateCallback(new Transaction(actions));
             } else {
                 console.error("not implimented!!");
@@ -443,7 +441,7 @@ export function SceneInterfaceController(parentContainer, mWebsocketController, 
             if (menuId == MenuNavButtons.ADD_TELEPORT) {
                 let parentMoment = mModel.moments.find(m => m.id == mCurrentMomentId);
                 if (!parentMoment) { console.error("invalid moment id: " + mCurrentMomentId); return; }
-                let point = target.getIntersection().point;
+                let point = new THREE.Vector3();
                 let targetMoment = buttonId;
                 mModelUpdateCallback(new Transaction([
                     new Action(ActionType.CREATE,

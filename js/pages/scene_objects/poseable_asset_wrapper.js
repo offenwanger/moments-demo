@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { ToolButtons } from '../../constants.js';
+import { AssetTypes, ToolButtons } from '../../constants.js';
 import { Data } from "../../data.js";
 import { GLTKUtil } from '../../utils/gltk_util.js';
 import { InteractionTargetInterface } from './interaction_target_interface.js';
@@ -54,7 +54,7 @@ export function PoseableAssetWrapper(parent, audioListener) {
             mSounds = {};
 
             loadSequence = loadSequence
-                .then(() => assetUtil.loadModelAsset(mPoseableAsset.assetId))
+                .then(() => assetUtil.loadAsset(mPoseableAsset.assetId, AssetTypes.MODEL))
                 .then(gltf => {
                     if (!gltf) { throw Error('Cannot display model: ' + mPoseableAsset.name) }
 
@@ -147,7 +147,7 @@ export function PoseableAssetWrapper(parent, audioListener) {
                             mSounds[pose.id].setLoop(true);
                             mSounds[pose.id].setVolume(audio.volume);
                             innerLoadsequence = innerLoadsequence
-                                .then(() => assetUtil.loadAudioAsset(audio.assetId))
+                                .then(() => assetUtil.loadAsset(audio.assetId, AssetTypes.AUDIO))
                                 .then(buffer => {
                                     mSounds[pose.id].setBuffer(buffer);
                                     if (audio.ambient) try {

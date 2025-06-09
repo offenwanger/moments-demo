@@ -190,6 +190,14 @@ export function clickButtonInput(id) {
     inputContainer.eventListeners.pointerout();
 }
 
+export function createBasicStoryModel() {
+    let model = new Data.StoryModel();
+    model.moments.push(new Data.Moment());
+    model.photospheres.push(new Data.Photosphere());
+    model.photospheres[0].momentId = model.moments[0].id;
+    return model;
+}
+
 export function createStoryModel() {
     let model = new Data.StoryModel();
     model.name = "TestStory"
