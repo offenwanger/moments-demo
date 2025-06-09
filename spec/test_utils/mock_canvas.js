@@ -38,18 +38,9 @@ export function mockCanvas() {
         }
     };
 
-    canvas.console = {
-        log: function () {
-            if (!fs.existsSync(__dirname + '/dump')) {
-                fs.mkdirSync(__dirname + '/dump');
-            }
-            let filename = __dirname + '/dump/debug' + RUN + "_" + (fileCount++) + '.png';
-            logInfo("writing: " + filename);
-            const out = fs.createWriteStream(filename);
-            const stream = canvas.createPNGStream();
-            let data;
-            while (data = stream.read()) { out.write(data); }
-        }
+    canvas.toDataURL = function () {
+        // mock canvas cannot be converted to dataURI, so return a fake one. 
+        return 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAjAAAAHgCAYAAAC7J1fdAAAAAXNSR0IArs4c6QAAHAJJREFUeF7t3UuS';
     }
 
     return canvas;
