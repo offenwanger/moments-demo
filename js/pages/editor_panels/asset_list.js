@@ -71,7 +71,9 @@ export function AssetList(container) {
             if (mAssetUtil) {
                 chain = chain
                     .then(() => mAssetUtil.loadThumbnail(asset.id))
-                    .then(thumbnail => mAssetList[i].setImage(thumbnail.src, true));
+                    .then(thumbnail => {
+                        if (thumbnail) mAssetList[i].setImage(thumbnail.src, true)
+                    });
             }
         })
         return chain;

@@ -87,8 +87,8 @@ export function PicturePanel(container) {
         if (teleport) {
             mAttachedTeleport
                 .setLabel(teleport.name)
-                .sOnClick(() => mNavigationCallback(teleport.id))
-                .sh();
+                .setOnClick(() => mNavigationCallback(teleport.id))
+                .show();
         } else {
             mAttachedTeleport.hide();
         }
@@ -97,8 +97,8 @@ export function PicturePanel(container) {
         if (audio) {
             mAttachedAudio
                 .setLabel(audio.name)
-                .sOnClick(() => mNavigationCallback(audio.id))
-                .sh();
+                .setOnClick(() => mNavigationCallback(audio.id))
+                .show();
         } else {
             mAttachedAudio.hide();
         }
