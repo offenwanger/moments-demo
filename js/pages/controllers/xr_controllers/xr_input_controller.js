@@ -131,12 +131,17 @@ export function XRInputController(sceneContainer) {
 
     function pollInteractionState() {
         let axes = getRightGamePad();
+        let lastButtonState = mButtonState;
+        mButtonState = getButtonPressedState();
+
         if (!mMoved && Math.abs(axes[3]) > 0.5) {
-            let add = new THREE.Vector3();
-            mXRCamera.getWorldDirection(add);
+            let dir = new THREE.Vector3();
+            mXRCamera.getWorldDirection(dir);
+            dir.y = 0;
+            dir.normalize();
             let sign = -axes[3] / Math.abs(axes[3])
 
-            moveUser(add, 0.5 * sign)
+            moveUser(dir, 0.5 * sign)
 
             mMoved = true;
         } else if (!mMoved && Math.abs(axes[2]) > 0.5) {
@@ -152,12 +157,17 @@ export function XRInputController(sceneContainer) {
             mUserGroup.applyQuaternion(rotation);
 
             mMoved = true;
-        } else if (mMoved && axes.every(v => v == 0)) {
+        } else if (!mMoved && mButtonState.toggleRPressed) {
+            let dir = new THREE.Vector3();
+            mXRCamera.getWorldDirection(dir);
+            let sign = dir.y / Math.abs(dir.y);
+
+            moveUser(new THREE.Vector3(0, 1, 0), 0.5 * sign)
+
+            mMoved = true;
+        } else if (mMoved && axes.every(v => v == 0) && !mButtonState.toggleRPressed) {
             mMoved = false;
         }
-
-        let lastButtonState = mButtonState;
-        mButtonState = getButtonPressedState();
 
 
         setRay(mRightController, mRaycaster);
@@ -186,6 +196,8 @@ export function XRInputController(sceneContainer) {
         let primaryRPressed = false;
         let gripLPressed = false;
         let gripRPressed = false;
+        let toggleLPressed = false;
+        let toggleRPressed = false;
 
         if (mSession && mSession.inputSources) {
             let leftController, rightController;
@@ -201,6 +213,9 @@ export function XRInputController(sceneContainer) {
                 // grip button
                 gripLPressed = leftController.gamepad.buttons[1]
                     && leftController.gamepad.buttons[1].pressed;
+                // toggle button
+                toggleLPressed = leftController.gamepad.buttons[3]
+                    && leftController.gamepad.buttons[3].pressed;
             }
 
             if (rightController && rightController.gamepad) {
@@ -210,6 +225,9 @@ export function XRInputController(sceneContainer) {
                 // grip button
                 gripRPressed = rightController.gamepad.buttons[1]
                     && rightController.gamepad.buttons[1].pressed;
+                // toggle button
+                toggleRPressed = rightController.gamepad.buttons[3]
+                    && rightController.gamepad.buttons[3].pressed;
             }
         }
 
@@ -218,6 +236,8 @@ export function XRInputController(sceneContainer) {
             primaryRPressed,
             gripLPressed,
             gripRPressed,
+            toggleLPressed,
+            toggleRPressed,
         }
     }
 
