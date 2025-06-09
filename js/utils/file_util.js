@@ -102,7 +102,7 @@ function getModelFromZip(zipBlob) {
             return storyFile.getData(stream.writable);
         })
         .then(() => zipReader.close())
-        .then(streamPromise)
+        .then(() => streamPromise)
         .then((fileText) => {
             let modelJSON = JSON.parse(fileText);
             let model = Data.StoryModel.fromObject(modelJSON);
