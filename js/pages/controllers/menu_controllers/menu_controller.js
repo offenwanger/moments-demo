@@ -38,6 +38,15 @@ export function MenuController() {
     let mInfoTile = new MeshTile('InfoTile', 'Welcome to Moments', BUTTON_SIZE, '#000000')
     mInfoTile.setColor('#ffffff');
 
+    let mBrushTile = new MeshTile('InfoTile', '', BUTTON_SIZE, '#000000')
+    let mBrushCanvas = document.createElement('canvas')
+    mBrushCanvas.width = 64
+    mBrushCanvas.height = 64
+    let mBrushCtx = mBrushCanvas.getContext('2d');
+    mBrushCtx.fillStyle = "white";
+    mBrushCtx.fillRect(0, 0, mBrushCanvas.width, mBrushCanvas.height);
+    mBrushTile.setImage(mBrushCanvas.toDataURL());
+
     /** Tool menu and tools settings menus **/
     mMenus[MenuNavButtons.TOOL_MENU] = createMenu(MenuNavButtons.TOOL_MENU,
         'Tools. Move lets you move things in the environment. Brush lets you edit the surrounding image. Surface lets you morph the surrounding image. Scissors lets you cut out bits of the surrounding image to use as artifacts. Record lets you record your voice or other audio.', [
@@ -61,14 +70,15 @@ export function MenuController() {
     ]);
     mMenus[BrushToolButtons.COLOR] = createMenu(ToolButtons.BRUSH,
         'Brush color and size.', [
+        mBrushTile,
+        new MeshButton(BrushToolSettings.BIGGER, 'Bigger', BUTTON_SIZE),
+        new MeshButton(BrushToolSettings.SMALLER, 'Smaller', BUTTON_SIZE),
         new MeshButton(BrushToolSettings.HUE_INC, 'Color', BUTTON_SIZE),
         new MeshButton(BrushToolSettings.SAT_INC, 'Colorful', BUTTON_SIZE),
         new MeshButton(BrushToolSettings.LIGHT_INC, 'Lighter', BUTTON_SIZE),
         new MeshButton(BrushToolSettings.HUE_DEC, 'Color', BUTTON_SIZE),
         new MeshButton(BrushToolSettings.SAT_DEC, 'Muted', BUTTON_SIZE),
         new MeshButton(BrushToolSettings.LIGHT_DEC, 'Darker', BUTTON_SIZE),
-        new MeshButton(BrushToolSettings.BIGGER, 'Bigger', BUTTON_SIZE),
-        new MeshButton(BrushToolSettings.SMALLER, 'Smaller', BUTTON_SIZE),
     ]);
     mMenus[BrushToolButtons.CLEAR] = createMenu(ToolButtons.BRUSH,
         'Choose clear size. Heads up, it\'s not super accurate.', [
@@ -211,7 +221,6 @@ export function MenuController() {
     }
 
     function updateColorPicker(toolState) {
-        toolState.brushSettings.color;
         let buttons = mMenus[BrushToolButtons.COLOR].getButtons();
         buttons.find(b => b.getId() == BrushToolSettings.HUE_INC).setColor(ColorUtil.hueIncrement(toolState.brushSettings.color));
         buttons.find(b => b.getId() == BrushToolSettings.LIGHT_INC).setColor(ColorUtil.lightIncrement(toolState.brushSettings.color));
@@ -219,6 +228,19 @@ export function MenuController() {
         buttons.find(b => b.getId() == BrushToolSettings.HUE_DEC).setColor(ColorUtil.hueDecrement(toolState.brushSettings.color));
         buttons.find(b => b.getId() == BrushToolSettings.LIGHT_DEC).setColor(ColorUtil.lightDecrement(toolState.brushSettings.color));
         buttons.find(b => b.getId() == BrushToolSettings.SAT_DEC).setColor(ColorUtil.satDecrement(toolState.brushSettings.color));
+
+        mBrushCtx.fillStyle = "white";
+        mBrushCtx.fillRect(0, 0, mBrushCanvas.width, mBrushCanvas.height);
+        mBrushCtx.beginPath()
+        mBrushCtx.arc(
+            mBrushCanvas.width / 2,
+            mBrushCanvas.height / 2,
+            mBrushCanvas.width * toolState.brushSettings.colorWidth * 2,
+            0, 2 * Math.PI)
+        mBrushCtx.fillStyle = toolState.brushSettings.color;
+        mBrushCtx.fill();
+        mBrushCtx.closePath()
+        mBrushTile.setImage(mBrushCanvas.toDataURL());
     }
 
     function updateModel(model, assetUtil) {

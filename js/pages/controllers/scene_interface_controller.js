@@ -295,22 +295,22 @@ export function SceneInterfaceController(parentContainer, mWebsocketController, 
             mToolState.brushSettings.colorWidth = Math.max(0.005, mToolState.brushSettings.colorWidth * 0.9);
             mMenuController.setToolState(mToolState);
         } else if (buttonId == BrushToolSettings.HUE_INC) {
-            mToolState.brushSettings.color = ColorUtil.hueIncrement(mToolState.brushSettings.color, 10);
+            mToolState.brushSettings.color = ColorUtil.hueIncrement(mToolState.brushSettings.color, 15);
             mMenuController.setToolState(mToolState);
         } else if (buttonId == BrushToolSettings.LIGHT_INC) {
-            mToolState.brushSettings.color = ColorUtil.lightIncrement(mToolState.brushSettings.color, 10);
+            mToolState.brushSettings.color = ColorUtil.lightIncrement(mToolState.brushSettings.color, 15);
             mMenuController.setToolState(mToolState);
         } else if (buttonId == BrushToolSettings.SAT_INC) {
-            mToolState.brushSettings.color = ColorUtil.satIncrement(mToolState.brushSettings.color, 5);
+            mToolState.brushSettings.color = ColorUtil.satIncrement(mToolState.brushSettings.color, 15);
             mMenuController.setToolState(mToolState);
         } else if (buttonId == BrushToolSettings.HUE_DEC) {
-            mToolState.brushSettings.color = ColorUtil.hueDecrement(mToolState.brushSettings.color, 5);
+            mToolState.brushSettings.color = ColorUtil.hueDecrement(mToolState.brushSettings.color, 15);
             mMenuController.setToolState(mToolState);
         } else if (buttonId == BrushToolSettings.LIGHT_DEC) {
-            mToolState.brushSettings.color = ColorUtil.lightDecrement(mToolState.brushSettings.color, 5);
+            mToolState.brushSettings.color = ColorUtil.lightDecrement(mToolState.brushSettings.color, 15);
             mMenuController.setToolState(mToolState);
         } else if (buttonId == BrushToolSettings.SAT_DEC) {
-            mToolState.brushSettings.color = ColorUtil.satDecrement(mToolState.brushSettings.color, 5);
+            mToolState.brushSettings.color = ColorUtil.satDecrement(mToolState.brushSettings.color, 15);
             mMenuController.setToolState(mToolState);
         } else if (Object.values(SurfaceToolButtons).includes(buttonId)) {
             mToolState.surfaceSettings.mode = buttonId;
