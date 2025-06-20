@@ -172,6 +172,10 @@ export function PictureWrapper(parent, audioListener) {
             if (mInteractionSound) { try { mSound.pause(); } catch (e) { console.error(e); } }
         }
         target.select = (toolState) => {
+            mFrontPlane.material.color.set(0xffffff);
+            mFrontPlane.material.needsUpdate = true;
+            mBackPlane.material.color.set(0xaaaaaa);
+            mBackPlane.material.needsUpdate = true;
             if (mInteractionSound) { try { mSound.play(); } catch (e) { console.error(e); } }
         }
         target.getId = () => mPicture.id;
