@@ -93,7 +93,7 @@ export function EditorPage(parentContainer, mWebsocketController) {
             }
 
             let oldFilename = file.name;
-            file.name = FileUtil.cleanFilename(file.name);
+            file = new File([file], FileUtil.cleanFilename(file.name), { type: file.type });
 
             if (!mWorkspace) {
                 mWebsocketController.newAsset(id, file, type)

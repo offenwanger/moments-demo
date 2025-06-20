@@ -176,6 +176,8 @@ export function mockFile(data, filename, params = null) {
     this.name = filename;
     this.type = params ? params.type : null;
 
+    if (Array.isArray(data) && data.length == 1 && data[0] instanceof mockFile) data = data[0].getFileData();
+
     // writing file
     this.write = (data) => {
         if (Array.isArray(data) && data.length == 1) data = data[0];
