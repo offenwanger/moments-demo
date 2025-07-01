@@ -385,7 +385,7 @@ export function SceneInterfaceController(parentContainer, mWebsocketController, 
 
                 mAssetCreateCallback(assetId, recordingName, filename, AssetTypes.AUDIO, audioBlob);
 
-                let actions = DataUtil.getAudioCreationActions(mModel, mCurrentMomentId, assetId, new THREE.Vector3());
+                let actions = DataUtil.getAudioCreationActions(mModel, mCurrentMomentId, assetId, inFrontOfCamera());
                 mModelUpdateCallback(new Transaction(actions));
             }
         } else if (buttonId == RecordToolButtons.DELETE) {
@@ -427,12 +427,12 @@ export function SceneInterfaceController(parentContainer, mWebsocketController, 
                 let assetId = buttonId;
                 let actions = DataUtil.getPictureCreationActions(
                     mModel, mCurrentMomentId, assetId,
-                    new THREE.Vector3(), new THREE.Quaternion());
+                    inFrontOfCamera(), new THREE.Quaternion());
                 mModelUpdateCallback(new Transaction(actions));
             } else if (menuId == MenuNavButtons.ADD_AUDIO) {
                 let assetId = buttonId;
                 let actions = DataUtil.getAudioCreationActions(
-                    mModel, mCurrentMomentId, assetId, new THREE.Vector3());
+                    mModel, mCurrentMomentId, assetId, inFrontOfCamera());
                 mModelUpdateCallback(new Transaction(actions));
             } else {
                 console.error("not implimented!!");
@@ -441,7 +441,8 @@ export function SceneInterfaceController(parentContainer, mWebsocketController, 
             if (menuId == MenuNavButtons.ADD_TELEPORT) {
                 let parentMoment = mModel.moments.find(m => m.id == mCurrentMomentId);
                 if (!parentMoment) { console.error("invalid moment id: " + mCurrentMomentId); return; }
-                let point = new THREE.Vector3();
+                mCurrentSessionController.getCamera()
+                let point = inFrontOfCamera();
                 let targetMoment = buttonId;
                 mModelUpdateCallback(new Transaction([
                     new Action(ActionType.CREATE,
@@ -510,6 +511,15 @@ export function SceneInterfaceController(parentContainer, mWebsocketController, 
         mSceneController.setCurrentMoment(momentId);
         mCurrentSessionController.setUserPositionAndDirection(position, direction);
         mCurrentMomentId = momentId;
+    }
+
+    function inFrontOfCamera() {
+        if (!mCurrentSessionController) return new THREE.Vector3();
+        let raycaster = new THREE.Raycaster();
+        raycaster.setFromCamera(new THREE.Vector2(), mCurrentSessionController.getCamera());
+        let point = new THREE.Vector3();
+        raycaster.ray.at(0.5, point);
+        return point;
     }
 
     setCurrentSession(mPageSessionController);

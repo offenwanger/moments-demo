@@ -29,34 +29,42 @@ export async function mockThreeSetup() {
         },
         Raycaster: function () {
             let interceptedCaster = new THREE.Raycaster();
-            let originalIntercept = interceptedCaster.intersectObjects;
-            interceptedCaster.intersectObject = function (object) {
-                return interceptedCaster.intersectObjects([object]);
+            function forcedIntercept(object) {
+                if (mForceId && object.userData.id == mForceId) {
+                    // first try to point the ray at the object and intercept it.
+                    interceptedCaster.ray.direction.subVectors(object.position, interceptedCaster.ray.origin).normalize()
+                    let intercept = originalIntercepts.call(this, object)[0];
+                    if (!intercept) {
+                        // probably a button
+                        // fake the intercept
+                        intercept = {
+                            distance: 0,
+                            point: new THREE.Vector3().copy(object.position),
+                            face: null,
+                            faceIndex: null,
+                            object,
+                            uv: null,
+                            uv1: null,
+                            normal: null,
+                            instanceId: null,
+                        }
+                    }
+                    return intercept;
+                }
             }
+
+            let originalIntercept = interceptedCaster.intersectObject;
+            interceptedCaster.intersectObject = function (object) {
+                let forced = forcedIntercept(object);
+                let intercept = forced ? [forced] : originalIntercept.call(this, object);
+                return intercept;
+            }
+
+            let originalIntercepts = interceptedCaster.intersectObjects;
             interceptedCaster.intersectObjects = function (objects) {
                 return objects.map(object => {
-                    if (mForceId && object.userData.id == mForceId) {
-                        // first try to point the ray at the object and intercept it.
-                        interceptedCaster.ray.direction.subVectors(object.position, interceptedCaster.ray.origin).normalize()
-                        let intercept = originalIntercept.call(this, object)[0];
-                        if (!intercept) {
-                            // probably a button
-                            // fake the intercept
-                            intercept = {
-                                distance: 0,
-                                point: new THREE.Vector3().copy(object.position),
-                                face: null,
-                                faceIndex: null,
-                                object,
-                                uv: null,
-                                uv1: null,
-                                normal: null,
-                                instanceId: null,
-                            }
-                        }
-                        return intercept;
-                    }
-                    let intercept = originalIntercept.call(this, [object])[0];
+                    let forced = forcedIntercept(object);
+                    let intercept = forced ? forced : originalIntercepts.call(this, [object])[0];
                     return intercept;
                 }).filter(i => i)
             }

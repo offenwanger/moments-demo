@@ -66,7 +66,11 @@ export function createAndOpenStoryMoment() {
     global.test_rendererAccess.animationLoop();
 }
 
-export function createAudioInCanvasEnvironment() {
+export function createAudioInCanvasEnvironment(x, y, z) {
+    global.test_rendererAccess.animationLoop();
+    movePageHead(x, y, z + 0.5)
+    lookHead(x, y, z - 1);
+
     canvasClickMenuButton(ToolButtons.RECORD);
     canvasClickMenuButton(RecordToolButtons.RECORD);
     global.test_rendererAccess.animationLoop();
@@ -106,28 +110,15 @@ export function setupEnvironmentWith3DAsset(assetName) {
     global.test_rendererAccess.animationLoop();
 }
 
-export function setupEnvironmentWithPicture() {
-    createAndOpenStoryMoment();
-
+export function addPictureAsset() {
     // add the file to the 'choosen file' queue.
     window.files.push(new mockFile('data:image/gif;base64,R0lGODlhAQABAAAAACwAAAAAAQABAAAC', 'fakePicture', { type: 'image/gif' }));
     clickButtonInput('#asset-manager-button');
     clickButtonInput('#asset-add-button');
     clickButtonInput('#dialog-close-button');
 
-    let assetId = testmodel().assets.find(a => a.type == AssetTypes.IMAGE).id;
-
-    canvasClickMenuButton(MenuNavButtons.ADD);
-    canvasClickMenuButton(MenuNavButtons.ADD_PICTURE);
-    canvasClickMenuButton(assetId);
-    canvasClickMenuButton(MenuNavButtons.BACK_BUTTON);
-    canvasClickMenuButton(MenuNavButtons.BACK_BUTTON);
-
     expect(document.querySelector('#assets-container').children.length).toBeGreaterThan(0);
     document.querySelector('#dialog-close-button').eventListeners.click();
-
-    expect(testmodel().pictures.length).toBe(1);
-    clickButtonInput('#picture-button-' + testmodel().pictures[0].id);
 
     global.test_rendererAccess.animationLoop();
 }
@@ -272,6 +263,7 @@ export function lookHead(x, y, z) {
 }
 
 export function movePageHead(x, y, z) {
+    global.test_rendererAccess.animationLoop();
     let camera = global.test_rendererAccess.lastRender.camera;
     camera.position.set(x, y, z);
     camera.updateWorldMatrix()

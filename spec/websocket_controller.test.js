@@ -100,7 +100,7 @@ describe('Test WebSocketController', function () {
             shareListener.handlers[ServerMessage.CONNECTION_ID]({});
             shareListener.handlers[ServerMessage.CONNECT_TO_STORY](testmodel().id);
 
-            createAudioInCanvasEnvironment();
+            createAudioInCanvasEnvironment(0, 0, 0);
 
             uploads = Object.entries(global.fileSystem)
                 .filter(([filename, contents]) => !contents.isDir);
@@ -171,7 +171,7 @@ describe('Test WebSocketController', function () {
             window.mainFunc();
             clickButtonInput('#moment-button-' + story.moments[0].id);
 
-            createAudioInCanvasEnvironment();
+            createAudioInCanvasEnvironment(0, 0, 0);
 
             expect(shareListener.events.length).toBe(5)
             expect(shareListener.events.map(e => e.event)).toEqual(['listofsharedstories', 'startsharing', 'newasset', 'updatestory', 'updatestory']);
