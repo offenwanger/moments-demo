@@ -36,13 +36,7 @@ export function PictureWrapper(parent, audioListener) {
 
     function updateModel(picture, model, assetUtil) {
         mPicture = picture;
-
-        mPlanes.position.set(picture.x, picture.y, picture.z);
-        mPlanes.setRotationFromQuaternion(new THREE.Quaternion().fromArray(picture.orientation));
-        mPlanes.scale.set(picture.scale, picture.scale * mRatio, picture.scale)
-        mTeleportSprite.scale.set(0.1 / picture.scale, 0.1 / (picture.scale * mRatio), 0.1 / picture.scale);
-        mAudioSprite.scale.set(0.1 / picture.scale, 0.1 / (picture.scale * mRatio), 0.1 / picture.scale);
-        mPlanes.userData.id = picture.id;
+        setPlaneData(picture, mRatio);
 
         let teleport = model.teleports.find(t => t.attachedId == picture.id);
         if (teleport) {
@@ -91,8 +85,19 @@ export function PictureWrapper(parent, audioListener) {
                     mFrontPlane.material.map = new THREE.Texture(image);
                     mFrontPlane.material.needsUpdate = true
                     mFrontPlane.material.map.needsUpdate = true
+
+                    setPlaneData(mPicture, mRatio)
                 });
         }
+    }
+
+    function setPlaneData(picture, ratio) {
+        mPlanes.position.set(picture.x, picture.y, picture.z);
+        mPlanes.setRotationFromQuaternion(new THREE.Quaternion().fromArray(picture.orientation));
+        mPlanes.scale.set(picture.scale, picture.scale * ratio, picture.scale)
+        mTeleportSprite.scale.set(0.1 / picture.scale, 0.1 / (picture.scale * ratio), 0.1 / picture.scale);
+        mAudioSprite.scale.set(0.1 / picture.scale, 0.1 / (picture.scale * ratio), 0.1 / picture.scale);
+        mPlanes.userData.id = picture.id;
     }
 
     function getId() {
