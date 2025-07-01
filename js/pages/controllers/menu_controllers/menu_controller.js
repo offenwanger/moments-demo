@@ -47,6 +47,13 @@ export function MenuController() {
     mBrushCtx.fillRect(0, 0, mBrushCanvas.width, mBrushCanvas.height);
     mBrushTile.setImage(mBrushCanvas.toDataURL());
 
+    /**  Utilities you always want access to **/
+    mMenus[MenuNavButtons.UTILITY_MENU] = createMenu(MenuNavButtons.MAIN_MENU, '', [
+        new MeshButton(ItemButtons.UNDO, 'Undo', BUTTON_SIZE),
+        new MeshButton(ItemButtons.REDO, 'Redo', BUTTON_SIZE),
+        new MeshButton(ItemButtons.RECENTER, 'Recenter', BUTTON_SIZE),
+    ]);
+
     /** Tool menu and tools settings menus **/
     mMenus[MenuNavButtons.TOOL_MENU] = createMenu(MenuNavButtons.TOOL_MENU,
         'Tools. Move lets you move things in the environment. Brush lets you edit the surrounding image. Surface lets you morph the surrounding image. Scissors lets you cut out bits of the surrounding image to use as artifacts. Record lets you record your voice or other audio.', [
@@ -107,17 +114,14 @@ export function MenuController() {
         'Additional tools, for example, add lets you add uploaded artifacts like pictures, and recenter will take you back to the middle of the scene.', [
         new MeshButton(MenuNavButtons.ADD, 'Add', BUTTON_SIZE),
         new MeshButton(MenuNavButtons.SPHERE_SETTINGS, 'Surround Image Settings', BUTTON_SIZE),
-        new MeshButton(ItemButtons.RECENTER, 'Recenter', BUTTON_SIZE),
-        new MeshButton(ItemButtons.UNDO, 'Undo', BUTTON_SIZE),
-        new MeshButton(ItemButtons.REDO, 'Redo', BUTTON_SIZE),
     ]);
     mMenus[MenuNavButtons.SPHERE_SETTINGS] = createMenu(MenuNavButtons.SPHERE_SETTINGS,
         'Edit the settings on the surrounding image.', [
         new MeshButton(MenuNavButtons.BACK_BUTTON, 'Back', BUTTON_SIZE),
-        new MeshButton(AttributeButtons.SPHERE_TOGGLE, 'Toggle Sphere', BUTTON_SIZE),
+        new MeshButton(AttributeButtons.SPHERE_TOGGLE, 'Remove/ Add Sphere', BUTTON_SIZE),
         new MeshButton(AttributeButtons.SPHERE_SCALE_UP, 'Scale Up', BUTTON_SIZE),
-        new MeshButton(MenuNavButtons.SPHERE_IMAGE, 'Image', BUTTON_SIZE),
-        new MeshButton(AttributeButtons.SPHERE_BLUR_TOGGLE, 'Toggle Blur', BUTTON_SIZE),
+        new MeshButton(MenuNavButtons.SPHERE_IMAGE, 'Set Sphere Image', BUTTON_SIZE),
+        new MeshButton(AttributeButtons.SPHERE_BLUR_TOGGLE, 'Turn on/off Blurring', BUTTON_SIZE),
         new MeshButton(AttributeButtons.SPHERE_SCALE_DOWN, 'Scale Down', BUTTON_SIZE),
     ]);
     mParentLinks[MenuNavButtons.SPHERE_SETTINGS] = MenuNavButtons.MAIN_MENU;
@@ -197,6 +201,8 @@ export function MenuController() {
         mMenuContainer.remove(...mDisplayedMenus.map(m => m.getObject()));
 
         mDisplayedMenus = [];
+        mDisplayedMenus.push(mMenus[MenuNavButtons.UTILITY_MENU]);
+
         mDisplayedMenus.push(mMenus[MenuNavButtons.TOOL_MENU])
         if (mMenus[mToolState.tool]) {
             mDisplayedMenus.push(mMenus[mToolState.tool])
