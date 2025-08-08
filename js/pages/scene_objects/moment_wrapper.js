@@ -17,6 +17,10 @@ export function MomentWrapper(parent, audioListener) {
     function updateModel(moment, model, assetUtil) {
         if (!moment) {
             parent.remove(mStoryGroup);
+            updateWrapperArray(mPoseableAssetWrappers, [], model, assetUtil, () => new PoseableAssetWrapper(mStoryGroup, audioListener));
+            updateWrapperArray(mPictureWrappers, [], model, assetUtil, () => new PictureWrapper(mStoryGroup, audioListener));
+            updateWrapperArray(mAudioWrappers, [], model, assetUtil, () => new AudioWrapper(mStoryGroup, audioListener));
+            updateWrapperArray(mTeleportWrappers, [], model, assetUtil, () => new TeleportWrapper(mStoryGroup));
         } else {
             parent.add(mStoryGroup);
 

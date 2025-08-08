@@ -40,24 +40,30 @@ export function AudioWrapper(parent, audioListener) {
         mSphere.position.set(audio.x, audio.y, audio.z);
         mSphere.userData.id = audio.id;
 
+        // if the audio has changed, updateit
+        if (mAudio && (!audio || mAudio.assetId != audio.assetId)) {
+            if (mAudio.ambient) try { mSound.stop(); } catch (e) { console.error(e); }
+
+            mInitialized = false;
+
+            assetUtil.loadAsset(audio.assetId, AssetTypes.AUDIO)
+                .then(buffer => {
+                    if (!buffer) {
+                        console.error('Failed to load audio.')
+                        return;
+                    }
+                    mSound.setBuffer(buffer);
+                    mInitialized = true;
+                    if (audio.ambient) {
+                        try { mSound.play(); } catch (e) { console.error(e); }
+                    } else {
+                        try { mSound.stop(); } catch (e) { console.error(e); }
+                    }
+                })
+        }
+
         mSound.setVolume(audio.volume);
         mAudio = audio;
-
-        mInitialized = false;
-        assetUtil.loadAsset(audio.assetId, AssetTypes.AUDIO)
-            .then(buffer => {
-                if (!buffer) {
-                    console.error('Failed to load audio.')
-                    return;
-                }
-                mSound.setBuffer(buffer);
-                mInitialized = true;
-                if (audio.ambient) {
-                    try { mSound.play(); } catch (e) { console.error(e); }
-                } else {
-                    try { mSound.stop(); } catch (e) { console.error(e); }
-                }
-            })
     }
 
     function getId() {
