@@ -308,8 +308,7 @@ export function MenuController() {
             chain = chain
                 .then(() => assetUtil.loadThumbnail(asset.id))
                 .then(thumbnail => {
-                    let hideText = asset.type != AssetTypes.AUDIO;
-                    if (thumbnail) { button.setImage(thumbnail.src, hideText); }
+                    if (thumbnail) { button.setImage(thumbnail.src, false); }
                 })
         }
 
