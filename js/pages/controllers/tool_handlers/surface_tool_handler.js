@@ -1,17 +1,21 @@
 import * as THREE from 'three';
 import { InteractionType, SurfaceToolButtons } from "../../../constants.js";
-import { Util } from "../../../utils/utility.js";
 
 // defines simplify2
 import '../../../../lib/simplify2.js';
 
+function getTarget(raycaster, orientation, isPrimary, interactionState, toolState, model, sessionController, sceneController, helperPointController) {
+    if (!isPrimary) return null;
+
+    let targets = sceneController.getTargets(raycaster, toolState)
+    if (targets.length > 1) { console.error('Unexpected target result!'); }
+    if (targets.length == 0) return null;
+    return targets[0];
+}
+
 function pointerMove(raycaster, orientation, isPrimary, interactionState, toolState, model, sessionController, sceneController, helperPointController) {
     if (isPrimary) {
-        if (interactionState.type == InteractionType.NONE) {
-            let targets = sceneController.getTargets(raycaster, toolState)
-            if (targets.length > 1) { console.error('Unexpected target result!'); }
-            Util.updateHoverTargetHighlight(targets[0], interactionState, toolState, isPrimary, sessionController, helperPointController);
-        } else if (interactionState.type == InteractionType.DELETING) {
+        if (interactionState.type == InteractionType.DELETING) {
             // do nothing.
         } else if (interactionState.type == InteractionType.BRUSHING) {
             let targets = sceneController.getTargets(raycaster, toolState)
@@ -100,6 +104,7 @@ function startOneHandMove(raycaster, orientation, target, interactionState) {
 }
 
 export const SurfaceToolHandler = {
+    getTarget,
     pointerMove,
     pointerDown,
     pointerUp,

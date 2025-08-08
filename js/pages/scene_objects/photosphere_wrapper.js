@@ -551,12 +551,27 @@ export function PhotosphereWrapper(parent) {
             }
         }
         mInteractionTarget.idle = (toolState) => {
+            let redraw = false;
+            if (mInputStrokes.length > 0 ||
+                mInputPath.length > 0 ||
+                mDrawingDeletedStrokes.length > 0 ||
+                mDrawingNewStrokes.length > 0 ||
+                mDrawingSurfaceAreas.length > 0 ||
+                mDrawAllSurfaceAreas) redraw = true;
+
             mInputStrokes = [];
             mInputPath = [];
             mDrawingDeletedStrokes = [];
             mDrawingNewStrokes = [];
             mDrawingSurfaceAreas = [];
             mDrawAllSurfaceAreas = false;
+
+            if (redraw) {
+                drawBlur();
+                drawColor();
+                drawSurfaceArea();
+                draw();
+            }
         }
 
         return [mInteractionTarget]

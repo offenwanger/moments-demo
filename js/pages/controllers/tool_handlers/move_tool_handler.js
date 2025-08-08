@@ -25,21 +25,24 @@ mTeleportTarget.userData.id = 'teleportTarget';
 const mTeleportTargetInteractionWrapper = new InteractionTargetInterface();
 mTeleportTargetInteractionWrapper.getId = () => TELEPORT_TARGET;
 
+function getTarget(raycaster, orientation, isPrimary, interactionState, toolState, model, sessionController, sceneController, helperPointController) {
+    if (!isPrimary) return null;
+    let targets = sceneController.getTargets(raycaster, toolState);
+    let closest = Util.getClosestTarget(raycaster.ray, targets);
+    return closest;
+
+}
+
 function pointerMove(raycaster, orientation, isPrimary, interactionState, toolState, model, sessionController, sceneController, helperPointController) {
+    // secondary controller does nothing.
+    if (!isPrimary) return null;
+
     if (!raycaster) {
-        // unhighlight things, hide interface stuff, that's it.
+        console.error('No Raycaster');
         return;
     }
 
-    if (interactionState.type == InteractionType.NONE) {
-        if (isPrimary) {
-            let targets = sceneController.getTargets(raycaster, toolState);
-            let closest = Util.getClosestTarget(raycaster.ray, targets);
-            Util.updateHoverTargetHighlight(closest, interactionState, toolState, isPrimary, sessionController, helperPointController);
-        } else {
-            // do nothing.
-        }
-    } else if (interactionState.type == InteractionType.ONE_HAND_MOVE && isPrimary) {
+    if (interactionState.type == InteractionType.ONE_HAND_MOVE && isPrimary) {
         // Move the moving thing. 
         let startOrigin = interactionState.data.startRay.origin;
         let startOrientation = new THREE.Quaternion().copy(interactionState.data.startRayOrientation);
@@ -407,6 +410,7 @@ function updateTeleportTarget(raycaster, sceneController) {
 }
 
 export const MoveToolHandler = {
+    getTarget,
     pointerMove,
     pointerDown,
     pointerUp,

@@ -1,16 +1,18 @@
 import { InteractionType } from "../../../constants.js";
-import { Util } from "../../../utils/utility.js";
+
+function getTarget(raycaster, orientation, isPrimary, interactionState, toolState, model, sessionController, sceneController, helperPointController) {
+    let targets = [];
+    targets = sceneController.getTargets(raycaster, toolState)
+    if (targets.length > 1) { console.error('Got more than one target! There should only be one photosphere to target!'); }
+    if (targets.length == 0) return null;
+    return targets[0];
+}
 
 function pointerMove(raycaster, orientation, isPrimary, interactionState, toolState, model, sessionController, sceneController, helperPointController) {
     // only main hand can brush.
     if (!isPrimary) return;
 
-    if (interactionState.type == InteractionType.NONE) {
-        let targets = [];
-        targets = sceneController.getTargets(raycaster, toolState)
-        if (targets.length > 1) { console.error('Got more than one target! There should only be one photosphere to target!'); }
-        Util.updateHoverTargetHighlight(targets[0], interactionState, toolState, isPrimary, sessionController, helperPointController);
-    } else if (interactionState.type == InteractionType.BRUSHING) {
+    if (interactionState.type == InteractionType.BRUSHING) {
         let targets = sceneController.getTargets(raycaster, toolState);
         if (targets.length == 0) { /* we moved off the sphere, do nothing. */ } else {
             if (targets.length > 1) { console.error('Unexpected target result!'); }
@@ -55,6 +57,7 @@ function pointerUp(raycaster, orientation, isPrimary, interactionState, toolStat
 }
 
 export const BrushToolHandler = {
+    getTarget,
     pointerMove,
     pointerDown,
     pointerUp,

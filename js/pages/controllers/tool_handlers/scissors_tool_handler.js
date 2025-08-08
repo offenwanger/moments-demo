@@ -1,22 +1,27 @@
+import * as THREE from 'three';
 import { CREATE_MODEL, InteractionType } from "../../../constants.js";
 import { Data } from '../../../data.js';
 import { IdUtil } from '../../../utils/id_util.js';
 import { Action, ActionType, Transaction } from '../../../utils/transaction_util.js';
-import { Util } from "../../../utils/utility.js";
-import * as THREE from 'three'
 
 // defines simplify2
 import '../../../../lib/simplify2.js';
 
+function getTarget(raycaster, orientation, isPrimary, interactionState, toolState, model, sessionController, sceneController, helperPointController) {
+    // secondary controller does nothing.
+    if (!isPrimary) return null;
+
+    let targets = sceneController.getTargets(raycaster, toolState)
+    if (targets.length > 1) { console.error('Unexpected target result!'); }
+    if (targets.length == 0) return null;
+    return targets[0];
+}
+
 function pointerMove(raycaster, orientation, isPrimary, interactionState, toolState, model, sessionController, sceneController, helperPointController) {
     // secondary controller does nothing.
-    if (!isPrimary) return;
+    if (!isPrimary) return null;
 
-    if (interactionState.type == InteractionType.NONE) {
-        let targets = sceneController.getTargets(raycaster, toolState)
-        if (targets.length > 1) { console.error('Unexpected target result!'); }
-        Util.updateHoverTargetHighlight(targets[0], interactionState, toolState, isPrimary, sessionController, helperPointController);
-    } else if (interactionState.type == InteractionType.BRUSHING) {
+    if (interactionState.type == InteractionType.BRUSHING) {
         let targets = sceneController.getTargets(raycaster, toolState)
         if (targets.length == 0) { /* we moved off the sphere, do nothing. */ } else {
             if (targets.length > 1) { console.error('Unexpected target result!'); }
@@ -25,7 +30,7 @@ function pointerMove(raycaster, orientation, isPrimary, interactionState, toolSt
             helperPointController.showPoint(isPrimary, target.getIntersection().point);
         }
     } else {
-        console.error('invalid state:' + toolState.tool + ", " + interactionState.type);
+        console.error('State unhandled by pointerMove:' + toolState.tool + ", " + interactionState.type);
     }
 }
 
@@ -128,6 +133,7 @@ function pointerUp(raycaster, orientation, isPrimary, interactionState, toolStat
 }
 
 export const ScissorsToolHandler = {
+    getTarget,
     pointerMove,
     pointerDown,
     pointerUp,

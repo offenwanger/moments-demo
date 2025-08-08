@@ -136,32 +136,42 @@ export function SceneInterfaceController(parentContainer, mWebsocketController, 
     mPageSessionController.onPointerMove(onPointerMove);
     mXRSessionController.onPointerMove(onPointerMove);
     function onPointerMove(raycaster = null, orientation = null, isPrimary = true) {
-        // unhighlight buttons. 
-        let hovered = (isPrimary ? mInteractionState.primaryHovered : mInteractionState.secondaryHovered)
-        if (hovered && hovered.isButton()) {
-            Util.updateHoverTargetHighlight(
-                null,
-                mInteractionState,
-                mToolState,
-                isPrimary,
-                mCurrentSessionController,
-                mHelperPointController)
-        }
+        // handle an interaction move. 
+        let handler = getToolHandler(mToolState.tool)
+        if (!handler) { console.error("Tool not handled: " + mToolState.tool); return; }
 
-        let menuTargets = mInteractionState.type == InteractionType.NONE ?
-            mMenuController.getTargets(raycaster, mToolState) : [];
-        if (menuTargets.length > 0) {
-            let closest = Util.getClosestTarget(raycaster.ray, menuTargets);
+        // if we are not in the middle of an interaction, update highlighting. 
+        if (mInteractionState.type == InteractionType.NONE) {
+            // check if we are hovering a menu item
+            let menuTargets = mMenuController.getTargets(raycaster, mToolState);
+            let hoverTarget;
+            if (menuTargets.length > 0) {
+                // we have a menu target, override the tool handler. 
+                hoverTarget = Util.getClosestTarget(raycaster.ray, menuTargets);
+            } else {
+                // otherwise let the handler specify what is hovered.
+                hoverTarget = handler.getTarget(
+                    raycaster,
+                    orientation,
+                    isPrimary,
+                    mInteractionState,
+                    mToolState,
+                    mModel,
+                    mCurrentSessionController,
+                    mSceneController,
+                    mHelperPointController
+                );
+            }
+
+            // update to highlight the hovered target, which may be null
             Util.updateHoverTargetHighlight(
-                closest,
+                hoverTarget,
                 mInteractionState,
                 mToolState,
                 isPrimary,
                 mCurrentSessionController,
                 mHelperPointController);
         } else {
-            let handler = getToolHandler(mToolState.tool)
-            if (!handler) { console.error("Tool not handled: " + mToolState.tool); return; }
             handler.pointerMove(
                 raycaster,
                 orientation,
@@ -173,7 +183,6 @@ export function SceneInterfaceController(parentContainer, mWebsocketController, 
                 mSceneController,
                 mHelperPointController)
         }
-
     }
 
     mPageSessionController.onPointerDown(onPointerDown);
@@ -475,7 +484,7 @@ export function SceneInterfaceController(parentContainer, mWebsocketController, 
     }
 
     function updateModel(model, assetUtil) {
-        // clear the highlighting / hovering.
+        // clear the highlighting / hovering for both primary and secondary controllers.
         Util.updateHoverTargetHighlight(
             null,
             mInteractionState,
