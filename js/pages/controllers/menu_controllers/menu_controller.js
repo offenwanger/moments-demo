@@ -4,6 +4,7 @@ import { ColorUtil } from '../../../utils/color_util.js';
 import { ToolState } from '../system_state.js';
 import { ButtonMenu } from './button_menu.js';
 import { MeshButton } from './mesh_button.js';
+import { MeshCanvasTile } from './mesh_canvas_tile.js';
 import { MeshTile } from './mesh_tile.js';
 
 export function MenuController() {
@@ -38,14 +39,9 @@ export function MenuController() {
     let mInfoTile = new MeshTile('InfoTile', 'Welcome to Moments', BUTTON_SIZE, '#000000')
     mInfoTile.setColor('#ffffff');
 
-    let mBrushTile = new MeshTile('InfoTile', '', BUTTON_SIZE, '#000000')
-    let mBrushCanvas = document.createElement('canvas')
-    mBrushCanvas.width = 64
-    mBrushCanvas.height = 64
-    let mBrushCtx = mBrushCanvas.getContext('2d');
-    mBrushCtx.fillStyle = "white";
-    mBrushCtx.fillRect(0, 0, mBrushCanvas.width, mBrushCanvas.height);
-    mBrushTile.setImage(mBrushCanvas.toDataURL());
+    let mBrushTile = new MeshCanvasTile('BrushTile', '', BUTTON_SIZE, '#000000');
+    let mUnblurTile = new MeshCanvasTile('UnblurTile', '', BUTTON_SIZE, '#000000');
+    let mClearTile = new MeshCanvasTile('ClearTile', '', BUTTON_SIZE, '#000000');
 
     /**  Utilities you always want access to **/
     mMenus[MenuNavButtons.UTILITY_MENU] = createMenu(MenuNavButtons.MAIN_MENU, '', [
@@ -72,8 +68,9 @@ export function MenuController() {
     ]);
     mMenus[BrushToolButtons.UNBLUR] = createMenu(ToolButtons.BRUSH,
         'Adjust the focus brush size.', [
+        mUnblurTile,
         new MeshButton(BrushToolSettings.BIGGER, 'Bigger', BUTTON_SIZE),
-        new MeshButton(BrushToolSettings.SMALLER, 'Draw', BUTTON_SIZE),
+        new MeshButton(BrushToolSettings.SMALLER, 'Smaller', BUTTON_SIZE),
     ]);
     mMenus[BrushToolButtons.COLOR] = createMenu(ToolButtons.BRUSH,
         'Brush color and size.', [
@@ -89,6 +86,7 @@ export function MenuController() {
     ]);
     mMenus[BrushToolButtons.CLEAR] = createMenu(ToolButtons.BRUSH,
         'Choose clear size. Heads up, it\'s not super accurate.', [
+        mClearTile,
         new MeshButton(BrushToolSettings.BIGGER, 'Bigger', BUTTON_SIZE),
         new MeshButton(BrushToolSettings.SMALLER, 'Smaller', BUTTON_SIZE),
     ]);
@@ -211,6 +209,10 @@ export function MenuController() {
             mDisplayedMenus.push(mMenus[mToolState.brushSettings.mode])
             if (mToolState.brushSettings.mode == BrushToolButtons.COLOR) {
                 updateColorPicker(mToolState);
+            } else if (mToolState.brushSettings.mode == BrushToolButtons.CLEAR) {
+                updateClearIndicator(mToolState);
+            } else if (mToolState.brushSettings.mode == BrushToolButtons.UNBLUR) {
+                updateUnblurIndicator(mToolState)
             }
         }
 
@@ -235,18 +237,51 @@ export function MenuController() {
         buttons.find(b => b.getId() == BrushToolSettings.LIGHT_DEC).setColor(ColorUtil.lightDecrement(toolState.brushSettings.color));
         buttons.find(b => b.getId() == BrushToolSettings.SAT_DEC).setColor(ColorUtil.satDecrement(toolState.brushSettings.color));
 
-        mBrushCtx.fillStyle = "white";
-        mBrushCtx.fillRect(0, 0, mBrushCanvas.width, mBrushCanvas.height);
-        mBrushCtx.beginPath()
-        mBrushCtx.arc(
-            mBrushCanvas.width / 2,
-            mBrushCanvas.height / 2,
-            mBrushCanvas.width * toolState.brushSettings.colorWidth * 2,
+        let ctx = mBrushTile.getCtx();
+        ctx.fillStyle = "white";
+        ctx.fillRect(0, 0, mBrushTile.getWidth(), mBrushTile.getHeight());
+        ctx.beginPath()
+        ctx.arc(
+            mBrushTile.getWidth() / 2,
+            mBrushTile.getHeight() / 2,
+            mBrushTile.getWidth() * toolState.brushSettings.colorWidth * 2,
             0, 2 * Math.PI)
-        mBrushCtx.fillStyle = toolState.brushSettings.color;
-        mBrushCtx.fill();
-        mBrushCtx.closePath()
-        mBrushTile.setImage(mBrushCanvas.toDataURL());
+        ctx.fillStyle = toolState.brushSettings.color;
+        ctx.fill();
+        ctx.closePath()
+        mBrushTile.renderImage();
+    }
+
+    function updateClearIndicator(toolState) {
+        let ctx = mClearTile.getCtx();
+        ctx.fillStyle = "white";
+        ctx.fillRect(0, 0, mClearTile.getWidth(), mClearTile.getHeight());
+        ctx.beginPath()
+        ctx.arc(
+            mClearTile.getWidth() / 2,
+            mClearTile.getHeight() / 2,
+            mClearTile.getWidth() * toolState.brushSettings.clearWidth * 2,
+            0, 2 * Math.PI)
+        ctx.fillStyle = 'black';
+        ctx.fill();
+        ctx.closePath()
+        mClearTile.renderImage();
+    }
+
+    function updateUnblurIndicator(toolState) {
+        let ctx = mUnblurTile.getCtx();
+        ctx.fillStyle = "white";
+        ctx.fillRect(0, 0, mUnblurTile.getWidth(), mUnblurTile.getHeight());
+        ctx.beginPath()
+        ctx.arc(
+            mUnblurTile.getWidth() / 2,
+            mUnblurTile.getHeight() / 2,
+            mUnblurTile.getWidth() * toolState.brushSettings.unblurWidth * 2,
+            0, 2 * Math.PI)
+        ctx.fillStyle = 'black';
+        ctx.fill();
+        ctx.closePath()
+        mUnblurTile.renderImage();
     }
 
     function updateModel(model, assetUtil) {
