@@ -345,6 +345,18 @@ export function PoseableAssetWrapper(parent, audioListener) {
             interactionTarget.select = (toolState) => {
                 let obj = mGLTF.getObjectByName(pose.name);
                 if (obj.userData.interactionAudio) try { mSounds[pose.id].play(); } catch (e) { console.error(e); }
+
+                // unhighlight
+                if (obj.isMesh) {
+                    obj.material.color.set(obj.userData.originalColor);
+                } else if (obj.type == "Bone") {
+                    let lineGroup = obj.children.find(c => c.userData.boneLines);
+                    if (!lineGroup) { console.error("Malformed target", obj) }
+                    lineGroup.visible = false;
+                } else {
+                    console.error("Unexpected target object!", obj);
+                }
+
                 obj.userData.state = 'selected';
             };
             interactionTarget.idle = (toolState) => {
