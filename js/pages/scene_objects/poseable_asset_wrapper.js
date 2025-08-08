@@ -167,6 +167,7 @@ export function PoseableAssetWrapper(parent, audioListener) {
                             delete mAudioSprites[pose.id];
                         }
                         object.userData.isAudio = false;
+                        object.userData.interactionAudio = false;
                     }
                 }
             })

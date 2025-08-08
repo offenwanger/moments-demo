@@ -65,6 +65,7 @@ export function PictureWrapper(parent, audioListener) {
         } else {
             mPlanes.remove(mAudioSprite);
             mInteractionTarget.isAudio = () => false;
+            mInteractionSound = false;
         }
 
         if (mCurrentAssetId != picture.assetId) {
