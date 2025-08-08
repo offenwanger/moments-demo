@@ -136,6 +136,9 @@ export function SceneInterfaceController(parentContainer, mWebsocketController, 
     mPageSessionController.onPointerMove(onPointerMove);
     mXRSessionController.onPointerMove(onPointerMove);
     function onPointerMove(raycaster = null, orientation = null, isPrimary = true) {
+        // right now, only primary does anything.
+        if (!isPrimary) return;
+
         // handle an interaction move. 
         let handler = getToolHandler(mToolState.tool)
         if (!handler) { console.error("Tool not handled: " + mToolState.tool); return; }
