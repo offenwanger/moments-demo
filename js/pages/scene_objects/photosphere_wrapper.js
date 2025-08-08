@@ -115,8 +115,17 @@ export function PhotosphereWrapper(parent) {
         let redraw = false;
         if (!oldPhotosphere ||
             mPhotosphere.id != oldPhotosphere.id ||
-            oldPhotosphere.enabled != mPhotosphere.enabled) {
+            oldPhotosphere.enabled != mPhotosphere.enabled ||
+            mPhotosphere.scale != oldPhotosphere.scale) {
             resurface = true;
+            redraw = true;
+        }
+
+        let oldStrokes = mStrokes.map(s => s.id).sort().join('');
+        mStrokes = model.strokes.filter(s => s.photosphereId == mPhotosphere.id);
+        if (mPhotosphere.blur != oldPhotosphere.blur ||
+            mStrokes.map(s => s.id).sort().join('') != oldStrokes ||
+            mPhotosphere.assetId != oldPhotosphere.assetId) {
             redraw = true;
         }
 
@@ -164,13 +173,6 @@ export function PhotosphereWrapper(parent) {
                 mSurfacePivots.push(pivot);
             })
             updateMesh();
-        }
-
-        let oldStrokes = mStrokes.map(s => s.id).sort().join('');
-        mStrokes = model.strokes.filter(s => s.photosphereId == mPhotosphere.id);
-        if (mPhotosphere.blur != oldPhotosphere.blur ||
-            mStrokes.map(s => s.id).sort().join('') != oldStrokes) {
-            redraw = true;
         }
 
         if (redraw) {
