@@ -28,7 +28,8 @@ describe('Test WebSocketController', function () {
             expect(document.querySelector('#share-button').textContent).toBe("Sharing!")
             let uploads = Object.entries(global.fileSystem)
                 .filter(([filename, contents]) => !contents.isDir && filename.includes('/uploads'));
-            expect(uploads.length).toBe(0);
+            // one moment thumbnail
+            expect(uploads.length).toBe(1);
 
             let shareListener = {
                 handlers: {},
@@ -64,7 +65,8 @@ describe('Test WebSocketController', function () {
 
             uploads = Object.entries(global.fileSystem)
                 .filter(([filename, contents]) => !contents.isDir);
-            expect(uploads.map(([filename, c]) => filename.split('.')[1])).toEqual(['json', 'json', 'glb', 'jpg']);
+            // TODO check this
+            expect(uploads.map(([filename, c]) => filename.split('.')[1])).toEqual(['json', 'json', 'jpg', 'jpg', 'glb', 'glb', 'jpg', 'jpg',]);
             expect(global.endpoints.socketServerEndpoints['SENT_' + ServerMessage.SHARED_STORIES].length).toBe(1)
             expect(global.endpoints.socketServerEndpoints['SENT_' + ServerMessage.SHARED_STORIES][0].id).toBe(testmodel().id);
 

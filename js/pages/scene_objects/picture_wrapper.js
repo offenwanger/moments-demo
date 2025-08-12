@@ -52,6 +52,10 @@ export function PictureWrapper(parent, audioListener) {
             mPlanes.add(mAudioSprite);
             assetUtil.loadAsset(audio.assetId, AssetTypes.AUDIO)
                 .then(buffer => {
+                    if (!buffer) {
+                        console.error('Failed to load piccture audio.')
+                        return;
+                    }
                     mSound.setBuffer(buffer);
                     mSound.setLoop(true);
                     mSound.setVolume(audio.volume);

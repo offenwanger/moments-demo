@@ -54,6 +54,7 @@ export function PhotosphereWrapper(parent) {
 
     // the original image which we will manipulate
     let mImage = document.createElement('canvas');
+    let mImageInitialized = false;
 
     // extra canvases to reduce draw calls
     // also they're smaller than the main canvas so the 
@@ -182,7 +183,8 @@ export function PhotosphereWrapper(parent) {
             draw();
         }
 
-        if (!oldPhotosphere || mPhotosphere.assetId != oldPhotosphere.assetId) {
+        if (!mImageInitialized || !oldPhotosphere || mPhotosphere.assetId != oldPhotosphere.assetId) {
+            mImageInitialized = false;
             let load;
             if (mPhotosphere.assetId) {
                 load = assetUtil.loadAsset(mPhotosphere.assetId, AssetTypes.IMAGE);
@@ -190,12 +192,18 @@ export function PhotosphereWrapper(parent) {
                 load = new THREE.ImageLoader().loadAsync(DEFAULT_TEXTURE);
             }
             load.then(img => {
+                if (!img) {
+                    console.error('Failed to initialize photosphere');
+                    return;
+                }
                 mImage = img;
                 drawBlur();
                 drawColor();
                 drawSurfaceArea();
                 draw();
+                mImageInitialized = true;
             });
+
         }
     }
 

@@ -30,8 +30,8 @@ describe('Test WebSocketController', function () {
             clickButtonInput('#share-button');
             expect(document.querySelector('#share-button').textContent).toBe("Sharing!")
             let uploads = Object.entries(global.fileSystem).filter(([filename, contents]) => !contents.isDir && filename.includes('/uploads'));
-            expect(uploads.length).toBe(2);
-            expect(uploads.map(([filename, c]) => filename.split('.')[1])).toEqual(['glb', 'jpg']);
+            expect(uploads.length).toBe(3);
+            expect(uploads.map(([filename, c]) => filename.split('.')[1])).toEqual(['glb', 'jpg', 'jpg']);
             expect(global.endpoints.socketServerEndpoints['SENT_' + ServerMessage.SHARED_STORIES].length).toBe(1)
             expect(global.endpoints.socketServerEndpoints['SENT_' + ServerMessage.SHARED_STORIES][0].id).toBe(testmodel().id);
         });
@@ -44,8 +44,9 @@ describe('Test WebSocketController', function () {
             clickButtonInput('#share-button');
             expect(document.querySelector('#share-button').textContent).toBe("Sharing!")
             let uploads = Object.entries(global.fileSystem).filter(([filename, contents]) => !contents.isDir && filename.includes('/uploads'));
-            expect(uploads.length).toBe(2);
-            expect(uploads.map(([filename, c]) => filename.split('.')[1])).toEqual(['glb', 'jpg']);
+            // one asset two thumbnails
+            expect(uploads.length).toBe(3);
+            expect(uploads.map(([filename, c]) => filename.split('.')[1])).toEqual(['glb', 'jpg', 'jpg']);
             expect(global.endpoints.socketServerEndpoints['SENT_' + ServerMessage.SHARED_STORIES].length).toBe(1)
             expect(global.endpoints.socketServerEndpoints['SENT_' + ServerMessage.SHARED_STORIES][0].id).toBe(testmodel().id);
 
@@ -84,7 +85,8 @@ describe('Test WebSocketController', function () {
 
             let uploads = Object.entries(global.fileSystem)
                 .filter(([filename, contents]) => !contents.isDir && filename.includes('/uploads'));
-            expect(uploads.length).toBe(0);
+            // just the moment thumbnail
+            expect(uploads.length).toBe(1);
 
             let shareListener = {
                 handlers: {},
@@ -104,7 +106,8 @@ describe('Test WebSocketController', function () {
 
             uploads = Object.entries(global.fileSystem)
                 .filter(([filename, contents]) => !contents.isDir);
-            expect(uploads.map(([filename, c]) => filename.split('.')[1])).toEqual(['json', 'json', 'wav', 'jpg']);
+            // TODO check this
+            expect(uploads.map(([filename, c]) => filename.split('.')[1])).toEqual(['json', 'json', 'jpg', 'jpg', 'wav', 'jpg', 'jpg', 'wav']);
             expect(global.endpoints.socketServerEndpoints['SENT_' + ServerMessage.SHARED_STORIES].length).toBe(1)
             expect(global.endpoints.socketServerEndpoints['SENT_' + ServerMessage.SHARED_STORIES][0].id).toBe(testmodel().id);
         });

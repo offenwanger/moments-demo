@@ -103,10 +103,24 @@ export function WorkspaceManager(folderHandle) {
     }
 
     function getFileAsDataURI(filename) {
+        if (!filename) {
+            console.error('Cannot get file, no filename.')
+            return initialized.then(() => null)
+        }
         return initialized
             .then(() => mFolderHandle.getDirectoryHandle(FILE_FOLDER, { create: true }))
             .then(folder => FileUtil.getFile(folder, filename))
-            .then(file => FileUtil.getDataUriFromFile(file));
+            .then(file => FileUtil.getDataUriFromFile(file))
+            .catch(e => {
+                if (e.message && e.message.includes('A requested file or directory could not be found at the time an operation was processed') &&
+                    filename.includes('thumbnail')) {
+                    // missing thumbnails is common, it's fine. 
+                    return;
+                }
+                console.error(e);
+                console.error('Failed to getFileAsDataURI locally: ' + filename);
+                return null;
+            });
     }
 
     function updateWorkspaceData() {
@@ -166,6 +180,10 @@ export function WorkspaceManager(folderHandle) {
 
 export function RemoteWorkSpace(storyId) {
     function getFileAsDataURI(filename) {
+        if (!filename) {
+            console.error('Failed to getFileAsDataURI, no filename provided');
+            return null;
+        }
         return fetch('uploads/' + storyId + "/" + filename)
             .then(result => {
                 if (result?.ok) {
@@ -179,9 +197,10 @@ export function RemoteWorkSpace(storyId) {
                     return null;
                 }
             })
+
             .catch(e => {
-                console.error('Failed to fetch file');
                 console.error(e);
+                console.error('Failed to getFileAsDataURI remotely: ' + filename);
                 return null;
             });
     }

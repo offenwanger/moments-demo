@@ -395,10 +395,11 @@ export function SceneInterfaceController(parentContainer, mWebsocketController, 
                     minute: '2-digit',
                 });
 
-                mAssetCreateCallback(assetId, recordingName, filename, AssetTypes.AUDIO, audioBlob);
-
-                let actions = DataUtil.getAudioCreationActions(mModel, mCurrentMomentId, assetId, inFrontOfCamera());
-                mModelUpdateCallback(new Transaction(actions));
+                mAssetCreateCallback(assetId, recordingName, filename, AssetTypes.AUDIO, audioBlob)
+                    .then(() => {
+                        let actions = DataUtil.getAudioCreationActions(mModel, mCurrentMomentId, assetId, inFrontOfCamera());
+                        mModelUpdateCallback(new Transaction(actions));
+                    });
             }
         } else if (buttonId == RecordToolButtons.DELETE) {
             mAudioRecorder.clearRecorder();
@@ -548,5 +549,6 @@ export function SceneInterfaceController(parentContainer, mWebsocketController, 
     this.onRedo = (func) => mRedoCallback = func;
     this.onSelect = (func) => mSelectCallback = func;
     this.showMessage = (msg) => mMenuController.getMainDisplay().setText(msg);
+    this.getScene = mSceneController.getScene;
 }
 

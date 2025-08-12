@@ -41,7 +41,7 @@ export function AudioWrapper(parent, audioListener) {
         mSphere.userData.id = audio.id;
 
         // if the audio has changed, updateit
-        if (mAudio && (!audio || mAudio.assetId != audio.assetId)) {
+        if (!mInitialized || (mAudio && (!audio || mAudio.assetId != audio.assetId))) {
             if (mAudio.ambient) try { mSound.stop(); } catch (e) { console.error(e); }
 
             mInitialized = false;

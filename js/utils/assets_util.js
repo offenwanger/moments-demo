@@ -53,7 +53,9 @@ export function AssetUtil(workspace) {
         let chain = loadAssetFile(asset.filename, type, assetId);
 
         // check the thumbnail async;
-        chain.then(asset => checkThumbnail(assetId, asset, type));
+        chain.then(asset => {
+            if (asset) return checkThumbnail(assetId, asset, type);
+        });
 
         return chain;
     }
@@ -65,18 +67,30 @@ export function AssetUtil(workspace) {
             chain = chain
                 .then(() => mWorkspace.getFileAsDataURI(filename))
                 .then(loadedURI => {
-                    if (!loadedURI) throw new Error('Failed to load asset file: ' + filename);
-                    mLoadedFileURIs[filename] = loadedURI
+                    if (loadedURI) {
+                        mLoadedFileURIs[filename] = loadedURI
+                    } else {
+                        return null;
+                    }
                 })
         }
 
         chain = chain
-            .then(() => uriToAsset(mLoadedFileURIs[filename], type))
+            .then(() => {
+                if (mLoadedFileURIs[filename]) {
+                    return uriToAsset(mLoadedFileURIs[filename], type)
+                } else {
+                    return null;
+                }
+            })
             .then(asset => {
-                if (!asset) throw new Error('Failed to load asset: ' + filename);
-                if (assetId) mLoadedAssets[assetId] = asset
-                if (type == AssetTypes.MODEL) asset = asset.clone();
-                return asset;
+                if (asset) {
+                    if (assetId) mLoadedAssets[assetId] = asset
+                    if (type == AssetTypes.MODEL) asset = asset.clone();
+                    return asset;
+                } else {
+                    return null;
+                };
             })
 
         return chain;
@@ -141,14 +155,21 @@ export function AssetUtil(workspace) {
             if (!item) { console.error("Invalid item id: " + itemId); return null; }
 
             return mWorkspace.getFileAsDataURI(THUMBNAIL_PREFIX + itemId + THUMBNAIL_SUFFIX)
-                .then(uri => mImageLoader.loadAsync(uri))
+                .then(uri => {
+                    if (uri) {
+                        return mImageLoader.loadAsync(uri)
+                    } else {
+                        return null;
+                    }
+                })
                 .then(image => {
-                    mLoadedThumbnails[itemId] = image;
-                    return mLoadedThumbnails[itemId];
+                    if (image) {
+                        mLoadedThumbnails[itemId] = image;
+                        return mLoadedThumbnails[itemId];
+                    } else return null;
                 })
                 .catch(e => {
-                    if (e instanceof Event ||
-                        e.message && e.message.includes("A requested file or directory could not be found at the time an operation was processed")) {
+                    if (e.message && e.message.includes("A requested file or directory could not be found at the time an operation was processed")) {
                         // Thumbnail might not exist yet. Normal occurance, ignore.
                     } else {
                         console.error(e);

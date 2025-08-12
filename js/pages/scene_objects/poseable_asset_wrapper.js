@@ -149,6 +149,10 @@ export function PoseableAssetWrapper(parent, audioListener) {
                             innerLoadsequence = innerLoadsequence
                                 .then(() => assetUtil.loadAsset(audio.assetId, AssetTypes.AUDIO))
                                 .then(buffer => {
+                                    if (!buffer) {
+                                        console.error('failed to load audio');
+                                        return;
+                                    }
                                     mSounds[pose.id].setBuffer(buffer);
                                     if (audio.ambient) try {
                                         mSounds[pose.id].play()

@@ -21,6 +21,8 @@ export function EditorPage(parentContainer, mWebsocketController) {
     let mModelController;
     let mWorkspace;
     let mAssetUtil;
+    let mCurrentMomentId = null;
+    let mRemote = false;
 
     let mUndoStack = []
     let mRedoStack = []
@@ -224,6 +226,10 @@ export function EditorPage(parentContainer, mWebsocketController) {
     });
 
     function storeAsset(id, file, type) {
+        if (mRemote) {
+            console.error('Remote connections cannot store assets!');
+            return;
+        }
         let chain = mWorkspace.storeFile(file);
 
         // do thumbnail asynconously.
@@ -233,14 +239,26 @@ export function EditorPage(parentContainer, mWebsocketController) {
                 if (!asset) { throw new Error('Cannot load asset to make thumbnail.'); }
                 return mAssetUtil.generateThumbnail(id, asset, type)
             })
-            .then(thumbnailFilename => mWorkspace.isSharing ? mWebsocketController.uploadAsset(mModelController.getModel().id, thumbnailFilename, mWorkspace) : null)
+            .then(thumbnailFilename => {
+                if (mWebsocketController.isSharing()) {
+                    return mWebsocketController.uploadAsset(mModelController.getModel().id, thumbnailFilename, mWorkspace)
+                } else {
+                    return null;
+                }
+            })
             .catch(e => {
                 console.error(e);
                 console.error('Failed to create thumbnail.')
             })
 
         chain = chain
-            .then(() => mWorkspace.isSharing ? mWebsocketController.uploadAsset(mModelController.getModel().id, file.name, mWorkspace) : null)
+            .then(() => {
+                if (mWebsocketController.isSharing()) {
+                    return mWebsocketController.uploadAsset(mModelController.getModel().id, file.name, mWorkspace)
+                } else {
+                    return null;
+                }
+            })
 
         return chain;
     }
@@ -274,8 +292,8 @@ export function EditorPage(parentContainer, mWebsocketController) {
 
         let chain = Promise.resolve();
 
-        const remote = UrlUtil.getParam("remote") == 'true';
-        if (remote) {
+        mRemote = UrlUtil.getParam("remote") == 'true';
+        if (mRemote) {
             mSidebarController.hideShare();
             mAssetUtil = new AssetUtil(new RemoteWorkSpace(storyId));
 
@@ -377,14 +395,22 @@ export function EditorPage(parentContainer, mWebsocketController) {
     }
 
     function setCurrentMoment(momentId, position = new THREE.Vector3(), direction = new THREE.Vector3(0, 0, -1)) {
+        // update the thumbnail
+        if (mCurrentMomentId && mAssetUtil && !mRemote) {
+            mAssetUtil.clearCache(mCurrentMomentId)
+            mAssetUtil.generateThumbnail(mCurrentMomentId, mSceneInterface.getScene(), Data.Moment);
+        }
+
         if (!momentId) { UrlUtil.updateParams({ 'moment': null }); }
 
         let model = mModelController.getModel();
         let moment = model.find(momentId);
         if (moment) {
+            mCurrentMomentId = momentId;
             UrlUtil.updateParams({ 'moment': momentId });
             mSidebarController.navigate(momentId);
         } else {
+            mCurrentMomentId = null;
             UrlUtil.updateParams({ 'moment': null });
             mSidebarController.navigate(model.id);
         }
@@ -403,6 +429,8 @@ export function EditorPage(parentContainer, mWebsocketController) {
         pushUndo(mModelController.getModel(), transaction)
         mModelController.applyTransaction(transaction);
         updateModel();
+
+        if (!mRemote) mAssetUtil.generateThumbnail(momentId, new THREE.Scene(), Data.Moment);
     }
 
     mWindowEventManager.onResize(resize);

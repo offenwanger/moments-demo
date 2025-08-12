@@ -147,25 +147,27 @@ export function WebsocketController() {
     function uploadAsset(storyId, filename, workspace) {
         return workspace.getFileAsDataURI(filename)
             .then(uri => {
-                logInfo("Uploading " + filename);
-                return fetch('/upload', {
-                    method: "POST",
-                    headers: {
-                        'Accept': 'application/json',
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        storyId,
-                        filename,
-                        uri,
-                    })
-                });
+                if (uri) {
+                    logInfo("Uploading " + filename);
+                    return fetch('/upload', {
+                        method: "POST",
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            storyId,
+                            filename,
+                            uri,
+                        })
+                    });
+                } else {
+                    console.error('Cannot upload: ' + filename)
+                }
             })
-            .then(() => logInfo(filename + " uploaded."))
+            .then(() => logInfo(filename + " upload attempt complete."))
             .catch((e) => {
-                if (e.message.includes('A requested file or directory could not be found at the time an operation was processed')) {
-                    // Probably just a missing thumbnail, ignore.
-                } else console.error(e)
+                console.error(e);
             })
     }
 

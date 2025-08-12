@@ -62,15 +62,8 @@ export function SceneController(audioListener) {
     }
 
     function setCurrentMoment(momentId = null) {
-        let oldMomentId = mCurrentMomentId;
         mCurrentMomentId = momentId;
         if (mAssetUtil) updateModel(mModel, mAssetUtil);
-
-        // update the thumbnail
-        if (oldMomentId && mAssetUtil) {
-            mAssetUtil.clearCache(oldMomentId)
-            mAssetUtil.generateThumbnail(oldMomentId, mScene, Data.Moment);
-        }
     }
 
     function getTargets(ray, tool) {
