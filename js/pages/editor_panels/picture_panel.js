@@ -31,6 +31,10 @@ export function PicturePanel(container) {
     let mAttachedAudio = new ButtonInput(mPanelContainer)
         .setId('picture-audio-button');
     mAttachedAudio.hide();
+    let mDetachAudio = new ButtonInput(mPanelContainer)
+        .setId('picture-audio-button-detach')
+        .setLabel("Detach Audio");
+    mDetachAudio.hide();
 
     let mPositionHeader = document.createElement('div');
     mPositionHeader.textContent = 'Position'
@@ -99,8 +103,12 @@ export function PicturePanel(container) {
                 .setLabel(audio.name)
                 .setOnClick(() => mNavigationCallback(audio.id))
                 .show();
+            mDetachAudio
+                .setOnClick(() => mUpdateAttributeCallback(audio.id, { attachedId: null }))
+                .show();
         } else {
             mAttachedAudio.hide();
+            mDetachAudio.hide();
         }
 
 
