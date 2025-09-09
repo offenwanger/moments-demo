@@ -48,7 +48,7 @@ export function PoseableAssetWrapper(parent, audioListener) {
 
         let loadSequence = Promise.resolve();
         if (mPoseableAsset.assetId != oldModel.assetId) {
-            if (mGLTF) remove();
+            mModelGroup.clear()
             mTeleportSprites = {};
             mAudioSprites = {};
             mSounds = {};
@@ -98,7 +98,7 @@ export function PoseableAssetWrapper(parent, audioListener) {
                 let innerLoadsequence = Promise.resolve();
                 for (const pose of mPoses) {
                     let object = mGLTF.getObjectByName(pose.name);
-                    if (!object) { console.error("Invalid pose!", pose); return; }
+                    if (!object) { console.error("Invalid pose!", pose); continue; }
 
                     object.setRotationFromQuaternion(new THREE.Quaternion().fromArray(pose.orientation));
                     object.position.set(pose.x, pose.y, pose.z);
